@@ -11,8 +11,8 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }: { mode: string }) => ({
   server: {
     host: "::",
-    port: 8080, // Fixed port as required
-    strictPort: true, // Force use of specified port
+    port: 8080, // Start with port 8080
+    strictPort: false, // Allow Vite to find another port if 8080 is in use
     hmr: {
       // Disable WebSocket host check which causes the __WS_TOKEN__ error
       protocol: 'ws',
@@ -39,4 +39,6 @@ export default defineConfig(({ mode }: { mode: string }) => ({
     },
   },
   base: './',
+  // Add logging
+  logLevel: 'info',
 }));
