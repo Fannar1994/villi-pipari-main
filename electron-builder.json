@@ -3,23 +3,33 @@
   "appId": "com.villipipari.invoicegenerator",
   "productName": "Villi Pípari",
   "directories": {
-    "output": "release"
+    "output": "release",
+    "buildResources": "public"
   },
   "files": [
     "dist/**/*",
-    "electron/**/*"
+    "electron/**/*",
+    "package.json"
   ],
-  "main": "electron/main.cjs",
+  "extraMetadata": {
+    "main": "electron/main.cjs"
+  },
+  "asar": true,
   "win": {
     "target": [
-      "nsis"
+      "nsis",
+      "portable"
     ],
     "icon": "public/favicon.ico",
-    "iconSize": 256
+    "artifactName": "${productName}-${version}-${arch}.${ext}"
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "createDesktopShortcut": true
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  },
+  "portable": {
+    "artifactName": "${productName}-${version}-portable.${ext}"
   }
 }

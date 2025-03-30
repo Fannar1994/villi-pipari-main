@@ -35,13 +35,15 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
+      sourcemap: false,
+      minify: true,
       rollupOptions: {
         output: {
           manualChunks: undefined,
         },
       },
     },
-    base: './',
+    base: './', // Critical for Electron to find assets correctly
     logLevel: 'info' as const
   };
 });
