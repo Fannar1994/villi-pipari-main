@@ -11,7 +11,6 @@ console.log('Starting Electron app with environment:', process.env.NODE_ENV);
 console.log('Current working directory:', process.cwd());
 
 let mainWindow;
-let attemptedPort = 8080; // Start with 8080 as primary port
 
 // Function to check if a port is in use
 function isPortInUse(port) {
@@ -28,25 +27,32 @@ function isPortInUse(port) {
   });
 }
 
-// Function to find available port
-async function findAvailablePort(startPort, maxAttempts = 10) {
-  let port = startPort;
-  let attempts = 0;
-  
-  while (attempts < maxAttempts) {
-    console.log(`Checking if port ${port} is available...`);
-    const inUse = await isPortInUse(port);
-    if (!inUse) {
-      console.log(`Found available port: ${port}`);
-      return port;
-    }
-    port++;
-    attempts++;
-    console.log(`Port ${port-1} is in use, trying ${port}`);
+// Function to find the port Vite is actually using
+async function findViteServerPort() {
+  // First, check if ELECTRON_PORT environment variable is set
+  if (process.env.ELECTRON_PORT) {
+    const portFromEnv = parseInt(process.env.ELECTRON_PORT, 10);
+    console.log(`Using port from environment variable: ${portFromEnv}`);
+    return portFromEnv;
   }
-  
-  console.error(`Could not find an available port after ${maxAttempts} attempts`);
-  return null;
+
+  // Try common Vite ports (8080-8100)
+  for (let port = 8080; port <= 8100; port++) {
+    try {
+      console.log(`Checking for Vite server on port ${port}...`);
+      const response = await fetch(`http://localhost:${port}`);
+      if (response.ok) {
+        console.log(`Vite server found on port ${port}`);
+        return port;
+      }
+    } catch (err) {
+      // This port doesn't have a running server, continue checking
+    }
+  }
+
+  // Default to 8080 if no server is found
+  console.log('Could not detect Vite server, defaulting to port 8080');
+  return 8080;
 }
 
 function createWindow() {
@@ -65,39 +71,57 @@ function createWindow() {
 
   // Load the app
   if (isDev) {
-    // In development, find an available port
-    findAvailablePort(8080).then(port => {
-      if (!port) {
-        console.error('Failed to find an available port. Exiting.');
-        app.quit();
-        return;
-      }
+    // In development, try to detect which port Vite is using
+    findViteServerPort().then(port => {
+      const devServerUrl = `http://localhost:${port}`;
+      console.log(`Loading app from development server at ${devServerUrl}`);
       
-      attemptedPort = port;
-      const url = `http://localhost:${port}`;
-      console.log(`Loading app from development server at ${url}`);
+      // Try to connect to the dev server with retries
+      const maxRetries = 30;
+      let retries = 0;
       
-      // Try to connect to the dev server
       const checkServer = () => {
-        console.log(`Checking if dev server is running at ${url}`);
-        http.get(url, (res) => {
-          if (res.statusCode === 200) {
-            console.log('Dev server is running, loading URL in Electron');
-            mainWindow.loadURL(url);
-          } else {
-            console.log(`Dev server returned status ${res.statusCode}, retrying in 1 second`);
-            setTimeout(checkServer, 1000);
-          }
-        }).on('error', (err) => {
-          console.log(`Error connecting to dev server: ${err.message}, retrying in 1 second`);
+        console.log(`Attempt ${retries + 1}/${maxRetries}: Checking if dev server is running at ${devServerUrl}`);
+        fetch(devServerUrl)
+          .then(res => {
+            if (res.ok) {
+              console.log('Dev server is running, loading URL in Electron');
+              mainWindow.loadURL(devServerUrl);
+              
+              // Open DevTools in development mode
+              mainWindow.webContents.openDevTools();
+            } else {
+              retryConnection();
+            }
+          })
+          .catch(err => {
+            console.log(`Error connecting to dev server: ${err.message}`);
+            retryConnection();
+          });
+      };
+      
+      const retryConnection = () => {
+        retries++;
+        if (retries < maxRetries) {
+          console.log(`Retrying in 1 second... (${retries}/${maxRetries})`);
           setTimeout(checkServer, 1000);
-        });
+        } else {
+          console.error(`Failed to connect to dev server after ${maxRetries} attempts`);
+          dialog.showErrorBox(
+            'Development Server Error',
+            `Could not connect to development server at ${devServerUrl} after ${maxRetries} attempts.\n\nPlease check if the Vite server is running.`
+          );
+        }
       };
       
       checkServer();
-      
-      // Open DevTools in development mode
-      mainWindow.webContents.openDevTools();
+    })
+    .catch(err => {
+      console.error('Error finding Vite server port:', err);
+      dialog.showErrorBox(
+        'Development Error',
+        `Failed to find Vite server port: ${err.message}`
+      );
     });
   } else {
     // In production, load from the dist folder with hash routing
@@ -148,6 +172,3 @@ ipcMain.handle('select-directory', async () => {
   
   return result.filePaths[0];
 });
-
-// Export port for electron-scripts.cjs
-exports.attemptedPort = attemptedPort;

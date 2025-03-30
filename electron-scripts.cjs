@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const { execSync } = require('child_process');
 
 // Function to check if a port is in use
 function isPortInUse(port) {
@@ -19,7 +20,7 @@ function isPortInUse(port) {
 }
 
 // Function to find available port
-async function findAvailablePort(startPort, maxAttempts = 10) {
+async function findAvailablePort(startPort, maxAttempts = 30) {
   let port = startPort;
   let attempts = 0;
   
@@ -35,7 +36,44 @@ async function findAvailablePort(startPort, maxAttempts = 10) {
   }
   
   console.error(`Could not find an available port after ${maxAttempts} attempts`);
-  return startPort; // Return the start port as fallback
+  return null; // Return null if no port is available
+}
+
+// Function to get the port Vite is actually using
+// This helps when Vite automatically selects a different port
+async function detectVitePort() {
+  try {
+    // Start Vite in the background and capture its output
+    const viteProcess = execSync('npx vite --port=8080 --strictPort=false --host=localhost', { 
+      encoding: 'utf8',
+      timeout: 5000, // 5 second timeout
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    
+    // Extract the port from Vite's output using a regex
+    const portMatch = viteProcess.match(/Local:\s+http:\/\/localhost:(\d+)/);
+    if (portMatch && portMatch[1]) {
+      return parseInt(portMatch[1], 10);
+    }
+  } catch (error) {
+    console.log('Could not detect Vite port automatically:', error.message);
+  }
+  
+  // Fallback: Try common ports
+  for (let port = 8080; port < 8110; port++) {
+    try {
+      const response = await fetch(`http://localhost:${port}`);
+      if (response.ok) {
+        console.log(`Vite server detected on port ${port}`);
+        return port;
+      }
+    } catch (err) {
+      // Port not responding, continue
+    }
+  }
+  
+  console.log('Could not detect Vite port, defaulting to 8080');
+  return 8080;
 }
 
 async function updatePackageJson() {
@@ -45,12 +83,17 @@ async function updatePackageJson() {
 
   // Find an available port
   const port = await findAvailablePort(8080);
+  if (!port) {
+    console.error('No available ports found. Please close some applications and try again.');
+    process.exit(1);
+  }
+  
   console.log(`Using port ${port} for Electron development`);
 
   // Add electron scripts with dynamic port configuration
   packageJson.scripts = {
     ...packageJson.scripts,
-    "electron:dev": `concurrently "cross-env NODE_ENV=development npm run dev" "wait-on http-get://localhost:${port} && electron electron/main.cjs"`,
+    "electron:dev": `concurrently "cross-env NODE_ENV=development ELECTRON_PORT=${port} npm run dev" "wait-on http-get://localhost:${port} && electron electron/main.cjs"`,
     "electron:build": "npm run build && electron-builder",
     "electron:build:win": "npm run build && electron-builder --windows",
     "electron:package": "node -e \"require('child_process').execSync('npm run build', {stdio: 'inherit'})\" && electron-builder --dir --config electron-builder.json"
@@ -91,6 +134,7 @@ async function updatePackageJson() {
   console.log('Electron scripts added to package.json');
   console.log('Added description and author to package.json');
   console.log('Moved electron and electron-builder to devDependencies');
+  console.log(`Electron will connect to port ${port}`);
 }
 
 // Execute this script directly
@@ -99,4 +143,4 @@ if (require.main === module) {
   updatePackageJson().catch(console.error);
 }
 
-module.exports = { findAvailablePort };
+module.exports = { findAvailablePort, detectVitePort };
