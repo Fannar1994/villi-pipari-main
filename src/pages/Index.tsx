@@ -73,7 +73,7 @@ const Index = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="bg-blue-50 border-b">
-          <CardTitle className="text-2xl text-blue-700">Reikningagerð</CardTitle>
+          <CardTitle className="text-2xl text-blue-700">Villi Pípari</CardTitle>
           <CardDescription>
             Búðu til reikninga út frá Excel vinnuskýrslum
           </CardDescription>
@@ -121,7 +121,7 @@ const Index = () => {
       </Card>
       
       <p className="text-gray-500 text-sm mt-4">
-        Reikningagerð forrit © 2023
+        Villi Pípari © 2023
       </p>
     </div>
   );
