@@ -16,20 +16,6 @@
     "icon": "public/favicon.ico",
     "iconSize": 256
   },
-  "mac": {
-    "target": [
-      "dmg"
-    ],
-    "icon": "public/favicon.ico",
-    "iconSize": 256
-  },
-  "linux": {
-    "target": [
-      "AppImage"
-    ],
-    "icon": "public/favicon.ico",
-    "iconSize": 256
-  },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
