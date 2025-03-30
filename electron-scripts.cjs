@@ -49,3 +49,8 @@ fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 console.log('Electron scripts added to package.json');
 console.log('Added description and author to package.json');
 console.log('Moved electron and electron-builder to devDependencies');
+
+// Execute this script directly
+if (require.main === module) {
+  console.log('electron-scripts.cjs executed directly');
+}
