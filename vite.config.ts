@@ -11,12 +11,12 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }: { mode: string }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 8081,
     hmr: {
       // Disable WebSocket host check which causes the __WS_TOKEN__ error
       protocol: 'ws',
       host: 'localhost',
-      port: 8080
+      port: 8081
     }
   },
   plugins: [
