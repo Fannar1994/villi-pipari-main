@@ -5,6 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
+// Add this to make TypeScript aware of the window.electron object
+declare global {
+  interface Window {
+    electron?: {
+      selectDirectory: () => Promise<string | null>;
+    };
+  }
+}
+
 interface DirectorySelectProps {
   value: string;
   onChange: (path: string) => void;
@@ -20,18 +29,18 @@ export function DirectorySelect({
   icon,
   disabled = false,
 }: DirectorySelectProps) {
-  // In a real application with Electron/Node.js, we would have access to the file system
-  // For this web demo, we'll simulate directory selection
-  
-  const handleButtonClick = () => {
-    // In a real app, we'd use something like:
-    // const result = await window.electron.showOpenDialog({ properties: ['openDirectory'] });
-    // if (!result.canceled) {
-    //   onChange(result.filePaths[0]);
-    // }
-    
-    // For the demo, we'll simulate selecting the user's Documents folder
-    onChange('C:/Users/User/Documents');
+  const handleButtonClick = async () => {
+    // Check if we're running in Electron
+    if (window.electron) {
+      // Use Electron's native dialog
+      const result = await window.electron.selectDirectory();
+      if (result) {
+        onChange(result);
+      }
+    } else {
+      // Fallback for web version (demo mode)
+      onChange('C:/Users/User/Documents');
+    }
   };
 
   return (
