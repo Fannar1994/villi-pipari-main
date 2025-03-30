@@ -11,8 +11,8 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }: { mode: string }) => ({
   server: {
     host: "::",
-    port: 8090, // Set a specific port
-    strictPort: false, // Allow fallback to another port if 8090 is in use
+    port: 8080, // Fixed port as required
+    strictPort: true, // Force use of specified port
     hmr: {
       // Disable WebSocket host check which causes the __WS_TOKEN__ error
       protocol: 'ws',

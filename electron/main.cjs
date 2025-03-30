@@ -21,9 +21,8 @@ function createWindow() {
 
   // Load the app
   if (isDev) {
-    // In development, load from dev server
-    // Default to port 8090, but try to detect the actual port from console output if available
-    const port = process.env.PORT || 8090;
+    // In development, load from dev server with fixed port
+    const port = 8080; // Fixed port that matches vite.config.ts
     console.log(`Loading app from development server at http://localhost:${port}`);
     mainWindow.loadURL(`http://localhost:${port}`);
     
