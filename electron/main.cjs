@@ -156,3 +156,19 @@ ipcMain.handle('select-directory', async () => {
   
   return result.filePaths[0];
 });
+
+// New handler for writing files
+ipcMain.handle('write-file', async (event, { filePath, data }) => {
+  try {
+    fs.writeFileSync(filePath, data);
+    return { success: true, filePath };
+  } catch (error) {
+    console.error('Error writing file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// New handler for checking if file exists
+ipcMain.handle('file-exists', async (event, filePath) => {
+  return fs.existsSync(filePath);
+});

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { FileCheck, FolderOutput, FileSpreadsheet } from 'lucide-react';
+import { parseTimesheetFile, generateInvoices } from '@/lib/excelProcessor';
 
 const Index = () => {
   const [timesheetFile, setTimesheetFile] = useState<File | null>(null);
@@ -49,24 +50,42 @@ const Index = () => {
       return;
     }
 
-    // In a real implementation, we would process the Excel files here
-    // For this demo, we'll simulate the process
-    setIsProcessing(true);
-    setProcessStatus({ status: 'processing', message: 'Vinnur að reikningagerð...' });
+    try {
+      setIsProcessing(true);
+      setProcessStatus({ status: 'processing', message: 'Vinnur að reikningagerð...' });
 
-    // Simulate processing
-    setTimeout(() => {
+      // Parse the timesheet file
+      const timesheetEntries = await parseTimesheetFile(timesheetFile);
+      
+      // Generate invoices
+      const invoiceCount = await generateInvoices(timesheetEntries, templateFile, outputDir);
+      
       setIsProcessing(false);
       setProcessStatus({
         status: 'success',
         message: 'Reikningar hafa verið búnir til!',
-        invoiceCount: 5, // This would be the actual count in real implementation
+        invoiceCount,
       });
+      
       toast({
         title: 'Árangur!',
-        description: '5 reikningar hafa verið búnir til.',
+        description: `${invoiceCount} reikningar hafa verið búnir til.`,
       });
-    }, 3000);
+      
+    } catch (error) {
+      console.error('Error generating invoices:', error);
+      setIsProcessing(false);
+      setProcessStatus({
+        status: 'error',
+        message: `Villa kom upp: ${error.message || 'Óþekkt villa'}`,
+      });
+      
+      toast({
+        title: 'Villa',
+        description: 'Ekki tókst að búa til reikninga.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
