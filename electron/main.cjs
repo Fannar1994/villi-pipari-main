@@ -10,12 +10,12 @@ const http = require('http');
 console.log('Electron app starting...');
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Current working directory:', process.cwd());
-console.log('Vite server port:', process.env.VITE_PORT || 8090);
+console.log('Vite server port:', process.env.VITE_PORT || 8080);
 
 let mainWindow;
 let retryCount = 0;
 const MAX_RETRIES = 30;
-const VITE_PORT = process.env.VITE_PORT || 8090; // Use environment variable or default to 8090
+const VITE_PORT = process.env.VITE_PORT || 8080; // Use environment variable or default to 8080
 
 function createWindow() {
   console.log('Creating Electron window');

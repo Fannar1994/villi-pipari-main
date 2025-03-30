@@ -9,8 +9,8 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Use the environment variable or default to 8090
-  const port = parseInt(process.env.VITE_PORT || '8090', 10);
+  // Always use port 8080 as required
+  const port = 8080;
   console.log(`Configuring Vite with port: ${port}`);
   
   return {

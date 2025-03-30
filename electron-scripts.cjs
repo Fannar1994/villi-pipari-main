@@ -21,10 +21,10 @@ async function runDevelopment() {
     // Wait a moment for Vite to start
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    console.log(`Starting Electron with port=${VITE_PORT}`);
+    console.log(`Starting Electron with port=${VITE_PORT} and trace warnings enabled`);
     
-    // Start Electron with the correct port
-    const electronProcess = spawn('electron', ['electron/main.cjs'], {
+    // Start Electron with the correct port and trace warnings enabled
+    const electronProcess = spawn('electron', ['--trace-warnings', 'electron/main.cjs'], {
       stdio: 'inherit',
       shell: true,
       env: {
@@ -63,10 +63,10 @@ async function updatePackageJson() {
   
   console.log(`Using fixed port ${VITE_PORT} for Electron development`);
 
-  // Add electron scripts with fixed port configuration
+  // Add electron scripts with fixed port configuration and trace warnings
   packageJson.scripts = {
     ...packageJson.scripts,
-    "electron:dev": `concurrently "cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} npm run dev" "wait-on http-get://localhost:${VITE_PORT} && cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} electron electron/main.cjs"`,
+    "electron:dev": `concurrently "cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} npm run dev" "wait-on http-get://localhost:${VITE_PORT} && cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} electron --trace-warnings electron/main.cjs"`,
     "electron:build": "npm run build && electron-builder",
     "electron:build:win": "npm run build && electron-builder --windows",
     "electron:package": "node -e \"require('child_process').execSync('npm run build', {stdio: 'inherit'})\" && electron-builder --dir --config electron-builder.json"
