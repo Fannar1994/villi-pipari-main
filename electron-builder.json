@@ -15,6 +15,18 @@
     ],
     "icon": "public/favicon.ico"
   },
+  "mac": {
+    "target": [
+      "dmg"
+    ],
+    "icon": "public/favicon.ico"
+  },
+  "linux": {
+    "target": [
+      "AppImage"
+    ],
+    "icon": "public/favicon.ico"
+  },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
