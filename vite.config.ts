@@ -15,9 +15,9 @@ export default defineConfig(({ mode }) => {
   
   return {
     server: {
-      host: "localhost",
-      port: port,
-      strictPort: false, // Allow Vite to find another port if this one is in use
+      host: true, // Listen on all addresses including network IP
+      port: port, // Fixed port
+      strictPort: true, // Fail if port is in use
       hmr: {
         protocol: 'ws',
         host: 'localhost',

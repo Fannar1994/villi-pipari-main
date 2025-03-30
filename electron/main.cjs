@@ -46,14 +46,17 @@ function createWindow() {
 async function testConnection(url, timeout = 1000) {
   return new Promise((resolve) => {
     const req = http.get(url, (res) => {
+      console.log(`Connection test to ${url} returned status: ${res.statusCode}`);
       resolve(res.statusCode === 200);
       res.resume(); // Consume response data to free up memory
-    }).on('error', () => {
+    }).on('error', (err) => {
+      console.error(`Connection test to ${url} failed:`, err.message);
       resolve(false);
     });
     
     // Set timeout
     req.setTimeout(timeout, () => {
+      console.error(`Connection test to ${url} timed out`);
       req.abort();
       resolve(false);
     });
@@ -84,6 +87,7 @@ async function loadDevelopmentApp() {
         'Development Server Error',
         `Could not connect to development server at ${devServerUrl} after ${MAX_RETRIES} attempts.\n\nPlease check if the Vite server is running on port ${VITE_PORT}.`
       );
+      app.quit();
     }
   } catch (err) {
     console.error('Error loading development app:', err);
@@ -91,6 +95,7 @@ async function loadDevelopmentApp() {
       'Development Error',
       `Failed to load development app: ${err.message}`
     );
+    app.quit();
   }
 }
 

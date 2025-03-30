@@ -12,14 +12,14 @@ async function runDevelopment() {
   try {
     console.log(`Starting Vite on port ${VITE_PORT}...`);
     
-    // Start Vite on the fixed port
-    const viteProcess = spawn('npx', ['vite', `--port=${VITE_PORT}`, '--strictPort=false'], {
+    // Start Vite on the fixed port with host option to listen on all interfaces
+    const viteProcess = spawn('npx', ['vite', `--port=${VITE_PORT}`, '--host', '--strictPort'], {
       stdio: 'inherit',
       shell: true
     });
     
     // Wait a moment for Vite to start
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     console.log(`Starting Electron with port=${VITE_PORT} and trace warnings enabled`);
     
@@ -44,10 +44,10 @@ async function runDevelopment() {
     process.on('SIGINT', cleanup);
     process.on('SIGTERM', cleanup);
     
-    electronProcess.on('exit', () => {
-      console.log('Electron process exited, cleaning up...');
+    electronProcess.on('exit', (code) => {
+      console.log(`Electron process exited with code ${code}, cleaning up...`);
       cleanup();
-      process.exit(0);
+      process.exit(code || 0);
     });
     
   } catch (error) {
@@ -66,7 +66,7 @@ async function updatePackageJson() {
   // Add electron scripts with fixed port configuration and trace warnings
   packageJson.scripts = {
     ...packageJson.scripts,
-    "electron:dev": `concurrently "cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} npm run dev" "wait-on http-get://localhost:${VITE_PORT} && cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} electron --trace-warnings electron/main.cjs"`,
+    "electron:dev": `concurrently "cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} npm run dev -- --host --port=${VITE_PORT} --strictPort" "wait-on http-get://localhost:${VITE_PORT} && cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} electron --trace-warnings electron/main.cjs"`,
     "electron:build": "npm run build && electron-builder",
     "electron:build:win": "npm run build && electron-builder --windows",
     "electron:package": "node -e \"require('child_process').execSync('npm run build', {stdio: 'inherit'})\" && electron-builder --dir --config electron-builder.json"
