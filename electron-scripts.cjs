@@ -1,10 +1,11 @@
+
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { execSync, spawn } = require('child_process');
 
 // Fixed port for Vite
-const VITE_PORT = 8080;
+const VITE_PORT = 8090;
 
 // Function to run in development mode
 async function runDevelopment() {
@@ -12,10 +13,13 @@ async function runDevelopment() {
     console.log(`Starting Vite on port ${VITE_PORT}...`);
     
     // Start Vite on the fixed port
-    const viteProcess = spawn('npx', ['vite', `--port=${VITE_PORT}`, '--strictPort=true'], {
+    const viteProcess = spawn('npx', ['vite', `--port=${VITE_PORT}`, '--strictPort=false'], {
       stdio: 'inherit',
       shell: true
     });
+    
+    // Wait a moment for Vite to start
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     console.log(`Starting Electron with port=${VITE_PORT}`);
     
@@ -25,7 +29,8 @@ async function runDevelopment() {
       shell: true,
       env: {
         ...process.env,
-        NODE_ENV: 'development'
+        NODE_ENV: 'development',
+        VITE_PORT: VITE_PORT.toString()
       }
     });
     
@@ -61,7 +66,7 @@ async function updatePackageJson() {
   // Add electron scripts with fixed port configuration
   packageJson.scripts = {
     ...packageJson.scripts,
-    "electron:dev": `concurrently "cross-env NODE_ENV=development npm run dev" "wait-on http-get://localhost:${VITE_PORT} && electron electron/main.cjs"`,
+    "electron:dev": `concurrently "cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} npm run dev" "wait-on http-get://localhost:${VITE_PORT} && cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} electron electron/main.cjs"`,
     "electron:build": "npm run build && electron-builder",
     "electron:build:win": "npm run build && electron-builder --windows",
     "electron:package": "node -e \"require('child_process').execSync('npm run build', {stdio: 'inherit'})\" && electron-builder --dir --config electron-builder.json"

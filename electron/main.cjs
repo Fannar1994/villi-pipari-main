@@ -1,3 +1,4 @@
+
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const isDev = process.env.NODE_ENV === 'development';
@@ -9,11 +10,12 @@ const http = require('http');
 console.log('Electron app starting...');
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Current working directory:', process.cwd());
+console.log('Vite server port:', process.env.VITE_PORT || 8090);
 
 let mainWindow;
 let retryCount = 0;
 const MAX_RETRIES = 30;
-const VITE_PORT = 8080; // Fixed port for Vite
+const VITE_PORT = process.env.VITE_PORT || 8090; // Use environment variable or default to 8090
 
 function createWindow() {
   console.log('Creating Electron window');
@@ -43,18 +45,18 @@ function createWindow() {
 
 async function testConnection(url, timeout = 1000) {
   return new Promise((resolve) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const req = http.get(url, (res) => {
+      resolve(res.statusCode === 200);
+      res.resume(); // Consume response data to free up memory
+    }).on('error', () => {
+      resolve(false);
+    });
     
-    fetch(url, { signal: controller.signal })
-      .then(res => {
-        clearTimeout(timeoutId);
-        resolve(res.ok);
-      })
-      .catch(() => {
-        clearTimeout(timeoutId);
-        resolve(false);
-      });
+    // Set timeout
+    req.setTimeout(timeout, () => {
+      req.abort();
+      resolve(false);
+    });
   });
 }
 
@@ -99,7 +101,13 @@ function loadProductionApp() {
   
   // Check if the file exists before loading it
   if (fs.existsSync(indexPath)) {
-    mainWindow.loadFile(indexPath);
+    const fileUrl = url.format({
+      pathname: indexPath,
+      protocol: 'file:',
+      slashes: true
+    });
+    console.log(`Loading file URL: ${fileUrl}`);
+    mainWindow.loadURL(fileUrl);
   } else {
     console.error(`Error: Could not find index.html at ${indexPath}`);
     dialog.showErrorBox(
