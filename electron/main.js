@@ -57,4 +57,3 @@ ipcMain.handle('select-directory', async () => {
   
   return result.filePaths[0];
 });
-
