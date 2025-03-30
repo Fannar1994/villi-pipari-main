@@ -1,4 +1,3 @@
-
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const isDev = process.env.NODE_ENV === 'development';
@@ -9,73 +8,12 @@ const http = require('http');
 // Add debugging info
 console.log('Electron app starting...');
 console.log('Environment:', process.env.NODE_ENV);
-console.log('Electron port:', process.env.ELECTRON_PORT);
 console.log('Current working directory:', process.cwd());
 
 let mainWindow;
 let retryCount = 0;
 const MAX_RETRIES = 30;
-
-// Function to check if a port is in use
-function isPortInUse(port) {
-  return new Promise((resolve) => {
-    const server = http.createServer();
-    server.once('error', () => {
-      resolve(true); // Port is in use
-    });
-    server.once('listening', () => {
-      server.close();
-      resolve(false); // Port is available
-    });
-    server.listen(port);
-  });
-}
-
-// Function to find the port Vite is actually using
-async function findViteServerPort() {
-  // First, check if ELECTRON_PORT environment variable is set
-  if (process.env.ELECTRON_PORT) {
-    const portFromEnv = parseInt(process.env.ELECTRON_PORT, 10);
-    console.log(`Using port from environment variable: ${portFromEnv}`);
-    return portFromEnv;
-  }
-
-  // Try common Vite ports (3000-3100)
-  for (let port = 3000; port <= 3100; port++) {
-    try {
-      console.log(`Checking for Vite server on port ${port}...`);
-      const response = await fetch(`http://localhost:${port}`);
-      if (response.ok) {
-        console.log(`Vite server found on port ${port}`);
-        return port;
-      }
-    } catch (err) {
-      // This port doesn't have a running server, continue checking
-    }
-  }
-
-  // Default to 3000 if no server is found
-  console.log('Could not detect Vite server, defaulting to port 3000');
-  return 3000;
-}
-
-// Function to test connection to a URL
-async function testConnection(url, timeout = 1000) {
-  return new Promise((resolve) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
-    fetch(url, { signal: controller.signal })
-      .then(res => {
-        clearTimeout(timeoutId);
-        resolve(res.ok);
-      })
-      .catch(() => {
-        clearTimeout(timeoutId);
-        resolve(false);
-      });
-  });
-}
+const VITE_PORT = 8080; // Fixed port for Vite
 
 function createWindow() {
   console.log('Creating Electron window');
@@ -103,10 +41,26 @@ function createWindow() {
   });
 }
 
+async function testConnection(url, timeout = 1000) {
+  return new Promise((resolve) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    fetch(url, { signal: controller.signal })
+      .then(res => {
+        clearTimeout(timeoutId);
+        resolve(res.ok);
+      })
+      .catch(() => {
+        clearTimeout(timeoutId);
+        resolve(false);
+      });
+  });
+}
+
 async function loadDevelopmentApp() {
   try {
-    const port = await findViteServerPort();
-    const devServerUrl = `http://localhost:${port}`;
+    const devServerUrl = `http://localhost:${VITE_PORT}`;
     console.log(`Attempting to load app from development server at ${devServerUrl}`);
     
     // Try to connect to the dev server
@@ -126,7 +80,7 @@ async function loadDevelopmentApp() {
       console.error(`Failed to connect to dev server after ${MAX_RETRIES} attempts`);
       dialog.showErrorBox(
         'Development Server Error',
-        `Could not connect to development server at ${devServerUrl} after ${MAX_RETRIES} attempts.\n\nPlease check if the Vite server is running.`
+        `Could not connect to development server at ${devServerUrl} after ${MAX_RETRIES} attempts.\n\nPlease check if the Vite server is running on port ${VITE_PORT}.`
       );
     }
   } catch (err) {
