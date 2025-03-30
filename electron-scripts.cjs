@@ -15,11 +15,28 @@ async function runDevelopment() {
     // Start Vite on the fixed port with host option to listen on all interfaces
     const viteProcess = spawn('npx', ['vite', `--port=${VITE_PORT}`, '--host', '--strictPort'], {
       stdio: 'inherit',
-      shell: true
+      shell: true,
+      env: {
+        ...process.env,
+        NODE_ENV: 'development',
+        VITE_PORT: VITE_PORT.toString()
+      }
     });
     
     // Wait a moment for Vite to start
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Check if the server is actually running
+    try {
+      const response = await fetch(`http://localhost:${VITE_PORT}`);
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      console.log(`Vite server is running and responding on port ${VITE_PORT}`);
+    } catch (err) {
+      console.warn(`Warning: Could not connect to Vite server: ${err.message}`);
+      console.log('Continuing anyway as server might still be starting...');
+    }
     
     console.log(`Starting Electron with port=${VITE_PORT} and trace warnings enabled`);
     
@@ -37,8 +54,8 @@ async function runDevelopment() {
     // Handle process termination
     const cleanup = () => {
       console.log('Terminating processes...');
-      if (viteProcess) viteProcess.kill();
-      if (electronProcess) electronProcess.kill();
+      if (viteProcess && !viteProcess.killed) viteProcess.kill();
+      if (electronProcess && !electronProcess.killed) electronProcess.kill();
     };
     
     process.on('SIGINT', cleanup);
