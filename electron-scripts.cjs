@@ -15,7 +15,7 @@ packageJson.scripts = {
   "electron:package": "node -e \"require('child_process').execSync('npm run build', {stdio: 'inherit'})\" && electron-builder --dir --config electron-builder.json"
 };
 
-// Add main entry for Electron
+// Add main entry for Electron - explicitly set the .cjs extension
 packageJson.main = "electron/main.cjs";
 
 // Add missing fields required by electron-builder

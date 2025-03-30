@@ -9,6 +9,7 @@
     "dist/**/*",
     "electron/**/*"
   ],
+  "main": "electron/main.cjs",
   "win": {
     "target": [
       "nsis"
