@@ -38,5 +38,5 @@ export default defineConfig(({ mode }: { mode: string }) => ({
       },
     },
   },
-  base: mode === 'production' ? './' : '/',
+  base: './',
 }));

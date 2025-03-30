@@ -20,12 +20,12 @@ function createWindow() {
   // Load the app
   if (isDev) {
     // In development, load from dev server
-    mainWindow.loadURL('http://localhost:8080/#/');
+    mainWindow.loadURL('http://localhost:8080');
     // Open DevTools in development mode
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load from the dist folder with hash routing
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: '/' });
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
   mainWindow.on('closed', () => {
