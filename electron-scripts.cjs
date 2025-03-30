@@ -25,20 +25,20 @@ packageJson.author = {
 };
 
 // Make sure electron and electron-builder are only in devDependencies
+if (!packageJson.devDependencies) {
+  packageJson.devDependencies = {};
+}
+
 if (packageJson.dependencies && packageJson.dependencies.electron) {
-  // Move electron to devDependencies if it doesn't exist there
-  if (!packageJson.devDependencies.electron) {
-    packageJson.devDependencies.electron = packageJson.dependencies.electron;
-  }
+  // Move electron to devDependencies
+  packageJson.devDependencies.electron = packageJson.dependencies.electron;
   // Remove from dependencies
   delete packageJson.dependencies.electron;
 }
 
 if (packageJson.dependencies && packageJson.dependencies['electron-builder']) {
-  // Move electron-builder to devDependencies if it doesn't exist there
-  if (!packageJson.devDependencies['electron-builder']) {
-    packageJson.devDependencies['electron-builder'] = packageJson.dependencies['electron-builder'];
-  }
+  // Move electron-builder to devDependencies
+  packageJson.devDependencies['electron-builder'] = packageJson.dependencies['electron-builder'];
   // Remove from dependencies
   delete packageJson.dependencies['electron-builder'];
 }
