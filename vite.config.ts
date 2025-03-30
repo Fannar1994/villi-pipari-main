@@ -12,6 +12,12 @@ export default defineConfig(({ mode }: { mode: string }) => ({
   server: {
     host: "::",
     port: 8080,
+    hmr: {
+      // Disable WebSocket host check which causes the __WS_TOKEN__ error
+      protocol: 'ws',
+      host: 'localhost',
+      port: 8080
+    }
   },
   plugins: [
     react(),
