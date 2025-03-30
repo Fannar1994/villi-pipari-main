@@ -2,6 +2,8 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const isDev = process.env.NODE_ENV === 'development';
+const url = require('url');
+const fs = require('fs');
 
 let mainWindow;
 
@@ -20,12 +22,25 @@ function createWindow() {
   // Load the app
   if (isDev) {
     // In development, load from dev server
-    mainWindow.loadURL('http://localhost:8080');
+    // Default to port 8090, but try to detect the actual port from console output if available
+    const port = process.env.PORT || 8090;
+    console.log(`Loading app from development server at http://localhost:${port}`);
+    mainWindow.loadURL(`http://localhost:${port}`);
+    
     // Open DevTools in development mode
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load from the dist folder with hash routing
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    console.log(`Loading production app from: ${indexPath}`);
+    
+    // Check if the file exists before loading it
+    if (fs.existsSync(indexPath)) {
+      mainWindow.loadFile(indexPath);
+    } else {
+      console.error(`Error: Could not find index.html at ${indexPath}`);
+      app.quit();
+    }
   }
 
   mainWindow.on('closed', () => {

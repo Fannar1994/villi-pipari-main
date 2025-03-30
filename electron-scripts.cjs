@@ -6,10 +6,10 @@ const path = require('path');
 const packageJsonPath = path.join(__dirname, 'package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
-// Add electron scripts
+// Add electron scripts with improved port handling
 packageJson.scripts = {
   ...packageJson.scripts,
-  "electron:dev": "concurrently \"cross-env NODE_ENV=development npm run dev\" \"wait-on http://localhost:8080 && electron electron/main.cjs\"",
+  "electron:dev": "concurrently \"cross-env NODE_ENV=development npm run dev\" \"wait-on http-get://localhost:8090 && electron electron/main.cjs\"",
   "electron:build": "npm run build && electron-builder",
   "electron:build:win": "npm run build && electron-builder --windows",
   "electron:package": "node -e \"require('child_process').execSync('npm run build', {stdio: 'inherit'})\" && electron-builder --dir --config electron-builder.json"
