@@ -4,8 +4,8 @@ const path = require('path');
 const http = require('http');
 const { execSync, spawn } = require('child_process');
 
-// Fixed port for Vite
-const VITE_PORT = 8090;
+// Fixed port for Vite - changed to 8080
+const VITE_PORT = 8080;
 
 // Function to run in development mode
 async function runDevelopment() {
