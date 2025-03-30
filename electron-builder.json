@@ -1,7 +1,7 @@
 
 {
   "appId": "com.villipipari.invoicegenerator",
-  "productName": "Villi Pípari",
+  "productName": "Villi pipari",
   "directories": {
     "output": "release",
     "buildResources": "public"
