@@ -11,7 +11,7 @@ packageJson.scripts = {
   ...packageJson.scripts,
   "electron:dev": "concurrently \"cross-env NODE_ENV=development npm run dev\" \"wait-on http://localhost:8080 && electron electron/main.js\"",
   "electron:build": "npm run build && electron-builder",
-  "electron:package": "node ./node_modules/.bin/vite build && electron-builder --dir --config electron-builder.json"
+  "electron:package": "node -e \"require('child_process').execSync('npm run build', {stdio: 'inherit'})\" && electron-builder --dir --config electron-builder.json"
 };
 
 // Add main entry for Electron
