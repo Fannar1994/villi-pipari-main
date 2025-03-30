@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
-const { execSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
 
 // Function to check if a port is in use
 function isPortInUse(port) {
@@ -39,41 +39,56 @@ async function findAvailablePort(startPort, maxAttempts = 30) {
   return null; // Return null if no port is available
 }
 
-// Function to get the port Vite is actually using
-// This helps when Vite automatically selects a different port
-async function detectVitePort() {
-  try {
-    // Start Vite in the background and capture its output
-    const viteProcess = execSync('npx vite --port=8080 --strictPort=false --host=localhost', { 
-      encoding: 'utf8',
-      timeout: 5000, // 5 second timeout
-      stdio: ['pipe', 'pipe', 'pipe']
+// Improved function to detect which port Vite is using
+async function detectVitePort(port) {
+  return new Promise((resolve, reject) => {
+    console.log(`Starting Vite on port ${port}...`);
+    
+    // Start Vite as a child process
+    const viteProcess = spawn('npx', ['vite', `--port=${port}`, '--strictPort=false'], {
+      stdio: ['inherit', 'pipe', 'inherit'],
+      shell: true
     });
     
-    // Extract the port from Vite's output using a regex
-    const portMatch = viteProcess.match(/Local:\s+http:\/\/localhost:(\d+)/);
-    if (portMatch && portMatch[1]) {
-      return parseInt(portMatch[1], 10);
-    }
-  } catch (error) {
-    console.log('Could not detect Vite port automatically:', error.message);
-  }
-  
-  // Fallback: Try common ports
-  for (let port = 8080; port < 8110; port++) {
-    try {
-      const response = await fetch(`http://localhost:${port}`);
-      if (response.ok) {
-        console.log(`Vite server detected on port ${port}`);
-        return port;
+    let output = '';
+    let portDetected = false;
+    
+    // Listen for Vite's stdout to extract the port
+    viteProcess.stdout.on('data', (data) => {
+      const dataStr = data.toString();
+      output += dataStr;
+      console.log(dataStr); // Log Vite output
+      
+      // Try to extract the port from Vite's output
+      const portMatch = dataStr.match(/Local:\s+http:\/\/localhost:(\d+)/);
+      if (portMatch && portMatch[1] && !portDetected) {
+        const detectedPort = parseInt(portMatch[1], 10);
+        portDetected = true;
+        console.log(`✅ Vite server detected on port ${detectedPort}`);
+        resolve({ port: detectedPort, process: viteProcess });
       }
-    } catch (err) {
-      // Port not responding, continue
-    }
-  }
-  
-  console.log('Could not detect Vite port, defaulting to 8080');
-  return 8080;
+    });
+    
+    // Set a timeout in case Vite doesn't start within a reasonable time
+    const timeout = setTimeout(() => {
+      if (!portDetected) {
+        viteProcess.kill();
+        reject(new Error('Timed out waiting for Vite to start'));
+      }
+    }, 30000); // 30 seconds timeout
+    
+    viteProcess.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
+    
+    viteProcess.on('exit', (code) => {
+      if (!portDetected) {
+        clearTimeout(timeout);
+        reject(new Error(`Vite process exited with code ${code} before port was detected`));
+      }
+    });
+  });
 }
 
 async function updatePackageJson() {
@@ -82,7 +97,7 @@ async function updatePackageJson() {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
   // Find an available port
-  const port = await findAvailablePort(8080);
+  const port = await findAvailablePort(3000);
   if (!port) {
     console.error('No available ports found. Please close some applications and try again.');
     process.exit(1);
@@ -137,10 +152,68 @@ async function updatePackageJson() {
   console.log(`Electron will connect to port ${port}`);
 }
 
-// Execute this script directly
-if (require.main === module) {
-  console.log('electron-scripts.cjs executed directly');
-  updatePackageJson().catch(console.error);
+// Function to run in development mode
+async function runDevelopment() {
+  try {
+    // Find an available port
+    const startPort = 3000;
+    const port = await findAvailablePort(startPort);
+    
+    if (!port) {
+      console.error('No available ports found. Please close some applications and try again.');
+      process.exit(1);
+    }
+    
+    console.log(`Found available port: ${port}`);
+    
+    // Start Vite on the available port
+    const { port: actualPort, process: viteProcess } = await detectVitePort(port);
+    
+    console.log(`Starting Electron with ELECTRON_PORT=${actualPort}`);
+    
+    // Start Electron with the correct port
+    const electronProcess = spawn('electron', ['electron/main.cjs'], {
+      stdio: 'inherit',
+      shell: true,
+      env: {
+        ...process.env,
+        NODE_ENV: 'development',
+        ELECTRON_PORT: actualPort.toString()
+      }
+    });
+    
+    // Handle process termination
+    const cleanup = () => {
+      console.log('Terminating processes...');
+      if (viteProcess) viteProcess.kill();
+      if (electronProcess) electronProcess.kill();
+    };
+    
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
+    
+    electronProcess.on('exit', () => {
+      console.log('Electron process exited, cleaning up...');
+      cleanup();
+      process.exit(0);
+    });
+    
+  } catch (error) {
+    console.error('Error running in development mode:', error);
+    process.exit(1);
+  }
 }
 
-module.exports = { findAvailablePort, detectVitePort };
+// Execute this script directly
+if (require.main === module) {
+  const args = process.argv.slice(2);
+  if (args.includes('run')) {
+    console.log('Running in development mode...');
+    runDevelopment().catch(console.error);
+  } else {
+    console.log('Updating package.json...');
+    updatePackageJson().catch(console.error);
+  }
+}
+
+module.exports = { findAvailablePort, detectVitePort, runDevelopment };

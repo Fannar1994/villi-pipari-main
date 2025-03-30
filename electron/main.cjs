@@ -7,10 +7,14 @@ const fs = require('fs');
 const http = require('http');
 
 // Add debugging info
-console.log('Starting Electron app with environment:', process.env.NODE_ENV);
+console.log('Electron app starting...');
+console.log('Environment:', process.env.NODE_ENV);
+console.log('Electron port:', process.env.ELECTRON_PORT);
 console.log('Current working directory:', process.cwd());
 
 let mainWindow;
+let retryCount = 0;
+const MAX_RETRIES = 30;
 
 // Function to check if a port is in use
 function isPortInUse(port) {
@@ -36,8 +40,8 @@ async function findViteServerPort() {
     return portFromEnv;
   }
 
-  // Try common Vite ports (8080-8100)
-  for (let port = 8080; port <= 8100; port++) {
+  // Try common Vite ports (3000-3100)
+  for (let port = 3000; port <= 3100; port++) {
     try {
       console.log(`Checking for Vite server on port ${port}...`);
       const response = await fetch(`http://localhost:${port}`);
@@ -50,9 +54,27 @@ async function findViteServerPort() {
     }
   }
 
-  // Default to 8080 if no server is found
-  console.log('Could not detect Vite server, defaulting to port 8080');
-  return 8080;
+  // Default to 3000 if no server is found
+  console.log('Could not detect Vite server, defaulting to port 3000');
+  return 3000;
+}
+
+// Function to test connection to a URL
+async function testConnection(url, timeout = 1000) {
+  return new Promise((resolve) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    fetch(url, { signal: controller.signal })
+      .then(res => {
+        clearTimeout(timeoutId);
+        resolve(res.ok);
+      })
+      .catch(() => {
+        clearTimeout(timeoutId);
+        resolve(false);
+      });
+  });
 }
 
 function createWindow() {
@@ -71,79 +93,67 @@ function createWindow() {
 
   // Load the app
   if (isDev) {
-    // In development, try to detect which port Vite is using
-    findViteServerPort().then(port => {
-      const devServerUrl = `http://localhost:${port}`;
-      console.log(`Loading app from development server at ${devServerUrl}`);
-      
-      // Try to connect to the dev server with retries
-      const maxRetries = 30;
-      let retries = 0;
-      
-      const checkServer = () => {
-        console.log(`Attempt ${retries + 1}/${maxRetries}: Checking if dev server is running at ${devServerUrl}`);
-        fetch(devServerUrl)
-          .then(res => {
-            if (res.ok) {
-              console.log('Dev server is running, loading URL in Electron');
-              mainWindow.loadURL(devServerUrl);
-              
-              // Open DevTools in development mode
-              mainWindow.webContents.openDevTools();
-            } else {
-              retryConnection();
-            }
-          })
-          .catch(err => {
-            console.log(`Error connecting to dev server: ${err.message}`);
-            retryConnection();
-          });
-      };
-      
-      const retryConnection = () => {
-        retries++;
-        if (retries < maxRetries) {
-          console.log(`Retrying in 1 second... (${retries}/${maxRetries})`);
-          setTimeout(checkServer, 1000);
-        } else {
-          console.error(`Failed to connect to dev server after ${maxRetries} attempts`);
-          dialog.showErrorBox(
-            'Development Server Error',
-            `Could not connect to development server at ${devServerUrl} after ${maxRetries} attempts.\n\nPlease check if the Vite server is running.`
-          );
-        }
-      };
-      
-      checkServer();
-    })
-    .catch(err => {
-      console.error('Error finding Vite server port:', err);
-      dialog.showErrorBox(
-        'Development Error',
-        `Failed to find Vite server port: ${err.message}`
-      );
-    });
+    loadDevelopmentApp();
   } else {
-    // In production, load from the dist folder with hash routing
-    const indexPath = path.join(__dirname, '../dist/index.html');
-    console.log(`Loading production app from: ${indexPath}`);
-    
-    // Check if the file exists before loading it
-    if (fs.existsSync(indexPath)) {
-      mainWindow.loadFile(indexPath);
-    } else {
-      console.error(`Error: Could not find index.html at ${indexPath}`);
-      dialog.showErrorBox(
-        'Application Error', 
-        `Could not find index.html at ${indexPath}`
-      );
-      app.quit();
-    }
+    loadProductionApp();
   }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+}
+
+async function loadDevelopmentApp() {
+  try {
+    const port = await findViteServerPort();
+    const devServerUrl = `http://localhost:${port}`;
+    console.log(`Attempting to load app from development server at ${devServerUrl}`);
+    
+    // Try to connect to the dev server
+    const isConnected = await testConnection(devServerUrl);
+    
+    if (isConnected) {
+      console.log('Dev server is running, loading URL in Electron');
+      mainWindow.loadURL(devServerUrl);
+      
+      // Open DevTools in development mode
+      mainWindow.webContents.openDevTools();
+    } else if (retryCount < MAX_RETRIES) {
+      retryCount++;
+      console.log(`Connection failed. Retrying in 1 second... (${retryCount}/${MAX_RETRIES})`);
+      setTimeout(loadDevelopmentApp, 1000);
+    } else {
+      console.error(`Failed to connect to dev server after ${MAX_RETRIES} attempts`);
+      dialog.showErrorBox(
+        'Development Server Error',
+        `Could not connect to development server at ${devServerUrl} after ${MAX_RETRIES} attempts.\n\nPlease check if the Vite server is running.`
+      );
+    }
+  } catch (err) {
+    console.error('Error loading development app:', err);
+    dialog.showErrorBox(
+      'Development Error',
+      `Failed to load development app: ${err.message}`
+    );
+  }
+}
+
+function loadProductionApp() {
+  // In production, load from the dist folder
+  const indexPath = path.join(__dirname, '../dist/index.html');
+  console.log(`Loading production app from: ${indexPath}`);
+  
+  // Check if the file exists before loading it
+  if (fs.existsSync(indexPath)) {
+    mainWindow.loadFile(indexPath);
+  } else {
+    console.error(`Error: Could not find index.html at ${indexPath}`);
+    dialog.showErrorBox(
+      'Application Error', 
+      `Could not find index.html at ${indexPath}`
+    );
+    app.quit();
+  }
 }
 
 app.whenReady().then(createWindow);
