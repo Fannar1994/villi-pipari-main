@@ -9,14 +9,14 @@ const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 // Add electron scripts
 packageJson.scripts = {
   ...packageJson.scripts,
-  "electron:dev": "concurrently \"cross-env NODE_ENV=development npm run dev\" \"wait-on http://localhost:8080 && electron electron/main.js\"",
+  "electron:dev": "concurrently \"cross-env NODE_ENV=development npm run dev\" \"wait-on http://localhost:8081 && electron electron/main.cjs\"",
   "electron:build": "npm run build && electron-builder",
   "electron:build:win": "npm run build && electron-builder --windows",
   "electron:package": "node -e \"require('child_process').execSync('npm run build', {stdio: 'inherit'})\" && electron-builder --dir --config electron-builder.json"
 };
 
 // Add main entry for Electron
-packageJson.main = "electron/main.js";
+packageJson.main = "electron/main.cjs";
 
 // Add missing fields required by electron-builder
 packageJson.description = "Simple Bill Producer - An Electron application for bill generation";
