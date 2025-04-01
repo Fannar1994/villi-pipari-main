@@ -97,8 +97,8 @@ export async function generateInvoices(
           dateFormatted, 
           entry.description, 
           entry.employee, 
-          entry.hours, 
-          hourlyRate
+          entry.hours.toString(), // Convert number to string
+          hourlyRate.toString()   // Convert number to string
         ]);
         totalHours += entry.hours;
       });
@@ -106,7 +106,7 @@ export async function generateInvoices(
       // Add totals
       const totalAmount = totalHours * hourlyRate;
       invoiceData.push(['', '', '', '', '']);
-      invoiceData.push(['Total Hours:', '', '', totalHours, '']);
+      invoiceData.push(['Total Hours:', '', '', totalHours.toString(), '']); // Convert number to string
       invoiceData.push(['Total Amount:', '', '', '', `${totalAmount} ISK`]);
       invoiceData.push(['', '', '', '', '']);
       invoiceData.push(['Payment Terms:', 'Net 30', '', '', '']);
