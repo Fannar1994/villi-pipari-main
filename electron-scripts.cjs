@@ -73,9 +73,9 @@ async function runDevelopment() {
   }
 }
 
-async function updatePackageJson() {
+function updatePackageJson() {
   // Read package.json
-  const packageJsonPath = path.join(__dirname, 'package.json');
+  const packageJsonPath = path.join(process.cwd(), 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   
   console.log(`Using fixed port ${VITE_PORT} for Electron development`);
@@ -123,6 +123,7 @@ async function updatePackageJson() {
 
   console.log('Electron scripts added to package.json');
   console.log(`Electron will connect to port ${VITE_PORT}`);
+  return packageJson;
 }
 
 // Execute this script directly
@@ -133,8 +134,10 @@ if (require.main === module) {
     runDevelopment().catch(console.error);
   } else {
     console.log('Updating package.json...');
-    updatePackageJson().catch(console.error);
+    const updatedPackage = updatePackageJson();
+    console.log('Updated package.json with the following scripts:');
+    console.log(JSON.stringify(updatedPackage.scripts, null, 2));
   }
 }
 
-module.exports = { runDevelopment };
+module.exports = { runDevelopment, updatePackageJson };
