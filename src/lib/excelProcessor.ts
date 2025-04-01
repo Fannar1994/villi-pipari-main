@@ -39,20 +39,13 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
     }));
   } catch (error) {
     console.error('Error parsing timesheet file:', error);
-    // If parsing fails, return dummy data for demo purposes
-    return [
-      { street: 'Laugavegur', apartment: '101', date: new Date(), hours: 2, description: 'Cleaning', employee: 'John Doe' },
-      { street: 'Laugavegur', apartment: '101', date: new Date(), hours: 1.5, description: 'Repairs', employee: 'John Doe' },
-      { street: 'Skólavörðustígur', apartment: '5', date: new Date(), hours: 3, description: 'Painting', employee: 'Jane Smith' },
-      { street: 'Bankastræti', apartment: '10A', date: new Date(), hours: 4, description: 'Renovation', employee: 'John Doe' },
-      { street: 'Bankastræti', apartment: '10A', date: new Date(), hours: 2, description: 'Finishing', employee: 'Jane Smith' },
-    ];
+    throw new Error('Villa við lestur á vinnuskýrslu');
   }
 }
 
 export async function generateInvoices(
   timesheetEntries: TimesheetEntry[],
-  templateFile: File,
+  outputFile: File,
   outputDirectory: string
 ): Promise<number> {
   try {
@@ -62,57 +55,23 @@ export async function generateInvoices(
     const groupedEntries = groupEntriesByLocation(timesheetEntries);
     console.log("Grouped entries:", groupedEntries);
     
-    // Read template file
-    const templateArrayBuffer = await templateFile.arrayBuffer();
-    const templateWorkbook = XLSX.read(templateArrayBuffer, { type: 'array' });
-    
-    // Create invoice for each location
+    // Read output file
+    const outputArrayBuffer = await outputFile.arrayBuffer();
+    const outputWorkbook = XLSX.read(outputArrayBuffer, { type: 'array' });
+
     let invoiceCount = 0;
     
     for (const [location, entries] of Object.entries(groupedEntries)) {
       console.log(`Processing location: ${location} with ${entries.length} entries`);
       
-      // Create a new workbook for this invoice
-      const invoiceWorkbook = XLSX.utils.book_new();
+      // Create a new sheet name for this location
+      const [street, apartment] = location.split('-');
+      const safeSheetName = `${street}_${apartment}`.substring(0, 31).replace(/[\[\]\*\?\/\\]/g, '_');
       
-      // Create a worksheet for invoice details
-      const invoiceData = [
-        ['Invoice', '', '', '', ''],
-        ['Villi Pípari', '', '', '', ''],
-        ['Date:', new Date().toLocaleDateString(), '', '', ''],
-        ['', '', '', '', ''],
-        ['Location:', `${entries[0].street} ${entries[0].apartment}`, '', '', ''],
-        ['', '', '', '', ''],
-        ['Work Details:', '', '', '', ''],
-        ['Date', 'Description', 'Employee', 'Hours', 'Rate'],
-      ];
+      // Create invoice data for this location
+      const invoiceData = createInvoiceData(entries);
       
-      // Add entry rows
-      let totalHours = 0;
-      const hourlyRate = 3500; // Default hourly rate in ISK
-      
-      entries.forEach(entry => {
-        const dateFormatted = entry.date.toLocaleDateString();
-        invoiceData.push([
-          dateFormatted, 
-          entry.description, 
-          entry.employee, 
-          entry.hours.toString(), // Convert number to string
-          hourlyRate.toString()   // Convert number to string
-        ]);
-        totalHours += entry.hours;
-      });
-      
-      // Add totals
-      const totalAmount = totalHours * hourlyRate;
-      invoiceData.push(['', '', '', '', '']);
-      invoiceData.push(['Total Hours:', '', '', totalHours.toString(), '']); // Convert number to string
-      invoiceData.push(['Total Amount:', '', '', '', `${totalAmount} ISK`]);
-      invoiceData.push(['', '', '', '', '']);
-      invoiceData.push(['Payment Terms:', 'Net 30', '', '', '']);
-      invoiceData.push(['Bank Account:', '0123-26-012345', '', '', '']);
-      
-      // Create worksheet from data
+      // Create a worksheet from the invoice data
       const invoiceSheet = XLSX.utils.aoa_to_sheet(invoiceData);
       
       // Set column widths
@@ -125,25 +84,27 @@ export async function generateInvoices(
       ];
       invoiceSheet['!cols'] = wscols;
       
-      // Apply some styling (as much as XLSX allows)
-      // Note: Styling capabilities are limited with xlsx library
-      
-      // Add sheet to workbook
-      XLSX.utils.book_append_sheet(invoiceWorkbook, invoiceSheet, 'Invoice');
-      
-      // Generate filename
-      const [street, apartment] = location.split('-');
-      const filename = `Invoice_${street}_${apartment}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      const filepath = path.join(outputDirectory, filename);
-      
-      console.log(`Writing invoice to: ${filepath}`);
-      
-      // Write to file using electron's fs
-      const buffer = XLSX.write(invoiceWorkbook, { type: 'buffer', bookType: 'xlsx' });
-      fs.writeFileSync(filepath, buffer);
+      // Add or replace the sheet in the output workbook
+      if (outputWorkbook.SheetNames.includes(safeSheetName)) {
+        // Replace existing sheet
+        outputWorkbook.Sheets[safeSheetName] = invoiceSheet;
+      } else {
+        // Add new sheet
+        XLSX.utils.book_append_sheet(outputWorkbook, invoiceSheet, safeSheetName);
+      }
       
       invoiceCount++;
     }
+    
+    // Save the modified workbook
+    const filename = `Invoices_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const filepath = path.join(outputDirectory, filename);
+    
+    console.log(`Writing invoices to: ${filepath}`);
+    
+    // Write to file using electron's fs
+    const buffer = XLSX.write(outputWorkbook, { type: 'buffer', bookType: 'xlsx' });
+    fs.writeFileSync(filepath, buffer);
     
     console.log(`Successfully generated ${invoiceCount} invoices`);
     return invoiceCount;
@@ -151,6 +112,47 @@ export async function generateInvoices(
     console.error('Error generating invoices:', error);
     throw error;
   }
+}
+
+function createInvoiceData(entries: TimesheetEntry[]): any[][] {
+  // Create a worksheet for invoice details
+  const invoiceData = [
+    ['Invoice', '', '', '', ''],
+    ['Villi Pípari', '', '', '', ''],
+    ['Date:', new Date().toLocaleDateString(), '', '', ''],
+    ['', '', '', '', ''],
+    ['Location:', `${entries[0].street} ${entries[0].apartment}`, '', '', ''],
+    ['', '', '', '', ''],
+    ['Work Details:', '', '', '', ''],
+    ['Date', 'Description', 'Employee', 'Hours', 'Rate'],
+  ];
+  
+  // Add entry rows
+  let totalHours = 0;
+  const hourlyRate = 3500; // Default hourly rate in ISK
+  
+  entries.forEach(entry => {
+    const dateFormatted = entry.date.toLocaleDateString();
+    invoiceData.push([
+      dateFormatted, 
+      entry.description, 
+      entry.employee, 
+      entry.hours.toString(), // Convert number to string 
+      hourlyRate.toString()   // Convert number to string
+    ]);
+    totalHours += entry.hours;
+  });
+  
+  // Add totals
+  const totalAmount = totalHours * hourlyRate;
+  invoiceData.push(['', '', '', '', '']);
+  invoiceData.push(['Total Hours:', '', '', totalHours.toString(), '']); // Convert number to string
+  invoiceData.push(['Total Amount:', '', '', '', `${totalAmount} ISK`]);
+  invoiceData.push(['', '', '', '', '']);
+  invoiceData.push(['Payment Terms:', 'Net 30', '', '', '']);
+  invoiceData.push(['Bank Account:', '0123-26-012345', '', '', '']);
+  
+  return invoiceData;
 }
 
 function groupEntriesByLocation(entries: TimesheetEntry[]): Record<string, TimesheetEntry[]> {

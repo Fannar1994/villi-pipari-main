@@ -12,7 +12,7 @@ import { parseTimesheetFile, generateInvoices } from '@/lib/excelProcessor';
 
 const Index = () => {
   const [timesheetFile, setTimesheetFile] = useState<File | null>(null);
-  const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [outputFile, setOutputFile] = useState<File | null>(null);
   const [outputDir, setOutputDir] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState<{
@@ -32,10 +32,10 @@ const Index = () => {
       return;
     }
 
-    if (!templateFile) {
+    if (!outputFile) {
       toast({
         title: 'Villa',
-        description: 'Vinsamlegast veldu sniðmát skrá.',
+        description: 'Vinsamlegast veldu Excel skrá til að skrifa í.',
         variant: 'destructive',
       });
       return;
@@ -57,8 +57,8 @@ const Index = () => {
       // Parse the timesheet file
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
-      // Generate invoices
-      const invoiceCount = await generateInvoices(timesheetEntries, templateFile, outputDir);
+      // Generate invoices using the built-in template and writing to the selected output file
+      const invoiceCount = await generateInvoices(timesheetEntries, outputFile, outputDir);
       
       setIsProcessing(false);
       setProcessStatus({
@@ -108,9 +108,9 @@ const Index = () => {
           />
           
           <FileUpload
-            value={templateFile}
-            onChange={setTemplateFile}
-            label="Sniðmát skrá"
+            value={outputFile}
+            onChange={setOutputFile}
+            label="Excel skrá til að skrifa í"
             accept=".xlsx,.xls"
             icon={<FileCheck className="mr-2 h-4 w-4" />}
             disabled={isProcessing}
