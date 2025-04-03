@@ -1,6 +1,5 @@
-
-import type { Config } from "tailwindcss";
-import tailwindAnimate from "tailwindcss-animate";
+import type { Config } from "tailwindcss"
+import tailwindAnimate from "tailwindcss-animate"
 
 export default {
   darkMode: ["class"],
@@ -21,20 +20,19 @@ export default {
     },
     extend: {
       colors: {
-        // Refined dark mode color palette
         background: {
-          DEFAULT: 'hsl(240 5% 15%)',  // Softer dark gray base
-          foreground: 'hsl(240 5% 95%)'
+          DEFAULT: 'hsl(240 5% 15%)',   // Deep charcoal base
+          foreground: 'hsl(240 5% 95%)' // Light text for contrast
         },
-        border: 'hsl(240 3% 20%)',     // Slightly lighter border
+        border: 'hsl(240 3% 20%)',      // Slightly lighter border
         input: 'hsl(240 3% 20%)',
         ring: 'hsl(240 4% 30%)',
         primary: {
-          DEFAULT: 'hsl(24 83% 47%)',  // Keep Villi orange as primary
+          DEFAULT: 'hsl(24 83% 47%)',   // Villi orange accent
           foreground: 'hsl(0 0% 98%)'
         },
         secondary: {
-          DEFAULT: 'hsl(240 3% 20%)',  // Dark gray secondary
+          DEFAULT: 'hsl(240 3% 20%)',   // Dark gray secondary
           foreground: 'hsl(0 0% 98%)'
         },
         destructive: {
@@ -42,19 +40,19 @@ export default {
           foreground: 'hsl(0 0% 98%)'
         },
         muted: {
-          DEFAULT: 'hsl(240 3% 20%)',  // Dark gray muted color
+          DEFAULT: 'hsl(240 3% 20%)',   // Dark gray muted color
           foreground: 'hsl(240 5% 65%)'
         },
         accent: {
-          DEFAULT: 'hsl(240 3% 20%)',  // Dark gray accent
+          DEFAULT: 'hsl(240 3% 20%)',   // Dark gray accent
           foreground: 'hsl(0 0% 98%)'
         },
         popover: {
-          DEFAULT: 'hsl(240 5% 15%)',  // Matching background
+          DEFAULT: 'hsl(240 5% 15%)',   // Matching background
           foreground: 'hsl(240 5% 95%)'
         },
         card: {
-          DEFAULT: 'hsl(240 5% 18%)',  // Slightly lighter than background
+          DEFAULT: 'hsl(240 5% 18%)',   // Slightly lighter than background
           foreground: 'hsl(240 5% 95%)'
         },
       },
@@ -80,4 +78,4 @@ export default {
     }
   },
   plugins: [tailwindAnimate],
-} satisfies Config;
+} satisfies Config
