@@ -1,6 +1,5 @@
 
 import * as XLSX from 'xlsx';
-import * as path from 'path';
 import { TimesheetEntry } from '@/types/timesheet';
 import { createSafeSheetName } from '../utils/formatters';
 import { groupEntriesByLocation, createInvoiceData } from './processor';
@@ -88,7 +87,10 @@ export async function generateInvoices(
     
     // Ensure outputDirectory is handled correctly
     console.log("Output directory:", outputDirectory);
-    const filePath = path.join(outputDirectory, filename);
+    // Use string concatenation instead of path.join which may not be available in browser
+    const filePath = outputDirectory.endsWith('/') || outputDirectory.endsWith('\\') 
+      ? outputDirectory + filename
+      : outputDirectory + '/' + filename;
     
     console.log("Saving file to:", filePath);
     
