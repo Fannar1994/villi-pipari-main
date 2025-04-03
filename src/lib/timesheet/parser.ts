@@ -12,7 +12,8 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
     
     console.log("Available sheets:", workbook.SheetNames);
 
-    const monthPattern = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec).*-kop$/i;
+    // Updated pattern to include all months in both English and Icelandic
+    const monthPattern = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|janúar|febrúar|mars|apríl|maí|júní|júlí|ágúst|september|október|nóvember|desember).*-kop$/i;
     const targetSheet = workbook.SheetNames.find(name => monthPattern.test(name.toLowerCase()));
 
     if (!targetSheet) {
