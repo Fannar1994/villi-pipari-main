@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,15 +21,22 @@ export function DirectorySelect({
   disabled = false,
 }: DirectorySelectProps) {
   const handleButtonClick = async () => {
-    // Check if we're running in Electron
-    if (window.electron) {
-      // Use Electron's native dialog
-      const result = await window.electron.selectDirectory();
-      if (result) {
-        onChange(result);
+    try {
+      // Check if we're running in Electron with the required API
+      if (typeof window !== 'undefined' && window.electron && window.electron.selectDirectory) {
+        // Use Electron's native dialog
+        const result = await window.electron.selectDirectory();
+        if (result) {
+          onChange(result);
+        }
+      } else {
+        // Fallback for web version (demo mode)
+        console.log("Electron API not available, using demo path");
+        onChange('C:/Users/User/Documents');
       }
-    } else {
-      // Fallback for web version (demo mode)
+    } catch (error) {
+      console.error("Error selecting directory:", error);
+      // Still provide a fallback path so the app doesn't completely break
       onChange('C:/Users/User/Documents');
     }
   };

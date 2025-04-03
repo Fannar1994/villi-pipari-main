@@ -65,9 +65,21 @@ export async function generateInvoices(
     // Write the workbook to a buffer
     const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer' });
 
-    // For browser environment (if electron is not available)
-    if (!window.electron) {
-      console.log("Running in browser environment, skipping file write");
+    // Check if we're in an Electron environment with the required API
+    if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+      console.log("Running in browser environment or electron API not available, skipping file write");
+      // For browser demo, offer file download
+      if (typeof document !== 'undefined') {
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
       return invoiceCount;
     }
 
@@ -75,20 +87,24 @@ export async function generateInvoices(
     const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
     
     // Ensure outputDirectory is handled correctly
-    // This was the root of the previous error - we were creating invalid paths
     console.log("Output directory:", outputDirectory);
     const filePath = path.join(outputDirectory, filename);
     
     console.log("Saving file to:", filePath);
     
-    // Use the window.electron API for file operations
-    const result = await window.electron.writeFile({
-      filePath: filePath,
-      data: new Uint8Array(wbout)
-    });
+    try {
+      // Use the window.electron API for file operations
+      const result = await window.electron.writeFile({
+        filePath: filePath,
+        data: new Uint8Array(wbout)
+      });
 
-    if (!result.success) {
-      throw new Error(result.error || 'Villa kom upp við að vista skjalið');
+      if (!result.success) {
+        throw new Error(result.error || 'Villa kom upp við að vista skjalið');
+      }
+    } catch (error) {
+      console.error("Error while using Electron API:", error);
+      throw new Error('Villa við að vista skrá: ' + (error.message || 'Óþekkt villa'));
     }
 
     return invoiceCount;

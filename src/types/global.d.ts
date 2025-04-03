@@ -1,12 +1,9 @@
 
-export {};
-
-declare global {
-  interface Window {
-    electron: {
-      selectDirectory: () => Promise<string | null>;
-      writeFile: (options: { filePath: string; data: Buffer | Uint8Array }) => Promise<{ success: boolean; error?: string }>;
-      fileExists: (filePath: string) => Promise<boolean>;
-    };
-  }
+// This ensures TypeScript recognizes the Electron API on the window object
+interface Window {
+  electron?: {
+    writeFile: (options: { filePath: string; data: Uint8Array }) => Promise<{ success: boolean; error?: string }>;
+    selectDirectory: () => Promise<string | null>;
+    fileExists: (filePath: string) => Promise<boolean>;
+  };
 }
