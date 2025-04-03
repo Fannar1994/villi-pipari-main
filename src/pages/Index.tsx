@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { DirectorySelect } from '@/components/DirectorySelect';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { FileCheck, FolderOutput, FileSpreadsheet, FileTemplate } from 'lucide-react';
+import { FileCheck, FolderOutput, FileSpreadsheet, FileText } from 'lucide-react';
 import { parseTimesheetFile, generateInvoices } from '@/lib/excelProcessor';
 
 const Index = () => {
@@ -103,7 +102,7 @@ const Index = () => {
             onChange={setTemplateFile}
             label="Sniðmát skrá (valfrjálst)"
             accept=".xlsx,.xls"
-            icon={<FileTemplate className="mr-2 h-4 w-4" />}
+            icon={<FileText className="mr-2 h-4 w-4" />}
             disabled={isProcessing}
           />
           
