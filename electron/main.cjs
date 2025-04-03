@@ -1,3 +1,4 @@
+
 // ✅ electron/main.cjs
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
@@ -98,9 +99,17 @@ ipcMain.handle('select-directory', async () => {
   return result.canceled ? null : result.filePaths[0];
 });
 
-ipcMain.handle('write-file', async (event, { filePath, data }) => {
+ipcMain.handle('write-file', async (event, { filePath, data, directory }) => {
   try {
-    const fullPath = path.join(app.getPath('documents'), filePath);
+    // Use the directory parameter if provided, otherwise default to documents
+    let fullPath;
+    if (directory) {
+      // Create a proper path by joining the directory and filePath
+      fullPath = path.join(directory, filePath);
+    } else {
+      fullPath = path.join(app.getPath('documents'), filePath);
+    }
+    
     const dir = path.dirname(fullPath);
     
     if (!fs.existsSync(dir)) {
@@ -110,6 +119,7 @@ ipcMain.handle('write-file', async (event, { filePath, data }) => {
     await fs.promises.writeFile(fullPath, data);
     return { success: true, path: fullPath };
   } catch (error) {
+    console.error('Error writing file:', error);
     if (error.code === 'EBUSY') {
       return { success: false, error: 'Vinsamlegast lokið skjalinu' };
     }

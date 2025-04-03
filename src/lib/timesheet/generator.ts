@@ -87,18 +87,18 @@ export async function generateInvoices(
     
     // Ensure outputDirectory is handled correctly
     console.log("Output directory:", outputDirectory);
-    // Use string concatenation instead of path.join which may not be available in browser
-    const filePath = outputDirectory.endsWith('/') || outputDirectory.endsWith('\\') 
-      ? outputDirectory + filename
-      : outputDirectory + '/' + filename;
+    // Use the filename directly without trying to join it with the outputDirectory
+    // The Electron API will handle the path properly
     
-    console.log("Saving file to:", filePath);
+    console.log("Saving file with filename:", filename);
     
     try {
-      // Use the window.electron API for file operations
+      // Use the window.electron API for file operations with just the filename
+      // Let the Electron side handle the full path creation
       const result = await window.electron.writeFile({
-        filePath: filePath,
-        data: new Uint8Array(wbout)
+        filePath: filename,
+        data: new Uint8Array(wbout),
+        directory: outputDirectory
       });
 
       if (!result.success) {
