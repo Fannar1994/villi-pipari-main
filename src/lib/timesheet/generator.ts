@@ -10,13 +10,21 @@ import { groupEntriesByLocation, createInvoiceData } from './processor';
  */
 export async function generateInvoices(
   timesheetEntries: TimesheetEntry[],
-  outputFile: File,
+  templateFile: File | null,
   outputDirectory: string
 ): Promise<number> {
   try {
-    // Read the template file (outputFile is actually the template file)
-    const outputArrayBuffer = await outputFile.arrayBuffer();
-    const outputWorkbook = XLSX.read(outputArrayBuffer, { type: 'array' });
+    // Create a new workbook or use the template if provided
+    let outputWorkbook;
+    
+    if (templateFile) {
+      // Use the provided template file
+      const templateArrayBuffer = await templateFile.arrayBuffer();
+      outputWorkbook = XLSX.read(templateArrayBuffer, { type: 'array' });
+    } else {
+      // Create a new workbook from scratch
+      outputWorkbook = XLSX.utils.book_new();
+    }
     
     // Group entries by location and apartment
     const groupedEntries = groupEntriesByLocation(timesheetEntries);
@@ -66,16 +74,10 @@ export async function generateInvoices(
     // Create a valid filename with the current date
     const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
     
-    // Fix path handling to avoid double path issues
-    let filePath: string;
-    
-    // Check if outputDirectory is an absolute path
-    if (path.isAbsolute(outputDirectory)) {
-      filePath = path.join(outputDirectory, filename);
-    } else {
-      // If it's not absolute, we'll use it as is (electron API will handle it)
-      filePath = path.join(outputDirectory, filename);
-    }
+    // Ensure outputDirectory is handled correctly
+    // This was the root of the previous error - we were creating invalid paths
+    console.log("Output directory:", outputDirectory);
+    const filePath = path.join(outputDirectory, filename);
     
     console.log("Saving file to:", filePath);
     
