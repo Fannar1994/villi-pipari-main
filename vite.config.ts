@@ -9,6 +9,12 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  // Determine the mode (development or production)
+  const isDevelopment = mode === "development";
+  const isProduction = mode === "production";
+  console.log(`Running in ${isDevelopment ? "development" : "production"} mode`);
+  // Use the appropriate tagger based on the mode
+  
   // Always use port 8080 as required
   const port = 8080;
   console.log(`Configuring Vite with port: ${port}`);
