@@ -66,15 +66,15 @@ export async function generateInvoices(
     // Create a valid filename with the current date
     const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
     
+    // Fix path handling to avoid double path issues
     let filePath: string;
     
-    // Handle different path formats
-    if (outputDirectory.includes('/') || outputDirectory.includes('\\')) {
-      // It's already a path
+    // Check if outputDirectory is an absolute path
+    if (path.isAbsolute(outputDirectory)) {
       filePath = path.join(outputDirectory, filename);
     } else {
-      // It's just a folder name, assume Documents folder
-      filePath = path.join('C:\\Users\\Fanna\\Documents', outputDirectory, filename);
+      // If it's not absolute, we'll use it as is (electron API will handle it)
+      filePath = path.join(outputDirectory, filename);
     }
     
     console.log("Saving file to:", filePath);
