@@ -6,25 +6,25 @@
 @layer base {
   :root {
     /* Dark mode color variables */
-    --background: 240 5% 15%;
+    --background: 240 5% 10%;
     --foreground: 240 5% 95%;
     
-    --card: 240 5% 18%;
+    --card: 240 5% 15%;
     --card-foreground: 240 5% 95%;
     
-    --popover: 240 5% 15%;
+    --popover: 240 5% 10%;
     --popover-foreground: 240 5% 95%;
     
     --primary: 24 83% 47%;
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 240 3% 20%;
+    --secondary: 240 3% 15%;
     --secondary-foreground: 0 0% 98%;
     
-    --muted: 240 3% 20%;
+    --muted: 240 3% 15%;
     --muted-foreground: 240 5% 65%;
     
-    --accent: 240 3% 20%;
+    --accent: 240 3% 15%;
     --accent-foreground: 0 0% 98%;
     
     --destructive: 0 62.8% 30.6%;
@@ -53,7 +53,7 @@ html, body {
   color: hsl(var(--foreground)) !important;
 }
 
-/* Additional global styles to enhance dark theme */
+/* Keep existing additional styles */
 .container {
   @apply bg-secondary border border-border;
 }

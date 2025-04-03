@@ -21,18 +21,18 @@ export default {
     extend: {
       colors: {
         background: {
-          DEFAULT: 'hsl(240 5% 15%)',   // Deep charcoal base
+          DEFAULT: 'hsl(240 5% 10%)',   // Softer dark gray base
           foreground: 'hsl(240 5% 95%)' // Light text for contrast
         },
-        border: 'hsl(240 3% 20%)',      // Slightly lighter border
+        border: 'hsl(240 3% 20%)',      // Border color
         input: 'hsl(240 3% 20%)',
         ring: 'hsl(240 4% 30%)',
         primary: {
-          DEFAULT: 'hsl(24 83% 47%)',   // Villi orange accent
+          DEFAULT: 'hsl(24 83% 47%)',   // Maintain Villi orange accent
           foreground: 'hsl(0 0% 98%)'
         },
         secondary: {
-          DEFAULT: 'hsl(240 3% 20%)',   // Dark gray secondary
+          DEFAULT: 'hsl(240 3% 15%)',   // Slightly darker secondary
           foreground: 'hsl(0 0% 98%)'
         },
         destructive: {
