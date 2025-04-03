@@ -13,7 +13,6 @@ export default defineConfig(({ mode }) => {
   const isDevelopment = mode === "development";
   const isProduction = mode === "production";
   console.log(`Running in ${isDevelopment ? "development" : "production"} mode`);
-  // Use the appropriate tagger based on the mode
   
   // Always use port 8080 as required
   const port = 8080;
@@ -41,8 +40,8 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
-      sourcemap: false,
-      minify: true,
+      sourcemap: isDevelopment, // Only generate sourcemaps in development
+      minify: isProduction,
       rollupOptions: {
         output: {
           manualChunks: undefined,

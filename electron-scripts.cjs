@@ -1,6 +1,7 @@
+
 const fs = require('fs');
 const path = require('path');
-const { execSync, spawn } = require('child_process');
+const { execSync } = require('child_process');
 
 // Fixed port for Vite - changed to 8080
 const VITE_PORT = 8080;
@@ -17,8 +18,8 @@ function updatePackageJson() {
   packageJson.scripts = {
     ...packageJson.scripts,
     "electron:dev": `concurrently "cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} npm run dev -- --host --port=${VITE_PORT} --strictPort" "wait-on http-get://localhost:${VITE_PORT} && cross-env NODE_ENV=development VITE_PORT=${VITE_PORT} electron --trace-warnings electron/main.cjs"`,
-    "electron:build": "npm run build && electron-builder",
-    "electron:build:win": "npm run build && electron-builder --windows",
+    "electron:build": "npm run build && electron-builder --config electron-builder.json",
+    "electron:build:win": "npm run build && electron-builder --windows --config electron-builder.json",
     "electron:package": "node -e \"require('child_process').execSync('npm run build', {stdio: 'inherit'})\" && electron-builder --dir --config electron-builder.json"
   };
 

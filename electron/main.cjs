@@ -1,3 +1,4 @@
+
 // ✅ electron/main.cjs
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
@@ -26,9 +27,9 @@ function createWindow() {
     show: false
   });
 
-mainWindow = win;
+  mainWindow = win;
 
-mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.once('ready-to-show', () => mainWindow.show());
 
   if (isDev) {
     loadDev();
@@ -65,25 +66,25 @@ async function loadDev() {
     setTimeout(loadDev, 1000);
   } else {
     dialog.showErrorBox('Dev Server Error', `Could not reach ${devUrl}`);
-    dialog.showMessageBox({
-      backgroundColor: '#2d2d2d',
-      color: '#ffffff',
-    });
     app.quit();
   }
 }
 
 function loadProd() {
   const file = path.join(__dirname, '../dist/index.html');
+  console.log('Loading production file:', file);
+  console.log('File exists:', fs.existsSync(file));
+  
   if (fs.existsSync(file)) {
-    const appUrl = url.format({ pathname: file, protocol: 'file:', slashes: true });
+    const appUrl = url.format({
+      pathname: file,
+      protocol: 'file:',
+      slashes: true
+    });
+    console.log('Loading URL:', appUrl);
     mainWindow.loadURL(appUrl);
   } else {
     dialog.showErrorBox('Build Missing', `Missing file: ${file}`);
-    dialog.showMessageBox({
-      backgroundColor: '#2d2d2d',
-      color: '#ffffff',
-    });
     app.quit();
   }
 }
