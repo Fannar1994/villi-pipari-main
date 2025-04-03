@@ -31,5 +31,7 @@
   },
   "portable": {
     "artifactName": "${productName}-${version}-portable.${ext}"
-  }
+  },
+  "buildDependenciesFromSource": true,
+  "npmRebuild": true
 }

@@ -42,13 +42,19 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       sourcemap: isDevelopment, // Only generate sourcemaps in development
       minify: isProduction,
+      // Ensure we're using relative paths in the built files
+      assetsDir: 'assets',
       rollupOptions: {
         output: {
           manualChunks: undefined,
+          entryFileNames: 'assets/[name]-[hash].js',
+          chunkFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash].[ext]'
         },
       },
     },
     base: './', // Critical for Electron to find assets correctly
-    logLevel: 'info' as const
+    logLevel: 'info' as const,
+    publicDir: 'public', // Ensure public directory is properly included
   };
 });
