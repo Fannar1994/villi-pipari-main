@@ -1,13 +1,6 @@
+
 import * as XLSX from 'xlsx';
 import * as path from 'path';
-
-declare global {
-  interface Window {
-    electronAPI?: {
-      writeFile: (filepath: string, buffer: Buffer | Uint8Array) => Promise<{ success: boolean; error?: string }>;
-    };
-  }
-}
 
 export interface TimesheetEntry {
   date: string;      // Dagsetning
@@ -194,30 +187,13 @@ function createSafeSheetName(location: string, apartment: string): string {
   return `${cleanLocation}, ${cleanApartment}`.substring(0, 31);
 }
 
-// A simple fallback join function (using OS-specific separator if needed)
-function safeJoin(...parts: string[]): string {
-  if (typeof path.join === 'function') {
-    return path.join(...parts);
-  }
-  // Fallback: ensure there is a single slash between parts
-  return parts.map((part, idx) => {
-    if (idx === 0) return part.replace(/[\\/]+$/, '');
-    return part.replace(/^[\\/]+/, '').replace(/[\\/]+$/, '');
-  }).join('/');
-}
-
-// Helper function to check if a path is absolute
-function isAbsolutePath(filePath: string): boolean {
-  return filePath.startsWith('/') || filePath.match(/^[a-zA-Z]:\\/)!== null;
-}
-
 export async function generateInvoices(
   timesheetEntries: TimesheetEntry[],
   outputFile: File,
   outputDirectory: string
 ): Promise<number> {
   try {
-    // Read the template file
+    // Read the template file (outputFile is actually the template file)
     const outputArrayBuffer = await outputFile.arrayBuffer();
     const outputWorkbook = XLSX.read(outputArrayBuffer, { type: 'array' });
     
@@ -260,8 +236,8 @@ export async function generateInvoices(
     // Write the workbook to a buffer
     const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer' });
 
-    // For browser environment (if electronAPI is not available)
-    if (!window.electronAPI) {
+    // For browser environment (if electron is not available)
+    if (!window.electron && !window.electronAPI) {
       console.log("Running in browser environment, skipping file write");
       return invoiceCount;
     }
@@ -269,28 +245,40 @@ export async function generateInvoices(
     // Create a valid filename with the current date
     const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
     
-    // Handle path creation
-    let filePath = filename;
-    if (outputDirectory) {
-      // Check if outputDirectory is an absolute path
-      if (outputDirectory.match(/^([A-Za-z]:)?[\\/]/)) {
-        // If absolute, use as is
-        filePath = outputDirectory.replace(/[\\/]+$/, '') + '\\' + filename;
-      } else {
-        // If relative, treat as subdirectory of Documents
-        filePath = `C:\\Users\\Fanna\\Documents\\${outputDirectory}\\${filename}`.replace(/\\+/g, '\\');
-      }
+    let filePath: string;
+    
+    // Handle different path formats
+    if (outputDirectory.includes('/') || outputDirectory.includes('\\')) {
+      // It's already a path
+      filePath = path.join(outputDirectory, filename);
+    } else {
+      // It's just a folder name, assume Documents folder
+      filePath = path.join('C:\\Users\\Fanna\\Documents', outputDirectory, filename);
     }
     
     console.log("Saving file to:", filePath);
     
-    const result = await window.electronAPI.writeFile(
-      filePath,
-      new Uint8Array(wbout)
-    );
+    // Try the window.electron API first
+    if (window.electron?.writeFile) {
+      const result = await window.electron.writeFile({
+        filePath: filePath,
+        data: new Uint8Array(wbout)
+      });
 
-    if (!result.success) {
-      throw new Error(result.error || 'Villa kom upp við að vista skjalið');
+      if (!result.success) {
+        throw new Error(result.error || 'Villa kom upp við að vista skjalið');
+      }
+    } 
+    // Fall back to electronAPI if needed
+    else if (window.electronAPI?.writeFile) {
+      const result = await window.electronAPI.writeFile(
+        filePath,
+        new Uint8Array(wbout)
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Villa kom upp við að vista skjalið');
+      }
     }
 
     return invoiceCount;
