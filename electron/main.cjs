@@ -1,174 +1,120 @@
-
+// ✅ electron/main.cjs
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const isDev = process.env.NODE_ENV === 'development';
-const url = require('url');
 const fs = require('fs');
+const url = require('url');
+const isDev = process.env.NODE_ENV === 'development';
 const http = require('http');
 
-// Add debugging info
-console.log('Electron app starting...');
-console.log('Environment:', process.env.NODE_ENV);
-console.log('Current working directory:', process.cwd());
-console.log('Vite server port:', process.env.VITE_PORT || 8080);
-
 let mainWindow;
-let retryCount = 0;
+const VITE_PORT = process.env.VITE_PORT || 8080;
 const MAX_RETRIES = 30;
-const VITE_PORT = process.env.VITE_PORT || 8080; // Use environment variable or default to 8080
+let retryCount = 0;
 
 function createWindow() {
-  console.log('Creating Electron window');
-  
-  mainWindow = new BrowserWindow({
+  const { BrowserWindow } = require('electron');
+  const win = new BrowserWindow({
     width: 900,
     height: 700,
+    backgroundColor: '#2d2d2d',  // Dark grey background
     webPreferences: {
-      nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.cjs')
+      nodeIntegration: false
     },
     icon: path.join(__dirname, '../public/favicon.ico'),
-    show: false // Don't show window until ready-to-show
+    show: false
   });
 
-  // Show window when ready to avoid white flash
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-    console.log('Window is now visible');
-  });
+mainWindow = win;
 
-  // Load the app
+mainWindow.once('ready-to-show', () => mainWindow.show());
+
   if (isDev) {
-    loadDevelopmentApp();
+    loadDev();
   } else {
-    loadProductionApp();
+    loadProd();
   }
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+  mainWindow.on('closed', () => mainWindow = null);
 }
 
 async function testConnection(url, timeout = 1000) {
   return new Promise((resolve) => {
-    const req = http.get(url, (res) => {
-      console.log(`Connection test to ${url} returned status: ${res.statusCode}`);
+    const req = http.get(url, res => {
+      res.resume();
       resolve(res.statusCode === 200);
-      res.resume(); // Consume response data to free up memory
-    }).on('error', (err) => {
-      console.error(`Connection test to ${url} failed:`, err.message);
-      resolve(false);
-    });
-    
-    // Set timeout
+    }).on('error', () => resolve(false));
+
     req.setTimeout(timeout, () => {
-      console.error(`Connection test to ${url} timed out`);
       req.abort();
       resolve(false);
     });
   });
 }
 
-async function loadDevelopmentApp() {
-  try {
-    const devServerUrl = `http://localhost:${VITE_PORT}`;
-    console.log(`Attempting to load app from development server at ${devServerUrl}`);
-    
-    // Try to connect to the dev server
-    const isConnected = await testConnection(devServerUrl);
-    
-    if (isConnected) {
-      console.log('Dev server is running, loading URL in Electron');
-      mainWindow.loadURL(devServerUrl);
-      
-      // Open DevTools in development mode
-      mainWindow.webContents.openDevTools();
-    } else if (retryCount < MAX_RETRIES) {
-      retryCount++;
-      console.log(`Connection failed. Retrying in 1 second... (${retryCount}/${MAX_RETRIES})`);
-      setTimeout(loadDevelopmentApp, 1000);
-    } else {
-      console.error(`Failed to connect to dev server after ${MAX_RETRIES} attempts`);
-      dialog.showErrorBox(
-        'Development Server Error',
-        `Could not connect to development server at ${devServerUrl} after ${MAX_RETRIES} attempts.\n\nPlease check if the Vite server is running on port ${VITE_PORT}.`
-      );
-      app.quit();
-    }
-  } catch (err) {
-    console.error('Error loading development app:', err);
-    dialog.showErrorBox(
-      'Development Error',
-      `Failed to load development app: ${err.message}`
-    );
+async function loadDev() {
+  const devUrl = `http://localhost:${VITE_PORT}`;
+  const isConnected = await testConnection(devUrl);
+
+  if (isConnected) {
+    mainWindow.loadURL(devUrl);
+    mainWindow.webContents.openDevTools();
+  } else if (retryCount < MAX_RETRIES) {
+    retryCount++;
+    setTimeout(loadDev, 1000);
+  } else {
+    dialog.showErrorBox('Dev Server Error', `Could not reach ${devUrl}`);
+    dialog.showMessageBox({
+      backgroundColor: '#2d2d2d',
+      color: '#ffffff',
+    });
     app.quit();
   }
 }
 
-function loadProductionApp() {
-  // In production, load from the dist folder
-  const indexPath = path.join(__dirname, '../dist/index.html');
-  console.log(`Loading production app from: ${indexPath}`);
-  
-  // Check if the file exists before loading it
-  if (fs.existsSync(indexPath)) {
-    const fileUrl = url.format({
-      pathname: indexPath,
-      protocol: 'file:',
-      slashes: true
-    });
-    console.log(`Loading file URL: ${fileUrl}`);
-    mainWindow.loadURL(fileUrl);
+function loadProd() {
+  const file = path.join(__dirname, '../dist/index.html');
+  if (fs.existsSync(file)) {
+    const appUrl = url.format({ pathname: file, protocol: 'file:', slashes: true });
+    mainWindow.loadURL(appUrl);
   } else {
-    console.error(`Error: Could not find index.html at ${indexPath}`);
-    dialog.showErrorBox(
-      'Application Error', 
-      `Could not find index.html at ${indexPath}`
-    );
+    dialog.showErrorBox('Build Missing', `Missing file: ${file}`);
+    dialog.showMessageBox({
+      backgroundColor: '#2d2d2d',
+      color: '#ffffff',
+    });
     app.quit();
   }
 }
 
 app.whenReady().then(createWindow);
+app.on('window-all-closed', () => process.platform !== 'darwin' && app.quit());
+app.on('activate', () => mainWindow === null && createWindow());
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
-  }
-});
-
-// IPC handlers for file system operations
+// IPC handlers
 ipcMain.handle('select-directory', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openDirectory']
-  });
-  
-  if (result.canceled) {
-    return null;
-  }
-  
-  return result.filePaths[0];
+  const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+  return result.canceled ? null : result.filePaths[0];
 });
 
-// New handler for writing files
 ipcMain.handle('write-file', async (event, { filePath, data }) => {
   try {
-    fs.writeFileSync(filePath, data);
-    return { success: true, filePath };
+    const fullPath = path.join(app.getPath('documents'), filePath);
+    const dir = path.dirname(fullPath);
+    
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    await fs.promises.writeFile(fullPath, data);
+    return { success: true, path: fullPath };
   } catch (error) {
-    console.error('Error writing file:', error);
+    if (error.code === 'EBUSY') {
+      return { success: false, error: 'Vinsamlegast lokið skjalinu' };
+    }
     return { success: false, error: error.message };
   }
 });
 
-// New handler for checking if file exists
-ipcMain.handle('file-exists', async (event, filePath) => {
-  return fs.existsSync(filePath);
-});
+ipcMain.handle('file-exists', async (_, filePath) => fs.existsSync(filePath));
