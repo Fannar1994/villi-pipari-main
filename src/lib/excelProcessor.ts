@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import * as path from 'path';
 
@@ -237,7 +236,7 @@ export async function generateInvoices(
     const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer' });
 
     // For browser environment (if electron is not available)
-    if (!window.electron && !window.electronAPI) {
+    if (!window.electron) {
       console.log("Running in browser environment, skipping file write");
       return invoiceCount;
     }
@@ -258,27 +257,14 @@ export async function generateInvoices(
     
     console.log("Saving file to:", filePath);
     
-    // Try the window.electron API first
-    if (window.electron?.writeFile) {
-      const result = await window.electron.writeFile({
-        filePath: filePath,
-        data: new Uint8Array(wbout)
-      });
+    // Use the window.electron API for file operations
+    const result = await window.electron.writeFile({
+      filePath: filePath,
+      data: new Uint8Array(wbout)
+    });
 
-      if (!result.success) {
-        throw new Error(result.error || 'Villa kom upp við að vista skjalið');
-      }
-    } 
-    // Fall back to electronAPI if needed
-    else if (window.electronAPI?.writeFile) {
-      const result = await window.electronAPI.writeFile(
-        filePath,
-        new Uint8Array(wbout)
-      );
-
-      if (!result.success) {
-        throw new Error(result.error || 'Villa kom upp við að vista skjalið');
-      }
+    if (!result.success) {
+      throw new Error(result.error || 'Villa kom upp við að vista skjalið');
     }
 
     return invoiceCount;

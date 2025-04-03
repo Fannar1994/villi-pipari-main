@@ -8,8 +8,5 @@ declare global {
       writeFile: (options: { filePath: string; data: Buffer | Uint8Array }) => Promise<{ success: boolean; error?: string }>;
       fileExists: (filePath: string) => Promise<boolean>;
     };
-    electronAPI?: {
-      writeFile: (filePath: string, data: Buffer | Uint8Array) => Promise<{ success: boolean; error?: string }>;
-    };
   }
 }

@@ -1,18 +1,8 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-
-// Add this to make TypeScript aware of the window.electron object
-declare global {
-  interface Window {
-    electron?: {
-      selectDirectory: () => Promise<string | null>;
-    };
-  }
-}
 
 interface DirectorySelectProps {
   value: string;

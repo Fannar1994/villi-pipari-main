@@ -1,8 +1,9 @@
+
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('electronAPI', {
-  writeFile: async (filepath, buffer) => {
-    const result = await ipcRenderer.invoke('write-file', { filePath: filepath, data: buffer });
+contextBridge.exposeInMainWorld('electron', {
+  writeFile: async (options) => {
+    const result = await ipcRenderer.invoke('write-file', options);
     return result;
   },
   selectDirectory: () => ipcRenderer.invoke('select-directory'),

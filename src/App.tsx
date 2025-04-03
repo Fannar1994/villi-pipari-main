@@ -10,8 +10,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
-console.log("ElectronAPI test:", window.electron);
-console.log("ElectronAPI writeFile test:", window.electron?.writeFile);
+// Simple check to see if Electron APIs are available
+console.log("Electron API available:", window.electron ? "Yes" : "No");
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
