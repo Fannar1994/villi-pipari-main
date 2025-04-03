@@ -87,18 +87,19 @@ export async function generateInvoices(
     
     // Ensure outputDirectory is handled correctly
     console.log("Output directory:", outputDirectory);
-    // Use the filename directly without trying to join it with the outputDirectory
-    // The Electron API will handle the path properly
     
-    console.log("Saving file with filename:", filename);
+    // Construct full file path by combining directory and filename
+    const fullPath = outputDirectory.endsWith('/') || outputDirectory.endsWith('\\') 
+      ? `${outputDirectory}${filename}`
+      : `${outputDirectory}/${filename}`;
+    
+    console.log("Saving file to:", fullPath);
     
     try {
-      // Use the window.electron API for file operations with just the filename
-      // Let the Electron side handle the full path creation
+      // Use the window.electron API for file operations with the full path
       const result = await window.electron.writeFile({
-        filePath: filename,
-        data: new Uint8Array(wbout),
-        directory: outputDirectory
+        filePath: fullPath,
+        data: new Uint8Array(wbout)
       });
 
       if (!result.success) {
