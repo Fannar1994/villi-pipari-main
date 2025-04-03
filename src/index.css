@@ -5,180 +5,40 @@
 
 @layer base {
   :root {
-    /* Global colors */
-    --background: 0 0% 0%;            /* Black background */
-    --foreground: 0 0% 100%;          /* White text */
+    /* Dark mode color variables */
+    --background: 240 5% 15%;
+    --foreground: 240 5% 95%;
     
-    /* Card and popover */
-    --card: 0 0% 0%;                  /* Black card background */
-    --card-foreground: 0 0% 100%;     /* White text on cards */
-    --popover: 0 0% 0%;               /* Black popover background */
-    --popover-foreground: 0 0% 100%;  /* White text on popover */
+    --card: 240 5% 18%;
+    --card-foreground: 240 5% 95%;
     
-    /* Primary: set as Villi orange */
-    --primary: 24 83% 47%;            /* Villi orange E25C10 */
-    --primary-foreground: 0 0% 100%;  /* White text on orange */
+    --popover: 240 5% 15%;
+    --popover-foreground: 240 5% 95%;
     
-    /* Secondary as Villi blue */
-    --secondary: 225 96% 42%;         /* Villi blue 0540CF */
-    --secondary-foreground: 0 0% 100%;/* White text on blue */
+    --primary: 24 83% 47%;
+    --primary-foreground: 0 0% 100%;
     
-    /* Destructive as Villi red */
-    --destructive: 5 88% 48%;         /* Villi red D9261C */
-    --destructive-foreground: 0 0% 100%; /* White on red */
+    --secondary: 240 3% 20%;
+    --secondary-foreground: 0 0% 98%;
     
-    /* Other colors */
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 80%;
-    --accent: 24 83% 47%;             /* Same as primary (orange) */
-    --accent-foreground: 0 0% 100%;   /* White on accent */
-    --border: 24 83% 47%;             /* Orange border */
-    --input: 0 0% 20%;
-    --ring: 24 83% 47%;               /* Orange ring */
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;  
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --muted: 240 3% 20%;
+    --muted-foreground: 240 5% 65%;
+    
+    --accent: 240 3% 20%;
+    --accent-foreground: 0 0% 98%;
+    
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
-
-  /* If your header text element uses a data attribute like data-lov-name="CardTitle", override it */
-  [data-lov-name="CardTitle"],
-  .card-header h3,
-  header h3 {
-    color: hsl(var(--primary-foreground)) !important;
-  }
-
-  html, body {
-    background-color: hsl(var(--background)) !important;
-    color: hsl(var(--foreground)) !important;
-  }
-
-  /* More specific custom class for header */
-  .site-header {
-    background-color: hsl(var(--primary)) !important;
-    color: hsl(var(--primary-foreground)) !important;
-    padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
-    padding-left: 1.5rem !important;
-    padding-right: 1.5rem !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2) !important;
-  }
-
-  /* If you have a header override, keep it as-is */
-  html body header {
-    background-color: hsl(var(--primary)) !important;
-    color: hsl(var(--primary-foreground)) !important;
-    padding: 1rem 1.5rem !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2) !important;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 3% 20%;
+    --input: 240 3% 20%;
+    --ring: 240 4% 30%;
+    
+    --radius: 0.5rem;
   }
 }
 
-/* Define the cloak (fade-in) animation */
-@keyframes cloakAnimation {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@layer components {
-  /* Override the header styles (assuming your header is wrapped in a component 
-     that renders with data-lov-name="CardHeader" or a custom class) */
-  [data-lov-name="CardHeader"],
-  .card-header,
-  header {
-    background-color: hsl(var(--primary)) !important;
-    color: hsl(var(--primary-foreground)) !important;
-    border-color: transparent !important;
-  }
-
-  /* Make sure your main container isn't forcing a light background */
-  .min-h-screen,
-  .bg-slate-50 {
-    background-color: hsl(var(--background)) !important;
-  }
-
-  /* Override buttons using the bg-green-600 class to use your primary colors */
-  html body button.bg-green-600,
-  html body button.bg-green-600:hover,
-  html body button.bg-green-600:focus,
-  html body button.bg-green-600:active,
-  html body button.inline-flex.w-full.bg-green-600,
-  html body button.inline-flex.w-full.bg-green-600:hover,
-  html body button.inline-flex.w-full.bg-green-600:focus,
-  html body button.inline-flex.w-full.bg-green-600:active {
-    background-color: hsl(var(--primary)) !important;
-    color: hsl(var(--primary-foreground)) !important;
-    border-color: hsl(var(--primary)) !important;
-  }
-
-  /* Create a custom destructive button style */
-  .btn-destructive {
-    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-    background-color: hsl(var(--destructive)) !important;
-    color: hsl(var(--primary-foreground)) !important;
-    border: 1px solid hsl(var(--destructive)) !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2) !important;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .btn-destructive:hover,
-  .btn-destructive:active,
-  .btn-destructive:focus {
-    /* Keep the color consistent on interaction */
-    background-color: hsl(var(--destructive)) !important;
-    border-color: hsl(var(--destructive)) !important;
-  }
-
-  /* Override input text and placeholder color for inputs with bg-white */
-  input.bg-white {
-    color: #000 !important;
-  }
-  input.bg-white::placeholder {
-    color: #000 !important;
-  }
-}
-
-@layer utilities {
-  /* Either override the global bg-gray-50 utility */
-  .bg-gray-50 {
-    background-color: hsl(var(--primary)) !important;
-  }
-  
-  /* Or target the specific element using its full class chain */
-  div.flex.items.center.p-6.pt-0.bg-gray-50-bor {
-    background-color: hsl(var(--primary)) !important;
-  }
-
-  /*
-    Target the paragraph inside the ProcessStatus component.
-    Adjust the selector if needed.
-  */
-  [data-lov-id*="ProcessStatus.tsx"] p {
-    color: #fff !important;
-    animation: cloakAnimation 1s ease-in-out forwards;
-  }
+html, body {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
 }

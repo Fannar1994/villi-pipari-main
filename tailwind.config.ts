@@ -21,54 +21,42 @@ export default {
     },
     extend: {
       colors: {
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        // Refined dark mode color palette
+        background: {
+          DEFAULT: 'hsl(240 5% 15%)',  // Softer dark gray base
+          foreground: 'hsl(240 5% 95%)'
+        },
+        border: 'hsl(240 3% 20%)',     // Slightly lighter border
+        input: 'hsl(240 3% 20%)',
+        ring: 'hsl(240 4% 30%)',
         primary: {
-          DEFAULT: 'hsl(var(--primary))', 
-          foreground: 'hsl(var(--primary-foreground))'
+          DEFAULT: 'hsl(24 83% 47%)',  // Keep Villi orange as primary
+          foreground: 'hsl(0 0% 98%)'
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))'
+          DEFAULT: 'hsl(240 3% 20%)',  // Dark gray secondary
+          foreground: 'hsl(0 0% 98%)'
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))'
+          DEFAULT: 'hsl(0 62.8% 30.6%)',
+          foreground: 'hsl(0 0% 98%)'
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))'
+          DEFAULT: 'hsl(240 3% 20%)',  // Dark gray muted color
+          foreground: 'hsl(240 5% 65%)'
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))'
+          DEFAULT: 'hsl(240 3% 20%)',  // Dark gray accent
+          foreground: 'hsl(0 0% 98%)'
         },
         popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))'
+          DEFAULT: 'hsl(240 5% 15%)',  // Matching background
+          foreground: 'hsl(240 5% 95%)'
         },
         card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))'
+          DEFAULT: 'hsl(240 5% 18%)',  // Slightly lighter than background
+          foreground: 'hsl(240 5% 95%)'
         },
-        // Villi Pípari specific colors
-        'villi-orange': '#E25C10',
-        'villi-red': '#D9261C',
-        'villi-blue': '#0540CF',
-        'villi-black': '#000000',
-        sidebar: {
-          DEFAULT: 'hsl(var(--sidebar-background))',
-          foreground: 'hsl(var(--sidebar-foreground))',
-          primary: 'hsl(var(--sidebar-primary))',
-          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-          accent: 'hsl(var(--sidebar-accent))',
-          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-          border: 'hsl(var(--sidebar-border))',
-          ring: 'hsl(var(--sidebar-ring))'
-        }
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -77,20 +65,12 @@ export default {
       },
       keyframes: {
         'accordion-down': {
-          from: {
-            height: '0'
-          },
-          to: {
-            height: 'var(--radix-accordion-content-height)'
-          }
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' }
         },
         'accordion-up': {
-          from: {
-            height: 'var(--radix-accordion-content-height)'
-          },
-          to: {
-            height: '0'
-          }
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' }
         }
       },
       animation: {
