@@ -85,13 +85,16 @@ export async function generateInvoices(
     // Create a valid filename with the current date
     const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
     
-    // Ensure outputDirectory is handled correctly
+    // Log the output directory for debugging
     console.log("Output directory:", outputDirectory);
     
-    // Construct full file path by combining directory and filename
-    const fullPath = outputDirectory.endsWith('/') || outputDirectory.endsWith('\\') 
-      ? `${outputDirectory}${filename}`
-      : `${outputDirectory}/${filename}`;
+    // Normalize the output directory to prevent path issues
+    // Remove any trailing slashes for consistency
+    const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
+    
+    // Create the full file path without using path.join (which isn't available in browser)
+    // Use forward slashes for cross-platform compatibility
+    const fullPath = `${normalizedDir}/${filename}`;
     
     console.log("Saving file to:", fullPath);
     
