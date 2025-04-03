@@ -1,46 +1,214 @@
-
 import * as XLSX from 'xlsx';
-import path from 'path';
-import fs from 'fs';
+import * as path from 'path';
+
+declare global {
+  interface Window {
+    electronAPI?: {
+      writeFile: (filepath: string, buffer: Buffer | Uint8Array) => Promise<{ success: boolean; error?: string }>;
+    };
+  }
+}
 
 export interface TimesheetEntry {
-  street: string;
-  apartment: string;
-  date: Date;
-  hours: number;
-  description: string;
-  employee: string;
+  date: string;      // Dagsetning
+  hours: number;     // Tímar
+  workType: string;  // Vinna
+  location: string;  // Hvar
+  apartment: string; // íbúð
+  other: string;     // Annað
+  employee: string;  // Starfsmaður
+}
+
+function formatNumber(num: number): string {
+  // Convert number to Icelandic format (using comma as decimal separator)
+  return num.toString().replace('.', ',');
 }
 
 export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> {
   try {
-    // Read the file as ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
-    // Parse the Excel file
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
     
-    // Get the first worksheet
-    const worksheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[worksheetName];
+    console.log("Available sheets:", workbook.SheetNames);
 
-    // Convert to JSON
-    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    const monthPattern = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec).*-kop$/i;
+    const targetSheet = workbook.SheetNames.find(name => monthPattern.test(name.toLowerCase()));
+
+    if (!targetSheet) {
+      throw new Error('Engin mánaðarleg vinnuskýrsla fannst');
+    }
+
+    console.log("Selected sheet:", targetSheet);
+
+    const worksheet = workbook.Sheets[targetSheet];
     
-    console.log("Parsed timesheet data:", jsonData);
+    // Convert sheet to raw data to access cells directly
+    const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false }) as string[][];
     
-    // Convert to TimesheetEntry array
-    return jsonData.map((row: any) => ({
-      street: row.street || row.Street || '',
-      apartment: row.apartment || row.Apartment || '',
-      date: new Date(row.date || row.Date || new Date()),
-      hours: Number(row.hours || row.Hours || 0),
-      description: row.description || row.Description || '',
-      employee: row.employee || row.Employee || ''
-    }));
+    console.log("Raw data loaded, rows:", rawData.length);
+    
+    const entries: TimesheetEntry[] = [];
+    
+    // Find the header row (should be around row 12)
+    let headerRowIndex = -1;
+    for (let i = 0; i < rawData.length; i++) {
+      if (rawData[i] && rawData[i].includes('Dagsetning')) {
+        headerRowIndex = i;
+        break;
+      }
+    }
+    
+    if (headerRowIndex === -1) {
+      throw new Error('Fyrirsögn fannst ekki í vinnuskýrslu');
+    }
+    
+    console.log("Header row found at index:", headerRowIndex);
+    
+    // Map column indices based on headers
+    const headerRow = rawData[headerRowIndex];
+    const getColumnIndex = (header: string): number => {
+      const index = headerRow.findIndex(cell => 
+        cell && cell.toLowerCase().includes(header.toLowerCase()));
+      return index;
+    };
+    
+    const dateColIdx = getColumnIndex('dagsetning');
+    const hoursColIdx = getColumnIndex('tímar');
+    const workTypeColIdx = getColumnIndex('vinna');
+    const locationColIdx = getColumnIndex('hvar');
+    const apartmentColIdx = getColumnIndex('íbúð');
+    const otherColIdx = getColumnIndex('annað');
+    const employeeColIdx = getColumnIndex('starfsmaður');
+    
+    console.log("Mapped columns:", {
+      date: dateColIdx,
+      hours: hoursColIdx,
+      workType: workTypeColIdx,
+      location: locationColIdx,
+      apartment: apartmentColIdx,
+      other: otherColIdx,
+      employee: employeeColIdx
+    });
+    
+    // Process data rows (starting from the next row after header)
+    for (let i = headerRowIndex + 1; i < rawData.length; i++) {
+      const row = rawData[i];
+      
+      // Skip empty rows
+      if (!row || row.length === 0 || !row.some(cell => cell)) {
+        continue;
+      }
+      
+      // Parse hours - convert comma to dot for number parsing
+      const hoursStr = row[hoursColIdx] || '0';
+      const hours = parseFloat(hoursStr.replace(',', '.')) || 0;
+      
+      const entry: TimesheetEntry = {
+        date: row[dateColIdx] || '',
+        hours: hours,
+        workType: row[workTypeColIdx] || '',
+        location: row[locationColIdx] || '',
+        apartment: row[apartmentColIdx] || '',
+        other: row[otherColIdx] || '',
+        employee: row[employeeColIdx] || ''
+      };
+      
+      // Only add non-empty entries
+      if (entry.date || entry.hours || entry.location) {
+        entries.push(entry);
+      }
+    }
+    
+    console.log("Extracted entries:", entries.length);
+    return entries;
+
   } catch (error) {
     console.error('Error parsing timesheet file:', error);
-    throw new Error('Villa við lestur á vinnuskýrslu');
+    throw new Error(`Villa við lestur á vinnuskýrslu: ${error.message || 'Óþekkt villa'}`);
   }
+}
+
+function groupEntriesByLocation(entries: TimesheetEntry[]): Record<string, TimesheetEntry[]> {
+  return entries.reduce((groups, entry) => {
+    // Use location (hvar) and apartment (íbúð) fields for grouping
+    const key = `${entry.location}-${entry.apartment}`;
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(entry);
+    return groups;
+  }, {} as Record<string, TimesheetEntry[]>);
+}
+
+function createInvoiceData(entries: TimesheetEntry[]): (string | number)[][] {
+  // Initialize with 15 empty rows of 4 columns each
+  const data: (string | number)[][] = Array(15).fill(null).map(() => Array(4).fill(''));
+  
+  // Set headers in row 3 (index 2)
+  data[2] = ['Dagsetning:', 'Tímar:', 'Vinnuliður:', 'Starfsmaður:'];
+  
+  // Set location headers in row 11 (index 10)
+  data[10] = ['Vinnustaður:', 'Íbúð:', 'Annað:', ''];
+
+  if (entries.length > 0) {
+    // Map location data starting at row 12 (index 11)
+    data[11] = [
+      entries[0].location,
+      entries[0].apartment,
+      entries[0].other,
+      ''
+    ];
+
+    // Map entries starting from row 4 (index 3)
+    entries.forEach((entry, index) => {
+      if (index < 7) { // Limit to 7 entries per invoice
+        const rowIndex = index + 3; // Start at row 4
+        data[rowIndex] = [
+          entry.date,                // Date in A4+
+          formatNumber(entry.hours), // Hours in B4+ with comma decimal
+          entry.workType,            // Work type in C4+
+          entry.employee             // Employee in D4+
+        ];
+      }
+    });
+  }
+
+  return data;
+}
+
+function createSafeSheetName(location: string, apartment: string): string {
+  // Clean and normalize the location and apartment strings
+  const cleanLocation = location
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+    .replace(/[^a-zA-Z0-9\s]/g, "");
+
+  const cleanApartment = apartment
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9\s]/g, "");
+
+  // Combine location and apartment with comma
+  return `${cleanLocation}, ${cleanApartment}`.substring(0, 31);
+}
+
+// A simple fallback join function (using OS-specific separator if needed)
+function safeJoin(...parts: string[]): string {
+  if (typeof path.join === 'function') {
+    return path.join(...parts);
+  }
+  // Fallback: ensure there is a single slash between parts
+  return parts.map((part, idx) => {
+    if (idx === 0) return part.replace(/[\\/]+$/, '');
+    return part.replace(/^[\\/]+/, '').replace(/[\\/]+$/, '');
+  }).join('/');
+}
+
+// Helper function to check if a path is absolute
+function isAbsolutePath(filePath: string): boolean {
+  return filePath.startsWith('/') || filePath.match(/^[a-zA-Z]:\\/)!== null;
 }
 
 export async function generateInvoices(
@@ -49,122 +217,85 @@ export async function generateInvoices(
   outputDirectory: string
 ): Promise<number> {
   try {
-    console.log("Starting invoice generation with entries:", timesheetEntries);
-    
-    // Group entries by street and apartment
-    const groupedEntries = groupEntriesByLocation(timesheetEntries);
-    console.log("Grouped entries:", groupedEntries);
-    
-    // Read output file
+    // Read the template file
     const outputArrayBuffer = await outputFile.arrayBuffer();
     const outputWorkbook = XLSX.read(outputArrayBuffer, { type: 'array' });
-
-    let invoiceCount = 0;
     
-    for (const [location, entries] of Object.entries(groupedEntries)) {
-      console.log(`Processing location: ${location} with ${entries.length} entries`);
-      
-      // Create a new sheet name for this location
-      const [street, apartment] = location.split('-');
-      const safeSheetName = `${street}_${apartment}`.substring(0, 31).replace(/[\[\]\*\?\/\\]/g, '_');
-      
-      // Create invoice data for this location
-      const invoiceData = createInvoiceData(entries);
-      
-      // Create a worksheet from the invoice data
-      const invoiceSheet = XLSX.utils.aoa_to_sheet(invoiceData);
-      
-      // Set column widths
-      const wscols = [
-        {wch: 15}, // Date
-        {wch: 30}, // Description
-        {wch: 15}, // Employee
-        {wch: 10}, // Hours
-        {wch: 15}  // Rate/Amount
-      ];
-      invoiceSheet['!cols'] = wscols;
-      
-      // Add or replace the sheet in the output workbook
-      if (outputWorkbook.SheetNames.includes(safeSheetName)) {
-        // Replace existing sheet
-        outputWorkbook.Sheets[safeSheetName] = invoiceSheet;
-      } else {
-        // Add new sheet
-        XLSX.utils.book_append_sheet(outputWorkbook, invoiceSheet, safeSheetName);
+    // Group entries by location and apartment
+    const groupedEntries = groupEntriesByLocation(timesheetEntries);
+    console.log("Grouped entries:", Object.keys(groupedEntries).length);
+    let invoiceCount = 0;
+
+    for (const [key, entries] of Object.entries(groupedEntries)) {
+      if (entries.length > 0) {
+        // Use the location (hvar) and apartment (íbúð) fields from the first entry
+        const firstEntry = entries[0];
+        const safeSheetName = createSafeSheetName(
+          firstEntry.location,  // This is from the 'hvar' column
+          firstEntry.apartment  // This is from the 'íbúð' column
+        );
+        
+        console.log(`Creating sheet for: ${safeSheetName}`);
+        const worksheetData = createInvoiceData(entries);
+        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+        
+        // Set column widths for better formatting
+        const cols = [
+          { wch: 12 }, // Column A width
+          { wch: 8 },  // Column B width
+          { wch: 20 }, // Column C width
+          { wch: 15 }  // Column D width
+        ];
+        worksheet['!cols'] = cols;
+
+        XLSX.utils.book_append_sheet(outputWorkbook, worksheet, safeSheetName);
+        invoiceCount++;
       }
-      
-      invoiceCount++;
+    }
+
+    if (invoiceCount === 0) {
+      throw new Error('Engar færslur fundust til að búa til reikninga');
+    }
+
+    // Write the workbook to a buffer
+    const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer' });
+
+    // For browser environment (if electronAPI is not available)
+    if (!window.electronAPI) {
+      console.log("Running in browser environment, skipping file write");
+      return invoiceCount;
+    }
+
+    // Create a valid filename with the current date
+    const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    // Handle path creation
+    let filePath = filename;
+    if (outputDirectory) {
+      // Check if outputDirectory is an absolute path
+      if (outputDirectory.match(/^([A-Za-z]:)?[\\/]/)) {
+        // If absolute, use as is
+        filePath = outputDirectory.replace(/[\\/]+$/, '') + '\\' + filename;
+      } else {
+        // If relative, treat as subdirectory of Documents
+        filePath = `C:\\Users\\Fanna\\Documents\\${outputDirectory}\\${filename}`.replace(/\\+/g, '\\');
+      }
     }
     
-    // Save the modified workbook
-    const filename = `Invoices_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    const filepath = path.join(outputDirectory, filename);
+    console.log("Saving file to:", filePath);
     
-    console.log(`Writing invoices to: ${filepath}`);
-    
-    // Write to file using electron's fs
-    const buffer = XLSX.write(outputWorkbook, { type: 'buffer', bookType: 'xlsx' });
-    fs.writeFileSync(filepath, buffer);
-    
-    console.log(`Successfully generated ${invoiceCount} invoices`);
+    const result = await window.electronAPI.writeFile(
+      filePath,
+      new Uint8Array(wbout)
+    );
+
+    if (!result.success) {
+      throw new Error(result.error || 'Villa kom upp við að vista skjalið');
+    }
+
     return invoiceCount;
   } catch (error) {
     console.error('Error generating invoices:', error);
-    throw error;
+    throw new Error(error.message || 'Villa við að búa til reikninga');
   }
-}
-
-function createInvoiceData(entries: TimesheetEntry[]): any[][] {
-  // Create a worksheet for invoice details
-  const invoiceData = [
-    ['Invoice', '', '', '', ''],
-    ['Villi Pípari', '', '', '', ''],
-    ['Date:', new Date().toLocaleDateString(), '', '', ''],
-    ['', '', '', '', ''],
-    ['Location:', `${entries[0].street} ${entries[0].apartment}`, '', '', ''],
-    ['', '', '', '', ''],
-    ['Work Details:', '', '', '', ''],
-    ['Date', 'Description', 'Employee', 'Hours', 'Rate'],
-  ];
-  
-  // Add entry rows
-  let totalHours = 0;
-  const hourlyRate = 3500; // Default hourly rate in ISK
-  
-  entries.forEach(entry => {
-    const dateFormatted = entry.date.toLocaleDateString();
-    invoiceData.push([
-      dateFormatted, 
-      entry.description, 
-      entry.employee, 
-      entry.hours.toString(), // Convert number to string 
-      hourlyRate.toString()   // Convert number to string
-    ]);
-    totalHours += entry.hours;
-  });
-  
-  // Add totals
-  const totalAmount = totalHours * hourlyRate;
-  invoiceData.push(['', '', '', '', '']);
-  invoiceData.push(['Total Hours:', '', '', totalHours.toString(), '']); // Convert number to string
-  invoiceData.push(['Total Amount:', '', '', '', `${totalAmount} ISK`]);
-  invoiceData.push(['', '', '', '', '']);
-  invoiceData.push(['Payment Terms:', 'Net 30', '', '', '']);
-  invoiceData.push(['Bank Account:', '0123-26-012345', '', '', '']);
-  
-  return invoiceData;
-}
-
-function groupEntriesByLocation(entries: TimesheetEntry[]): Record<string, TimesheetEntry[]> {
-  const grouped: Record<string, TimesheetEntry[]> = {};
-  
-  entries.forEach(entry => {
-    const key = `${entry.street}-${entry.apartment}`;
-    if (!grouped[key]) {
-      grouped[key] = [];
-    }
-    grouped[key].push(entry);
-  });
-  
-  return grouped;
 }
