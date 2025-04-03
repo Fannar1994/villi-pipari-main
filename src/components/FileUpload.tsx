@@ -41,18 +41,15 @@ export function FileUpload({
           value={value ? value.name : ''}
           readOnly
           placeholder="Engin skrá valin"
-          className="flex-1 bg-white"
+          className="flex-1 bg-secondary"
           id={`file-display-${label}`}
         />
         <Button
           type="button"
-          variant="outline"
+          variant="default"
           onClick={handleButtonClick}
           disabled={disabled}
-          className={cn(
-            "whitespace-nowrap",
-            value ? "border-blue-500 text-blue-600" : ""
-          )}
+          className="whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90"
         >
           {icon}
           Velja skrá

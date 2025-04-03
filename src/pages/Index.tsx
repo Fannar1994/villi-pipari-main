@@ -80,21 +80,21 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-lg border-villi-orange">
-        <CardHeader className="border-b border-villi-orange bg-villi-black">
-          <CardTitle className="text-2xl text-white">Villi Pípari</CardTitle>
-          <CardDescription className="text-gray-300">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+      <Card className="w-full max-w-md shadow-lg border-primary">
+        <CardHeader className="border-b border-primary bg-card">
+          <CardTitle className="text-2xl text-foreground">Villi Pípari</CardTitle>
+          <CardDescription className="text-muted-foreground">
             Búðu til reikninga út frá Excel vinnuskýrslum
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 pt-6 bg-black text-white">
+        <CardContent className="space-y-6 pt-6 bg-card text-foreground">
           <FileUpload
             value={timesheetFile}
             onChange={setTimesheetFile}
             label="Vinnuskýrsla skrá"
             accept=".xlsx,.xls"
-            icon={<FileSpreadsheet className="mr-2 h-4 w-4 text-villi-orange" />}
+            icon={<FileSpreadsheet className="mr-2 h-4 w-4 text-primary" />}
             disabled={isProcessing}
           />
           
@@ -103,7 +103,7 @@ const Index = () => {
             onChange={setTemplateFile}
             label="Sniðmát skrá (valfrjálst)"
             accept=".xlsx,.xls"
-            icon={<FileText className="mr-2 h-4 w-4 text-villi-blue" />}
+            icon={<FileText className="mr-2 h-4 w-4 text-primary" />}
             disabled={isProcessing}
           />
           
@@ -111,18 +111,18 @@ const Index = () => {
             value={outputDir}
             onChange={setOutputDir}
             label="Úttak mappa"
-            icon={<FolderOutput className="mr-2 h-4 w-4 text-villi-orange" />}
+            icon={<FolderOutput className="mr-2 h-4 w-4 text-primary" />}
             disabled={isProcessing}
           />
           
-          <Separator className="bg-villi-orange/30" />
+          <Separator className="bg-primary/30" />
           
           <ProcessStatus status={processStatus} />
         </CardContent>
-        <CardFooter className="border-t border-villi-orange bg-black">
+        <CardFooter className="border-t border-primary bg-card">
           <Button 
             onClick={handleGenerateInvoices} 
-            className="w-full bg-villi-orange hover:bg-villi-red transition-colors"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={isProcessing}
           >
             {isProcessing ? 'Vinnur...' : 'Búa til reikninga'}
@@ -130,7 +130,7 @@ const Index = () => {
         </CardFooter>
       </Card>
       
-      <p className="text-gray-500 text-sm mt-4">
+      <p className="text-muted-foreground text-sm mt-4">
         Villi Pípari © 2023
       </p>
     </div>
