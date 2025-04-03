@@ -1,0 +1,18 @@
+.file-uploader {
+  background-color: #3d3d3d;
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #4d4d4d;
+}
+
+.drop-zone {
+  background-color: #2d2d2d;
+  border: 2px dashed #4d4d4d;
+  color: white;
+}
+
+.file-list {
+  background-color: #3d3d3d;
+  color: white;
+}
