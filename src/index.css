@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,33 +6,35 @@
 @layer base {
   :root {
     /* Global colors */
-    --background: 0 0% 15%;           /* Dark gray background */
-    --foreground: 0 0% 100%;           /* White text */
+    --background: 0 0% 0%;            /* Black background */
+    --foreground: 0 0% 100%;          /* White text */
     
     /* Card and popover */
-    --card: 0 0% 15%;
-    --card-foreground: 0 0% 100%;
-    --popover: 0 0% 15%;
-    --popover-foreground: 0 0% 100%;
+    --card: 0 0% 0%;                  /* Black card background */
+    --card-foreground: 0 0% 100%;     /* White text on cards */
+    --popover: 0 0% 0%;               /* Black popover background */
+    --popover-foreground: 0 0% 100%;  /* White text on popover */
     
-    /* Primary: set as dark gray and its foreground as white */
-    --primary: 0 0% 15%;              /* Dark gray for header/cards */
-    --primary-foreground: 0 0% 100%;   /* White text on header/cards */
+    /* Primary: set as Villi orange */
+    --primary: 24 83% 47%;            /* Villi orange E25C10 */
+    --primary-foreground: 0 0% 100%;  /* White text on orange */
     
-    /* Secondary and others can be customized similarly */
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 20%;
+    /* Secondary as Villi blue */
+    --secondary: 225 96% 42%;         /* Villi blue 0540CF */
+    --secondary-foreground: 0 0% 100%;/* White text on blue */
+    
+    /* Destructive as Villi red */
+    --destructive: 5 88% 48%;         /* Villi red D9261C */
+    --destructive-foreground: 0 0% 100%; /* White on red */
+    
+    /* Other colors */
+    --muted: 0 0% 15%;
     --muted-foreground: 0 0% 80%;
-    --accent: 0 0% 20%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 25%;
-    --input: 0 0% 25%;
-    --ring: 0 0% 80%;
-    /* Custom darkish red variable */
-    --destructive-dark: 0 70% 25%;      /* Darker red (adjusted) */
+    --accent: 24 83% 47%;             /* Same as primary (orange) */
+    --accent-foreground: 0 0% 100%;   /* White on accent */
+    --border: 24 83% 47%;             /* Orange border */
+    --input: 0 0% 20%;
+    --ring: 24 83% 47%;               /* Orange ring */
   }
 
   .dark {
@@ -111,7 +114,7 @@
     border-color: transparent !important;
   }
 
-  /* Make sure your main container isn’t forcing a light background */
+  /* Make sure your main container isn't forcing a light background */
   .min-h-screen,
   .bg-slate-50 {
     background-color: hsl(var(--background)) !important;
@@ -126,17 +129,17 @@
   html body button.inline-flex.w-full.bg-green-600:hover,
   html body button.inline-flex.w-full.bg-green-600:focus,
   html body button.inline-flex.w-full.bg-green-600:active {
-    background-color: hsl(var(--destructive-dark)) !important;
+    background-color: hsl(var(--primary)) !important;
     color: hsl(var(--primary-foreground)) !important;
-    border-color: hsl(var(--destructive-dark)) !important;
+    border-color: hsl(var(--primary)) !important;
   }
 
   /* Create a custom destructive button style */
   .btn-destructive {
     @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-    background-color: hsl(var(--destructive-dark)) !important;
+    background-color: hsl(var(--destructive)) !important;
     color: hsl(var(--primary-foreground)) !important;
-    border: 1px solid hsl(var(--destructive-dark)) !important;
+    border: 1px solid hsl(var(--destructive)) !important;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2) !important;
     margin-left: auto;
     margin-right: auto;
@@ -146,8 +149,8 @@
   .btn-destructive:active,
   .btn-destructive:focus {
     /* Keep the color consistent on interaction */
-    background-color: hsl(var(--destructive-dark)) !important;
-    border-color: hsl(var(--destructive-dark)) !important;
+    background-color: hsl(var(--destructive)) !important;
+    border-color: hsl(var(--destructive)) !important;
   }
 
   /* Override input text and placeholder color for inputs with bg-white */
@@ -162,12 +165,12 @@
 @layer utilities {
   /* Either override the global bg-gray-50 utility */
   .bg-gray-50 {
-    background-color: hsl(var(--destructive-dark)) !important;
+    background-color: hsl(var(--primary)) !important;
   }
   
   /* Or target the specific element using its full class chain */
   div.flex.items.center.p-6.pt-0.bg-gray-50-bor {
-    background-color: hsl(var(--destructive-dark)) !important;
+    background-color: hsl(var(--primary)) !important;
   }
 
   /*

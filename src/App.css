@@ -1,13 +1,20 @@
+
 :root {
-  --background-dark: #2d2d2d;
-  --surface-dark: #3d3d3d;
+  /* Villi Pípari colors */
+  --villi-orange: #E25C10;
+  --villi-red: #D9261C;
+  --villi-blue: #0540CF;
+  --villi-black: #000000;
+  
+  --background-dark: var(--villi-black);
+  --surface-dark: #222222;
   --text-light: #ffffff;
-  --border-dark: #4d4d4d;
-  --hover-dark: #454545;
-  --primary-dark: #bb86fc;
+  --border-dark: var(--villi-orange);
+  --hover-dark: #333333;
+  --primary-dark: var(--villi-orange);
   --text-primary: #ffffff;
   --text-secondary: #b3b3b3;
-  --primary: 222.2 47.4% 11.2%;
+  --primary: var(--villi-orange);
 }
 
 html, 
@@ -69,7 +76,8 @@ button {
 }
 
 button:hover {
-  background-color: var(--border-dark);
+  background-color: var(--villi-orange);
+  opacity: 0.9;
 }
 
 .button {

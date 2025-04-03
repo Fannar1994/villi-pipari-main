@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 import tailwindAnimate from "tailwindcss-animate";
 
@@ -26,8 +27,8 @@ export default {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         primary: {
-          DEFAULT: 'hsl(0, 0%, 20%)', // dark gray
-          foreground: 'hsl(0, 0%, 100%)' // white
+          DEFAULT: 'hsl(var(--primary))', 
+          foreground: 'hsl(var(--primary-foreground))'
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
@@ -53,6 +54,11 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))'
         },
+        // Villi Pípari specific colors
+        'villi-orange': '#E25C10',
+        'villi-red': '#D9261C',
+        'villi-blue': '#0540CF',
+        'villi-black': '#000000',
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',

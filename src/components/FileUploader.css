@@ -1,18 +1,41 @@
+
 .file-uploader {
-  background-color: #3d3d3d;
+  background-color: #222222;
   color: white;
   padding: 20px;
   border-radius: 8px;
-  border: 1px solid #4d4d4d;
+  border: 1px solid #E25C10; /* Villi orange */
 }
 
 .drop-zone {
-  background-color: #2d2d2d;
-  border: 2px dashed #4d4d4d;
+  background-color: #000000; /* Villi black */
+  border: 2px dashed #E25C10; /* Villi orange */
   color: white;
 }
 
 .file-list {
-  background-color: #3d3d3d;
+  background-color: #222222;
   color: white;
+}
+
+.upload-button {
+  background-color: #E25C10; /* Villi orange */
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.upload-button:hover {
+  background-color: #D9261C; /* Villi red - hover effect */
+}
+
+.file-item {
+  border-bottom: 1px solid #333;
+  padding: 8px 0;
+}
+
+.file-item:last-child {
+  border-bottom: none;
 }

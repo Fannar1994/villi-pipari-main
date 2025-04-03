@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { DirectorySelect } from '@/components/DirectorySelect';
@@ -79,21 +80,21 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="bg-blue-50 border-b">
-          <CardTitle className="text-2xl text-blue-700">Villi Pípari</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-lg border-villi-orange">
+        <CardHeader className="border-b border-villi-orange bg-villi-black">
+          <CardTitle className="text-2xl text-white">Villi Pípari</CardTitle>
+          <CardDescription className="text-gray-300">
             Búðu til reikninga út frá Excel vinnuskýrslum
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 pt-6">
+        <CardContent className="space-y-6 pt-6 bg-black text-white">
           <FileUpload
             value={timesheetFile}
             onChange={setTimesheetFile}
             label="Vinnuskýrsla skrá"
             accept=".xlsx,.xls"
-            icon={<FileSpreadsheet className="mr-2 h-4 w-4" />}
+            icon={<FileSpreadsheet className="mr-2 h-4 w-4 text-villi-orange" />}
             disabled={isProcessing}
           />
           
@@ -102,7 +103,7 @@ const Index = () => {
             onChange={setTemplateFile}
             label="Sniðmát skrá (valfrjálst)"
             accept=".xlsx,.xls"
-            icon={<FileText className="mr-2 h-4 w-4" />}
+            icon={<FileText className="mr-2 h-4 w-4 text-villi-blue" />}
             disabled={isProcessing}
           />
           
@@ -110,18 +111,18 @@ const Index = () => {
             value={outputDir}
             onChange={setOutputDir}
             label="Úttak mappa"
-            icon={<FolderOutput className="mr-2 h-4 w-4" />}
+            icon={<FolderOutput className="mr-2 h-4 w-4 text-villi-orange" />}
             disabled={isProcessing}
           />
           
-          <Separator />
+          <Separator className="bg-villi-orange/30" />
           
           <ProcessStatus status={processStatus} />
         </CardContent>
-        <CardFooter className="bg-gray-50 border-t">
+        <CardFooter className="border-t border-villi-orange bg-black">
           <Button 
             onClick={handleGenerateInvoices} 
-            className="w-full bg-green-600 hover:bg-green-700 transition-colors"
+            className="w-full bg-villi-orange hover:bg-villi-red transition-colors"
             disabled={isProcessing}
           >
             {isProcessing ? 'Vinnur...' : 'Búa til reikninga'}
