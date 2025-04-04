@@ -29,16 +29,24 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
       throw new Error('Engin blöð fundust í skránni');
     }
 
-    // Updated pattern to include all months in both English and Icelandic, and now also including Kóp variations
-    const monthPattern = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|janúar|febrúar|mars|apríl|maí|júní|júlí|ágúst|september|október|nóvember|desember).*(-kop|-kóp|kop|kóp)?$/i;
-    const targetSheet = workbook.SheetNames.find(name => monthPattern.test(name.toLowerCase()));
+    // First, try to find a sheet with "kop" or "kóp" variations directly
+    const kopPattern = /kop|kóp/i;
+    let targetSheet = workbook.SheetNames.find(name => kopPattern.test(name.toLowerCase()));
+    
+    // If no "kop" sheet found, then try the month pattern with optional kop suffix
+    if (!targetSheet) {
+      console.log("No direct kop/kóp sheet found, looking for month sheets with kop/kóp suffix");
+      
+      const monthPattern = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|janúar|febrúar|mars|apríl|maí|júní|júlí|ágúst|september|október|nóvember|desember).*(-kop|-kóp|kop|kóp)?$/i;
+      targetSheet = workbook.SheetNames.find(name => monthPattern.test(name.toLowerCase()));
+    }
 
     // If no month sheet found, try to find any sheet with relevant headers
     let worksheet;
     let sheetName = targetSheet;
     
     if (!targetSheet) {
-      console.log("No month sheet found, looking for timesheet headers in all sheets");
+      console.log("No month or kop sheet found, looking for timesheet headers in all sheets");
       
       // Try each sheet and check if it has the expected headers
       for (const name of workbook.SheetNames) {
