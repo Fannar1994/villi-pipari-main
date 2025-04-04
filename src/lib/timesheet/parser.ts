@@ -26,11 +26,11 @@ export function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> {
         }
 
         const worksheet = workbook.Sheets[sheetName];
+        // Remove cellFormula from sheet_to_json options since it's not a valid option
         const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, { 
           header: 1, 
           defval: '',
-          raw: true, // Use raw values
-          cellFormula: false // Disable formula parsing
+          raw: true // Use raw values
         });
 
         const entries: TimesheetEntry[] = [];
