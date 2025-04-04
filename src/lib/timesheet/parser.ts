@@ -16,12 +16,14 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
     try {
       const arrayBuffer = await file.arrayBuffer();
       
-      // Use more robust options for reading various Excel formats
+      // Use more robust options for reading various Excel formats with formula handling
       const workbook = XLSX.read(arrayBuffer, { 
         type: 'array',
         cellDates: true,
         cellNF: true,
-        cellStyles: true
+        cellStyles: true,
+        cellFormula: false,  // Disable formula parsing to avoid issues
+        raw: true           // Use raw values instead of formatted values
       });
       
       console.log("Available sheets:", workbook.SheetNames);
@@ -52,23 +54,29 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
         // Try each sheet and check if it has the expected headers
         for (const name of workbook.SheetNames) {
           const sheet = workbook.Sheets[name];
-          const sample = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, raw: false }).slice(0, 20) as string[][];
           
-          // Check if any row contains timesheet-related headers
-          const hasTimesheetHeaders = sample.some(row => {
-            if (!row) return false;
-            const rowStr = row.join(' ').toLowerCase();
-            return rowStr.includes('dagsetning') || 
-                  rowStr.includes('tímar') || 
-                  rowStr.includes('vinna') || 
-                  (rowStr.includes('date') && rowStr.includes('hours'));
-          });
-          
-          if (hasTimesheetHeaders) {
-            console.log(`Found sheet with timesheet headers: ${name}`);
-            sheetName = name;
-            worksheet = sheet;
-            break;
+          try {
+            const sample = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 0, raw: true, defval: '' }).slice(0, 20) as string[][];
+            
+            // Check if any row contains timesheet-related headers
+            const hasTimesheetHeaders = sample.some(row => {
+              if (!row) return false;
+              const rowStr = row.join(' ').toLowerCase();
+              return rowStr.includes('dagsetning') || 
+                    rowStr.includes('tímar') || 
+                    rowStr.includes('vinna') || 
+                    (rowStr.includes('date') && rowStr.includes('hours'));
+            });
+            
+            if (hasTimesheetHeaders) {
+              console.log(`Found sheet with timesheet headers: ${name}`);
+              sheetName = name;
+              worksheet = sheet;
+              break;
+            }
+          } catch (error) {
+            console.warn(`Error checking headers in sheet ${name}:`, error);
+            continue; // Try next sheet if this one fails
           }
         }
         
@@ -92,13 +100,20 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
       const range = worksheet['!ref'] || 'A1:Z200';  // Use default range if not found
       console.log("Using range:", range);
       
-      // Convert sheet to raw data to access cells directly
-      const rawData = XLSX.utils.sheet_to_json(worksheet, { 
-        header: 1, 
-        raw: false,
-        range: range,
-        defval: ''  // Use empty string for empty cells
-      }) as string[][];
+      // Convert sheet to raw data with more robust error handling
+      let rawData: string[][] = [];
+      try {
+        rawData = XLSX.utils.sheet_to_json(worksheet, { 
+          header: 1, 
+          raw: true,
+          range: range,
+          defval: '',  // Use empty string for empty cells
+          blankrows: false // Skip blank rows
+        }) as string[][];
+      } catch (error) {
+        console.error('Error converting sheet to JSON:', error);
+        throw new Error('Villa við vinnslu á Excel skjali. Skjalið gæti innihaldið óstudd snið eða formúlur.');
+      }
       
       console.log("Raw data loaded, rows:", rawData.length);
       
@@ -136,7 +151,7 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
           for (let rowIdx = 0; rowIdx < Math.min(10, rawData.length); rowIdx++) {
             if (!rawData[rowIdx] || !rawData[rowIdx][colIdx]) continue;
             
-            const cell = rawData[rowIdx][colIdx];
+            const cell = String(rawData[rowIdx][colIdx] || '');
             // Check for date-like patterns
             if (/^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}$/.test(cell)) {
               datePatternCount++;
@@ -159,9 +174,9 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
             const row = rawData[i];
             if (!row || row.length === 0 || !row[potentialDateColumns[0]]) continue;
             
-            const dateStr = row[potentialDateColumns[0]];
-            const hoursStr = row[potentialHourColumns[0]] || '0';
-            const hours = parseFloat(hoursStr.replace(',', '.')) || 0;
+            const dateStr = String(row[potentialDateColumns[0]] || '');
+            const hoursStr = String(row[potentialHourColumns[0]] || '0');
+            const hours = parseFloat(String(hoursStr).replace(',', '.')) || 0;
             
             if (dateStr && hours > 0) {
               entries.push({
@@ -192,13 +207,13 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
       const getColumnIndex = (header: string, alternativeHeaders: string[] = []): number => {
         // Try primary header first
         let index = headerRow.findIndex(cell => 
-          cell && cell.toLowerCase().includes(header.toLowerCase()));
+          cell && String(cell).toLowerCase().includes(header.toLowerCase()));
         
         // If not found, try alternative headers
         if (index === -1 && alternativeHeaders.length > 0) {
           for (const altHeader of alternativeHeaders) {
             index = headerRow.findIndex(cell => 
-              cell && cell.toLowerCase().includes(altHeader.toLowerCase()));
+              cell && String(cell).toLowerCase().includes(altHeader.toLowerCase()));
             if (index !== -1) break;
           }
         }
@@ -244,17 +259,17 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
         }
         
         // Parse hours - convert comma to dot for number parsing
-        const hoursStr = row[hoursColIdx] || '0';
+        const hoursStr = String(row[hoursColIdx] || '0');
         const hours = parseFloat(hoursStr.replace(',', '.')) || 0;
         
         const entry: TimesheetEntry = {
-          date: row[dateColIdx] || '',
+          date: String(row[dateColIdx] || ''),
           hours: hours,
-          workType: workTypeColIdx !== -1 ? (row[workTypeColIdx] || '') : '',
-          location: locationColIdx !== -1 ? (row[locationColIdx] || '') : '',
-          apartment: apartmentColIdx !== -1 ? (row[apartmentColIdx] || '') : '',
-          other: otherColIdx !== -1 ? (row[otherColIdx] || '') : '',
-          employee: employeeColIdx !== -1 ? (row[employeeColIdx] || '') : ''
+          workType: workTypeColIdx !== -1 ? String(row[workTypeColIdx] || '') : '',
+          location: locationColIdx !== -1 ? String(row[locationColIdx] || '') : '',
+          apartment: apartmentColIdx !== -1 ? String(row[apartmentColIdx] || '') : '',
+          other: otherColIdx !== -1 ? String(row[otherColIdx] || '') : '',
+          employee: employeeColIdx !== -1 ? String(row[employeeColIdx] || '') : ''
         };
         
         // Only add non-empty entries with valid dates and hours
@@ -274,7 +289,7 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
       console.error('Error reading Excel file:', readError);
       if (readError.message.includes('could not be read') || 
           readError.message.includes('permission')) {
-        throw new Error('Ekki var hægt að lesa skrána. Athugaðu hvort skráin sé opin í öðru forriti eða hvort þú hafir réttindi til að lesa hana.');
+        throw new Error('Ekki var hægt að lesa skrána. Vinsamlegast athugaðu hvort skráin sé opin í öðru forriti eða hvort þú hafir réttindi til að lesa hana. Reyndu að loka skránni í Excel og vista áður en þú reynir aftur.');
       }
       throw readError; // rethrow for other errors
     }
