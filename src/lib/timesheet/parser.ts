@@ -9,7 +9,11 @@ export function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> {
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { 
+          type: 'array',
+          cellFormula: false, // Disable formula parsing
+          raw: true // Use raw values
+        });
 
         // Find the correct sheet (looking for 'kop' or 'kóp' variations)
         const sheetName = Object.keys(workbook.Sheets).find(name => 
@@ -22,19 +26,20 @@ export function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> {
         }
 
         const worksheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(worksheet, { 
+        const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, { 
           header: 1, 
           defval: '',
-          raw: false 
+          raw: true, // Use raw values
+          cellFormula: false // Disable formula parsing
         });
 
         const entries: TimesheetEntry[] = [];
 
-        // Find header row
-        const headerRow = rows.findIndex(row => 
-          row.some((cell: string) => 
-            ['dagsetning', 'date', 'dags'].some(header => 
-              String(cell).toLowerCase().includes(header)
+        // Find header row - explicitly type as array
+        const headerRow = (rows as any[][]).findIndex(row => 
+          Array.isArray(row) && row.some((cell: any) => 
+            typeof cell === 'string' && ['dagsetning', 'date', 'dags'].some(header => 
+              cell.toLowerCase().includes(header)
             )
           )
         );
@@ -54,10 +59,10 @@ export function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> {
 
         // Process rows starting from the next row after headers
         for (let i = headerRow + 1; i < rows.length; i++) {
-          const row = rows[i];
+          const row = rows[i] as any[];
           
-          // Skip empty rows
-          if (!row || row.every(cell => cell === '')) continue;
+          // Skip empty rows - explicitly type as array
+          if (!row || (Array.isArray(row) && row.every(cell => cell === ''))) continue;
 
           // Map columns (adjust these based on your specific Excel sheet structure)
           const entry: TimesheetEntry = {
@@ -76,7 +81,14 @@ export function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> {
         resolve(entries);
       } catch (error) {
         console.error('Villa við lestur á vinnuskýrslu:', error);
-        reject(new Error(`Villa við lestur á vinnuskýrslu: ${error instanceof Error ? error.message : 'Óþekkt villa'}`));
+        let errorMessage = `Villa við lestur á vinnuskýrslu: ${error instanceof Error ? error.message : 'Óþekkt villa'}`;
+        
+        // Add a helpful message for permission errors
+        if (errorMessage.includes('permission')) {
+          errorMessage += '. Athugaðu hvort skráin sé opin í Excel eða öðru forriti og lokaðu henni áður en þú reynir aftur.';
+        }
+        
+        reject(new Error(errorMessage));
       }
     };
 
@@ -88,4 +100,3 @@ export function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> {
     reader.readAsArrayBuffer(file);
   });
 }
-
