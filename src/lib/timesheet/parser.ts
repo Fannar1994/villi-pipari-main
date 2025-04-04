@@ -12,8 +12,10 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
     
     console.log("Available sheets:", workbook.SheetNames);
 
-    // Updated pattern to include all months in both English and Icelandic
-    const monthPattern = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|janúar|febrúar|mars|apríl|maí|júní|júlí|ágúst|september|október|nóvember|desember).*-kop$/i;
+    // Expanded pattern to include many variations of month names with or without -kop suffix
+    // This pattern matches month names in English and Icelandic with various spelling variations
+    const monthPattern = /(jan|feb|mar|mars|apr|apríl|may|maí|mai|jun|jún|júní|jul|júl|julý|aug|ágú|ágúst|sep|sept|september|oct|okt|október|nov|nóv|nóvember|dec|des|desember)(?:.*kop)?$/i;
+    
     const targetSheet = workbook.SheetNames.find(name => monthPattern.test(name.toLowerCase()));
 
     if (!targetSheet) {
@@ -34,7 +36,7 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
     // Find the header row (should be around row 12)
     let headerRowIndex = -1;
     for (let i = 0; i < rawData.length; i++) {
-      if (rawData[i] && rawData[i].includes('Dagsetning')) {
+      if (rawData[i] && Array.isArray(rawData[i]) && rawData[i].some(cell => typeof cell === 'string' && cell.toLowerCase().includes('dagsetning'))) {
         headerRowIndex = i;
         break;
       }
@@ -50,7 +52,7 @@ export async function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> 
     const headerRow = rawData[headerRowIndex];
     const getColumnIndex = (header: string): number => {
       const index = headerRow.findIndex(cell => 
-        cell && cell.toLowerCase().includes(header.toLowerCase()));
+        cell && typeof cell === 'string' && cell.toLowerCase().includes(header.toLowerCase()));
       return index;
     };
     

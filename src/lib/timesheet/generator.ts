@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { TimesheetEntry } from '@/types/timesheet';
 import { createSafeSheetName } from '../utils/formatters';
 import { groupEntriesByLocation, createInvoiceData } from './processor';
+import { generateSummarySheet, generateEmployeeTemplate } from './summary';
 
 /**
  * Generates Excel invoices from timesheet entries
@@ -57,6 +58,12 @@ export async function generateInvoices(
       }
     }
 
+    // Generate summary sheet and add it to the workbook
+    if (timesheetEntries.length > 0) {
+      const summarySheet = generateSummarySheet(timesheetEntries);
+      XLSX.utils.book_append_sheet(outputWorkbook, summarySheet, 'Samantekt');
+    }
+
     if (invoiceCount === 0) {
       throw new Error('Engar færslur fundust til að búa til reikninga');
     }
@@ -108,6 +115,10 @@ export async function generateInvoices(
       if (!result.success) {
         throw new Error(result.error || 'Villa kom upp við að vista skjalið');
       }
+      
+      // Now generate employee templates
+      await generateEmployeeTimesheets(timesheetEntries, normalizedDir);
+      
     } catch (error) {
       console.error("Error while using Electron API:", error);
       throw new Error('Villa við að vista skrá: ' + (error.message || 'Óþekkt villa'));
@@ -117,5 +128,49 @@ export async function generateInvoices(
   } catch (error) {
     console.error('Error generating invoices:', error);
     throw new Error(error.message || 'Villa við að búa til reikninga');
+  }
+}
+
+/**
+ * Generates employee timesheet files
+ */
+async function generateEmployeeTimesheets(
+  timesheetEntries: TimesheetEntry[],
+  outputDirectory: string
+): Promise<void> {
+  try {
+    // Generate the employee template workbook
+    const employeeWorkbook = generateEmployeeTemplate(timesheetEntries);
+    
+    // Skip if no sheets were created
+    if (employeeWorkbook.SheetNames.length === 0) {
+      console.log("No employee timesheets to generate");
+      return;
+    }
+    
+    // Write the workbook to a buffer
+    const wbout = XLSX.write(employeeWorkbook, { bookType: 'xlsx', type: 'buffer' });
+    
+    // Create a valid filename
+    const filename = `Employee_Timesheets_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    // Create the full file path
+    const fullPath = `${outputDirectory}/${filename}`;
+    
+    console.log("Saving employee timesheets to:", fullPath);
+    
+    // Use the window.electron API for file operations
+    const result = await window.electron.writeFile({
+      filePath: fullPath,
+      data: new Uint8Array(wbout)
+    });
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Villa kom upp við að vista starfsmannaskjal');
+    }
+    
+  } catch (error) {
+    console.error("Error generating employee timesheets:", error);
+    throw new Error('Villa við að búa til starfsmannaskýrslur: ' + (error.message || 'Óþekkt villa'));
   }
 }

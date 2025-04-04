@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { FileCheck, FolderOutput, FileSpreadsheet, FileText } from 'lucide-react';
+import { FileCheck, FolderOutput, FileSpreadsheet, FileText, FileOutput } from 'lucide-react';
 import { parseTimesheetFile, generateInvoices } from '@/lib/excelProcessor';
 
 const Index = () => {
@@ -60,7 +60,7 @@ const Index = () => {
       
       toast({
         title: 'Árangur!',
-        description: `${invoiceCount} reikningar hafa verið búnir til.`,
+        description: `${invoiceCount} reikningar, samantekt og starfsmannaskýrslur hafa verið búnar til.`,
       });
       
     } catch (error) {
@@ -116,6 +116,15 @@ const Index = () => {
           />
           
           <Separator className="bg-primary/30" />
+
+          <div className="text-sm space-y-2 bg-secondary/30 p-3 rounded-md">
+            <p className="font-semibold">Nýir eiginleikar:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Samantektarblað fyrir alla starfsmenn</li>
+              <li>Starfsmannaskýrslur með rauðum lit á frídögum</li>
+              <li>Stuðningur við fleiri eyðublöð og mánaðarnöfn</li>
+            </ul>
+          </div>
           
           <ProcessStatus status={processStatus} />
         </CardContent>
@@ -125,13 +134,14 @@ const Index = () => {
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={isProcessing}
           >
-            {isProcessing ? 'Vinnur...' : 'Búa til reikninga'}
+            <FileOutput className="mr-2 h-4 w-4" />
+            {isProcessing ? 'Vinnur...' : 'Búa til reikninga og skýrslur'}
           </Button>
         </CardFooter>
       </Card>
       
       <p className="text-muted-foreground text-sm mt-4">
-        Villi Pípari © 2023
+        Villi Pípari © 2023-2025
       </p>
     </div>
   );
