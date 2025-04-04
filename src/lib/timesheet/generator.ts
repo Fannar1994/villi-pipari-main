@@ -2,7 +2,7 @@
 import * as XLSX from 'xlsx';
 import { TimesheetEntry } from '@/types/timesheet';
 import { createSafeSheetName } from '../utils/formatters';
-import { groupEntriesByLocation, createInvoiceData } from './processor';
+import { groupEntriesByLocation, createInvoiceData, createSummarySheetData } from './processor';
 
 /**
  * Generates Excel invoices from timesheet entries
@@ -24,6 +24,40 @@ export async function generateInvoices(
       // Create a new workbook from scratch
       outputWorkbook = XLSX.utils.book_new();
     }
+    
+    // Add summary sheet
+    const { data: summaryData, styles: summaryStyles } = createSummarySheetData(timesheetEntries);
+    const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
+    
+    // Apply styles to the summary worksheet
+    if (!summaryWorksheet['!cols']) {
+      summaryWorksheet['!cols'] = [
+        { wch: 12 }, // Date column width
+        { wch: 20 }, // Employee column width
+        { wch: 12 }  // Hours column width
+      ];
+    }
+    
+    // Apply cell styles for the summary sheet
+    for (const [cell, style] of Object.entries(summaryStyles)) {
+      if (!summaryWorksheet[cell]) {
+        // Skip cells that don't exist
+        continue;
+      }
+      
+      // Ensure the cell has a 's' (style) property
+      if (!summaryWorksheet[cell].s) {
+        summaryWorksheet[cell].s = {};
+      }
+      
+      // Apply the font color
+      summaryWorksheet[cell].s = {
+        ...summaryWorksheet[cell].s,
+        ...style
+      };
+    }
+    
+    XLSX.utils.book_append_sheet(outputWorkbook, summaryWorksheet, 'Samantekt');
     
     // Group entries by location and apartment
     const groupedEntries = groupEntriesByLocation(timesheetEntries);
@@ -57,12 +91,12 @@ export async function generateInvoices(
       }
     }
 
-    if (invoiceCount === 0) {
+    if (invoiceCount === 0 && Object.keys(groupedEntries).length === 0) {
       throw new Error('Engar færslur fundust til að búa til reikninga');
     }
 
     // Write the workbook to a buffer
-    const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer' });
+    const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer', bookSST: false });
 
     // Check if we're in an Electron environment with the required API
     if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {

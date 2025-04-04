@@ -8,3 +8,10 @@ export interface TimesheetEntry {
   other: string;     // Annað
   employee: string;  // Starfsmaður
 }
+
+export interface SummaryEntry {
+  date: string;
+  employee: string;
+  totalHours: number;
+  isHoliday: boolean;
+}

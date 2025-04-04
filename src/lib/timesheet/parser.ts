@@ -35,7 +35,7 @@ export function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> {
 
         const entries: TimesheetEntry[] = [];
 
-        // Find header row - explicitly type as array
+        // Find header row
         const headerRow = (rows as any[][]).findIndex(row => 
           Array.isArray(row) && row.some((cell: any) => 
             typeof cell === 'string' && ['dagsetning', 'date', 'dags'].some(header => 
@@ -57,16 +57,73 @@ export function parseTimesheetFile(file: File): Promise<TimesheetEntry[]> {
           return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
         }
 
+        // Function to parse and standardize date format
+        function parseDate(dateValue: any): string {
+          if (!dateValue) return '';
+          
+          try {
+            // If it's already a date object from Excel
+            if (dateValue instanceof Date) {
+              return dateValue.toISOString().split('T')[0]; // YYYY-MM-DD format
+            }
+            
+            // If it's a number (Excel serial date)
+            if (typeof dateValue === 'number') {
+              // Excel dates are number of days since 1900-01-01 (or 1904-01-01)
+              const excelDate = XLSX.SSF.parse_date_code(dateValue);
+              const year = excelDate.y;
+              const month = excelDate.m.toString().padStart(2, '0');
+              const day = excelDate.d.toString().padStart(2, '0');
+              return `${year}-${month}-${day}`;
+            }
+            
+            // If it's a string, try to parse it
+            if (typeof dateValue === 'string') {
+              const dateStr = dateValue.trim();
+              
+              // Try to parse various date formats
+              // Icelandic format: DD.MM.YYYY
+              if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(dateStr)) {
+                const [day, month, year] = dateStr.split('.').map(Number);
+                return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+              }
+              
+              // Format: DD/MM/YYYY
+              if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+                const [day, month, year] = dateStr.split('/').map(Number);
+                return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+              }
+              
+              // Format: YYYY-MM-DD
+              if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) {
+                return dateStr;
+              }
+              
+              // If none of the above patterns match, try JavaScript Date parsing as fallback
+              const parsed = new Date(dateStr);
+              if (!isNaN(parsed.getTime())) {
+                return parsed.toISOString().split('T')[0];
+              }
+            }
+            
+            // If we can't parse the date, return it as is
+            return String(dateValue);
+          } catch (error) {
+            console.warn('Error parsing date:', error, dateValue);
+            return String(dateValue);
+          }
+        }
+
         // Process rows starting from the next row after headers
         for (let i = headerRow + 1; i < rows.length; i++) {
           const row = rows[i] as any[];
           
-          // Skip empty rows - explicitly type as array
-          if (!row || (Array.isArray(row) && row.every(cell => cell === ''))) continue;
+          // Skip empty rows
+          if (!row || (Array.isArray(row) && row.every((cell: any) => cell === ''))) continue;
 
           // Map columns (adjust these based on your specific Excel sheet structure)
           const entry: TimesheetEntry = {
-            date: row[0] ? String(row[0]) : '',
+            date: parseDate(row[0]),
             hours: row[1] ? Number(row[1]) : 0,
             workType: row[2] ? capitalize(String(row[2])) : '',
             location: row[3] ? capitalize(String(row[3])) : '',
