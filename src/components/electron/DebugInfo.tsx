@@ -36,7 +36,8 @@ export function DebugInfo() {
       const info = [
         `API found: ${!!api}`,
         `API source: ${window.electron ? 'window.electron' : ((window as any).electronBackupAPI ? 'backup' : 'none')}`,
-        `Context Isolation: ${typeof window.contextIsolation !== 'undefined' ? 'Enabled' : 'Unknown'}`,
+        // Fixed: contextIsolation isn't a standard Window property
+        `Context Isolation: ${'contextIsolation' in (window as any) ? 'Enabled' : 'Unknown'}`,
         `All methods available: ${isElectronAPIAvailable()}`,
         `Window properties: ${Object.keys(window).slice(0, 20).join(', ')}...`
       ].join('\n');
