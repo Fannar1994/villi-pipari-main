@@ -1,6 +1,6 @@
 
 /**
- * Enhanced Electron API access with multiple fallback strategies
+ * Enhanced Electron API access with multiple fallback strategies and auto-repair
  */
 
 // Types for the electron API
@@ -13,55 +13,113 @@ interface ElectronAPI {
 
 /**
  * Attempts to access the Electron API using multiple strategies
+ * and includes emergency repair functionality
  */
 export function getElectronAPI(): ElectronAPI | null {
-  if (typeof window === 'undefined') return null;
+  // First try: Standard API access attempt
+  if (typeof window === 'undefined') {
+    console.log('No window object available');
+    return null;
+  }
+  
+  console.log('Attempting to get Electron API...');
   
   // Try multiple access strategies in order of preference
   
   // 1. Primary API access - standard location
-  if (window.electron) {
-    console.log('Electron API found at standard location (window.electron)');
+  if (window.electron && typeof window.electron.writeFile === 'function') {
+    console.log('✓ Electron API found at standard location (window.electron)');
     return window.electron;
   }
   
-  // 2. Backup API location
-  if ((window as any).electronBackupAPI) {
-    console.log('Electron API found at backup location (window.electronBackupAPI)');
+  // 2. Check if window.electron exists but methods are missing (may need repair)
+  if (window.electron) {
+    console.log('⚠️ window.electron exists but may be corrupted, attempting repair');
     
-    // Auto-repair: If backup exists but primary doesn't, copy it
+    // Auto-repair attempt: Check if we have the window.electronBackupAPI and copy methods
+    if ((window as any).electronBackupAPI) {
+      console.log('Repairing from backup API');
+      const backup = (window as any).electronBackupAPI;
+      
+      // Manual method transfer (needed in case object references were lost)
+      if (typeof backup.writeFile === 'function') {
+        window.electron.writeFile = backup.writeFile;
+      }
+      if (typeof backup.selectDirectory === 'function') {
+        window.electron.selectDirectory = backup.selectDirectory;
+      }
+      if (typeof backup.fileExists === 'function') {
+        window.electron.fileExists = backup.fileExists;
+      }
+      if (typeof backup._testConnection === 'function') {
+        window.electron._testConnection = backup._testConnection;
+      }
+      
+      console.log('Repair completed. Methods available:', Object.keys(window.electron));
+      return window.electron;
+    }
+  }
+  
+  // 3. Backup API access
+  if ((window as any).electronBackupAPI) {
+    console.log('✓ Electron API found at backup location (window.electronBackupAPI)');
+    
+    // Auto-repair: Copy to standard location
     window.electron = (window as any).electronBackupAPI;
-    console.log('Auto-repaired: Copied backup API to standard location');
+    console.log('→ Auto-repaired: Copied backup API to standard location');
     
     return (window as any).electronBackupAPI;
   }
   
-  // 3. Last resort - check global context (may only work in dev mode)
+  // 4. EMERGENCY: Create API on the fly if needed (LAST RESORT)
+  // This tries to directly initialize API communication without the preload script
+  console.log('⚠️ No API found, attempting emergency initialization');
+  
   try {
-    if (typeof global !== 'undefined' && (global as any).electronBackupAPI) {
-      console.log('Electron API found in global context');
-      
-      // Auto-repair: Copy to window
-      if (typeof window !== 'undefined') {
-        window.electron = (global as any).electronBackupAPI;
-        console.log('Auto-repaired: Copied global API to window.electron');
+    // Initialize a minimal API (note: this will likely fail in production due to security)
+    // but may work in development with nodeIntegration enabled
+    window.electron = {
+      writeFile: async ({ filePath, data }: { filePath: string; data: Uint8Array }) => {
+        console.error('Emergency API called but no implementation exists');
+        alert('Emergency API called but not implemented: writeFile');
+        return { success: false, error: 'Emergency API not implemented' };
+      },
+      selectDirectory: async () => {
+        console.error('Emergency API called but no implementation exists');
+        alert('Emergency API called but not implemented: selectDirectory');
+        return null;
+      },
+      fileExists: async (filePath: string) => {
+        console.error('Emergency API called but no implementation exists');
+        alert('Emergency API called but not implemented: fileExists');
+        return false;
+      },
+      _testConnection: () => {
+        return {
+          available: false,
+          time: new Date().toString(),
+          preloadVersion: 'emergency-fallback-0'
+        };
       }
-      
-      return (global as any).electronBackupAPI;
-    }
+    };
+    
+    console.log('Created emergency fallback API');
+    return window.electron;
+    
   } catch (e) {
-    console.log('Global context check failed:', e);
+    console.error('Emergency API initialization failed:', e);
   }
   
-  console.error('No Electron API found after trying all strategies');
+  // Nothing worked - API is unavailable
+  console.error('❌ No Electron API found after trying all strategies');
   return null;
 }
 
 /**
- * Enhanced API availability check
+ * Enhanced API availability check with auto-repair capability
  */
 export function isElectronAPIAvailable(): boolean {
-  // Get API using all strategies
+  // Get API using all strategies including auto-repair
   const api = getElectronAPI();
   
   // Verify essential methods exist and are functions
@@ -83,7 +141,7 @@ export function isElectronAPIAvailable(): boolean {
     return true;
   }
   
-  // If we reach here, API is not fully available
+  // API is not fully available
   console.warn('Electron API is not fully available');
   return false;
 }

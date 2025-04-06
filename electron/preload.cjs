@@ -2,6 +2,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 console.log('🚀 Preload script starting...');
+console.log('Preload environment:', process.env.NODE_ENV || 'not set');
 
 // Create a more robust Electron API object with better error handling
 const electronAPI = {
@@ -36,55 +37,71 @@ const electronAPI = {
     return { 
       available: true, 
       time: new Date().toString(),
-      preloadVersion: '2.0' // Version tracking helps with debugging
+      preloadVersion: '3.0' // Version tracking helps with debugging
     };
   }
 };
 
-// Implement a more robust API exposure strategy
-const exposeAPI = () => {
-  try {
-    // Primary method: Use contextBridge when available
-    if (contextBridge && typeof contextBridge.exposeInMainWorld === 'function') {
-      contextBridge.exposeInMainWorld('electron', electronAPI);
-      console.log('✅ Electron API exposed via contextBridge');
-      return true;
-    } else {
-      console.warn('⚠️ contextBridge not available, falling back to direct assignment');
-      return false;
-    }
-  } catch (error) {
-    console.error('❌ Failed to expose API via contextBridge:', error);
-    return false;
-  }
-};
+// Log available IPC channels
+try {
+  console.log('Available IPC channels:', ipcRenderer.eventNames());
+} catch (e) {
+  console.error('Could not log IPC channels:', e);
+}
 
-// First try the proper way
-const exposed = exposeAPI();
-
-// Backup methods for when contextBridge fails
-if (!exposed) {
-  try {
-    // Backup method 1: Direct window assignment (less secure, but works in some cases)
-    if (typeof window !== 'undefined') {
-      window.electron = electronAPI;
-      console.log('⚠️ Electron API exposed directly on window object');
-      
-      // Also expose as backup property
-      window.electronBackupAPI = electronAPI;
-      console.log('⚠️ Backup API also exposed on window.electronBackupAPI');
-    }
-  } catch (e) {
-    console.error('💥 All exposure methods failed:', e);
+// CRITICAL: Use MULTIPLE exposure methods to ensure API availability
+// Method 1: Standard contextBridge exposure
+try {
+  if (contextBridge) {
+    console.log('Exposing API via contextBridge');
+    contextBridge.exposeInMainWorld('electron', electronAPI);
+    console.log('✅ API exposed via contextBridge');
+  } else {
+    console.warn('⚠️ contextBridge not available');
   }
+} catch (e) {
+  console.error('❌ contextBridge exposure failed:', e);
+}
+
+// Method 2: ALWAYS expose via direct window assignment regardless of environment
+// This is less secure but ensures the API is available
+try {
+  console.log('CRITICAL: Using direct window assignment as failsafe');
   
-  // Backup method 2: Global assignment for Node context
-  try {
-    global.electronBackupAPI = electronAPI;
-    console.log('⚠️ Backup API exposed on global.electronBackupAPI');
-  } catch (e) {
-    console.error('💥 Global backup exposure failed:', e);
-  }
+  // Create a special initialization function that will be called in the renderer
+  const initializeAPI = `
+    console.log('🔄 Initializing Electron API directly in window...');
+    window.electron = ${JSON.stringify(electronAPI)};
+    
+    // Set function implementations manually since they can't be serialized
+    window.electron.writeFile = ${electronAPI.writeFile.toString()};
+    window.electron.selectDirectory = ${electronAPI.selectDirectory.toString()};
+    window.electron.fileExists = ${electronAPI.fileExists.toString()};
+    window.electron._testConnection = ${electronAPI._testConnection.toString()};
+    
+    // Also expose as backup
+    window.electronBackupAPI = window.electron;
+    
+    console.log('✅ Direct API initialization complete');
+  `;
+  
+  // Use process.electronDirect as a transport mechanism
+  process.electronDirect = {
+    api: electronAPI,
+    initCode: initializeAPI
+  };
+  
+  console.log('✅ API prepared for direct injection');
+} catch (e) {
+  console.error('❌ Direct window assignment failed:', e);
+}
+
+// Method 3: Use global for Node context
+try {
+  global.electronBackupAPI = electronAPI;
+  console.log('✅ API exposed via global.electronBackupAPI');
+} catch (e) {
+  console.error('❌ Global exposure failed:', e);
 }
 
 // Debug handler to check if API is accessible
