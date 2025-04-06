@@ -8,12 +8,11 @@ import {
   getCurrentDateString,
 } from './pdfUtils';
 import { toast } from '@/hooks/use-toast';
-import { getElectronAPI, isElectronAPIAvailable, forceApiRecovery } from '@/lib/electron/detector';
 
 /**
  * Generates PDF files from timesheet entries
  * Main function that orchestrates all PDF generation process
- * Uses our enhanced API access methods
+ * Uses direct window.electron access
  */
 export async function generatePdfFiles(
   timesheetEntries: TimesheetEntry[],
@@ -29,38 +28,17 @@ export async function generatePdfFiles(
       throw new Error('PDF generation requires browser environment');
     }
     
-    // Check API availability using our enhanced helper
-    if (!isElectronAPIAvailable()) {
-      console.error("No viable Electron API available for file operations");
+    // Direct API check
+    if (!window.electron || typeof window.electron.writeFile !== 'function') {
+      const errorMsg = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.';
       
-      // Try to auto-recover API with our enhanced recovery method
-      console.log("Attempting enhanced API auto-recovery...");
-      const recoverySuccessful = forceApiRecovery();
+      toast({
+        title: "Villa",
+        description: errorMsg,
+        variant: "destructive",
+      });
       
-      // Check again after recovery attempt
-      if (!recoverySuccessful || !isElectronAPIAvailable()) {
-        const errorMsg = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Smelltu á "Debug" flipann og "Repair API" hnappinn, eða endurræstu forritið.';
-        
-        toast({
-          title: "Villa",
-          description: errorMsg,
-          variant: "destructive",
-        });
-        
-        throw new Error(errorMsg);
-      } else {
-        console.log("Enhanced API recovery successful!");
-        toast({
-          title: "Tókst",
-          description: "API hefur verið endurheimt í neyðarham",
-        });
-      }
-    }
-    
-    // Double-check we have the writeFile method
-    const api = getElectronAPI();
-    if (!api || typeof api.writeFile !== 'function') {
-      throw new Error('Ekki er hægt að búa til PDF - vantar aðgang að skráarkerfi. Vinsamlegast farðu í Debug flipann og smelltu á "Repair API" hnappinn.');
+      throw new Error(errorMsg);
     }
     
     // Check if we have valid entries

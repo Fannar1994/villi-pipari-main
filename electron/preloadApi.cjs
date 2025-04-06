@@ -10,7 +10,7 @@
  * @returns {Object} The API object to be exposed
  */
 function createElectronAPI(ipcRenderer) {
-  console.log('Creating Electron API object - SUPER SIMPLIFIED VERSION');
+  console.log('Creating Electron API object - SIMPLIFIED VERSION');
   
   return {
     writeFile: async (options) => {
@@ -24,9 +24,8 @@ function createElectronAPI(ipcRenderer) {
     },
     
     selectDirectory: async () => {
-      console.log('Preload: selectDirectory called - SUPER SIMPLE IMPLEMENTATION');
+      console.log('Preload: selectDirectory called');
       try {
-        // Simple, direct implementation - just call and return
         const result = await ipcRenderer.invoke('select-directory');
         console.log('Preload: selectDirectory result:', result);
         return result || null;
@@ -50,7 +49,7 @@ function createElectronAPI(ipcRenderer) {
       return { 
         available: true, 
         time: new Date().toString(),
-        preloadVersion: '6.0' // Super simple version
+        preloadVersion: '7.0' // Simplified direct version
       };
     }
   };

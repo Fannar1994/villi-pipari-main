@@ -1,7 +1,6 @@
 
 import { TimesheetEntry } from '@/types/timesheet';
 import { groupEntriesByLocation } from '../groupUtils';
-import { getElectronAPI } from '@/lib/electron/detector';
 
 /**
  * Validates if PDF generation prerequisites are met
@@ -23,11 +22,10 @@ export function prepareEntriesForPdfGeneration(
 
 /**
  * Returns whether Electron API is available
- * Uses our centralized API access helper
+ * Direct window.electron check
  */
 export function isElectronFileApiAvailable(): boolean {
-  const api = getElectronAPI();
-  return !!api && typeof api.writeFile === 'function';
+  return !!window.electron && typeof window.electron.writeFile === 'function';
 }
 
 /**
@@ -46,7 +44,7 @@ export function getCurrentDateString(): string {
 }
 
 /**
- * Save PDF data to a file using our enhanced API access
+ * Save PDF data to a file using direct window.electron API
  */
 export async function savePdfToFile(
   pdfData: Uint8Array,
@@ -54,16 +52,13 @@ export async function savePdfToFile(
 ): Promise<boolean> {
   console.log("Saving PDF to:", filePath, "data length:", pdfData.length);
   
-  // Standard implementation for paths
-  const api = getElectronAPI();
-  
-  if (!api || typeof api.writeFile !== 'function') {
+  if (!window.electron || typeof window.electron.writeFile !== 'function') {
     console.error("Electron API unavailable for saving PDF");
     return false;
   }
   
   try {
-    const result = await api.writeFile({
+    const result = await window.electron.writeFile({
       filePath: filePath,
       data: pdfData
     });

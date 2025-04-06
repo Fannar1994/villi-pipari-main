@@ -1,16 +1,14 @@
 
 /**
- * Enhanced Electron API access with improved reliability
+ * Simplified Electron API access
  * Main API export module
  */
 
-// Re-export all functionality from modules
+// Re-export only needed functionality from modules
 export { 
   getElectronAPI, 
   isElectronAPIAvailable, 
-  testConnection, 
-  forceApiRecovery,
-  activateEmergencyMode 
+  testConnection 
 } from './detector';
 export { writeFile, selectDirectory, fileExists } from './fileSystem';
 export type { 

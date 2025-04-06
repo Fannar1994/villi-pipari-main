@@ -6,11 +6,11 @@ export interface ApiStatusType {
   available: boolean;
   details: string;
   methods: Record<string, boolean>;
-  backupAvailable?: boolean;
 }
 
 /**
  * A hook for checking and monitoring Electron API availability
+ * Simplified to only check window.electron
  */
 export function useElectronAPI() {
   const [apiStatus, setApiStatus] = useState<ApiStatusType>({
@@ -20,27 +20,15 @@ export function useElectronAPI() {
   });
   const [isChecking, setIsChecking] = useState(false);
 
-  // Comprehensive API check function
+  // Direct API check function
   const checkApi = () => {
     setIsChecking(true);
     try {
-      console.log('📊 Detailed Electron API check:');
-      
-      // First check the window object
-      const hasWindow = typeof window !== 'undefined';
-      console.log('- Window object available:', hasWindow);
+      console.log('📊 Direct Electron API check:');
       
       // Check if electron is on window
-      const hasElectron = hasWindow && 'electron' in window;
+      const hasElectron = typeof window !== 'undefined' && 'electron' in window;
       console.log('- window.electron exists:', hasElectron);
-      
-      // Check backup method
-      const hasBackupApi = typeof window !== 'undefined' && 'electronBackupAPI' in window;
-      console.log('- Backup API exists:', hasBackupApi);
-      
-      // Check global access (may only work in development)
-      const hasGlobalBackup = typeof global !== 'undefined' && global && 'electronBackupAPI' in global;
-      console.log('- Global backup exists:', hasGlobalBackup);
       
       // Initialize methods status object
       const methods: Record<string, boolean> = {
@@ -53,9 +41,7 @@ export function useElectronAPI() {
       let details = '';
       
       // Determine status message based on API availability
-      if (!hasWindow) {
-        details = 'Window object is not available';
-      } else if (!hasElectron && !hasBackupApi) {
+      if (!hasElectron) {
         details = 'Electron API not found on window object';
         // Log available properties on window for debugging
         try {
@@ -64,42 +50,30 @@ export function useElectronAPI() {
           console.error('- Error listing window properties:', e);
         }
       } else {
-        // Get the API from either regular or backup location
-        const api = hasElectron ? window.electron : (window as any).electronBackupAPI;
-        
-        if (hasElectron) {
-          details = 'Electron API found on window.electron';
-        } else if (hasBackupApi) {
-          details = 'Electron API found on backup location';
-        }
-        
         // Check individual methods
-        if (api) {
-          try {
-            console.log('- Available API methods:', Object.keys(api));
-            methods.writeFile = typeof api.writeFile === 'function';
-            methods.selectDirectory = typeof api.selectDirectory === 'function';
-            methods.fileExists = typeof api.fileExists === 'function';
-            methods._testConnection = typeof api._testConnection === 'function';
-            
-            // Try the test connection method
-            if (methods._testConnection) {
-              const result = api._testConnection();
-              console.log('- Test connection result:', result);
-              details += ` (Test: ${result.available ? 'SUCCESS' : 'FAILED'})`;
-              if (result && 'preloadVersion' in result) {
-                details += ` [Preload v${result.preloadVersion}]`;
-              }
-              
-              // Add timestamp to show this is a fresh result
-              details += ` at ${new Date().toLocaleTimeString()}`;
+        details = 'Electron API found on window.electron';
+        try {
+          console.log('- Available API methods:', Object.keys(window.electron));
+          methods.writeFile = typeof window.electron.writeFile === 'function';
+          methods.selectDirectory = typeof window.electron.selectDirectory === 'function';
+          methods.fileExists = typeof window.electron.fileExists === 'function';
+          methods._testConnection = typeof window.electron._testConnection === 'function';
+          
+          // Try the test connection method
+          if (methods._testConnection) {
+            const result = window.electron._testConnection();
+            console.log('- Test connection result:', result);
+            details += ` (Test: ${result.available ? 'SUCCESS' : 'FAILED'})`;
+            if (result && 'preloadVersion' in result) {
+              details += ` [Preload v${result.preloadVersion}]`;
             }
-          } catch (error) {
-            console.error('- Error checking API methods:', error);
-            details += ` (Error: ${(error as Error).message})`;
+            
+            // Add timestamp to show this is a fresh result
+            details += ` at ${new Date().toLocaleTimeString()}`;
           }
-        } else {
-          details += ' (but API object is null or undefined)';
+        } catch (error) {
+          console.error('- Error checking API methods:', error);
+          details += ` (Error: ${(error as Error).message})`;
         }
       }
       
@@ -110,7 +84,6 @@ export function useElectronAPI() {
         available: hasElectron && allMethodsAvailable,
         details,
         methods,
-        backupAvailable: hasBackupApi || hasGlobalBackup
       });
       
       // Show toast with result
@@ -148,17 +121,6 @@ export function useElectronAPI() {
   // Run the check when the component mounts
   useEffect(() => {
     checkApi();
-    
-    // Set up periodic checks
-    const interval = setInterval(() => {
-      // Only do automatic rechecks if the API is not available
-      if (!apiStatus.available) {
-        console.log('Auto-checking Electron API availability...');
-        checkApi();
-      }
-    }, 5000); // Check every 5 seconds
-    
-    return () => clearInterval(interval);
   }, []);
 
   return {

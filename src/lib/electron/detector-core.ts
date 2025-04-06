@@ -1,16 +1,7 @@
-
 /**
  * Core API detection utilities for Electron
  */
 import { ElectronAPI, ConnectionTestResult } from './types';
-import { toast } from '@/hooks/use-toast';
-import { activateEmergencyMode } from './emergency-mode';
-import { tryLegacyRecovery } from './api-recovery';
-
-/**
- * Global emergency API reference - used as a last resort when all else fails
- */
-let emergencyApiBackup: ElectronAPI | null = null;
 
 /**
  * Attempts to access the Electron API
@@ -22,59 +13,18 @@ export function getElectronAPI(): ElectronAPI | null {
     return null;
   }
   
-  // Direct window.electron access - most reliable method
+  // Direct window.electron access - only method we use
   if (window.electron) {
     console.log('Found API at window.electron');
     return window.electron;
   }
   
-  // Fallback to backup API
-  if ((window as any).electronBackupAPI) {
-    console.log('Found backup API, using it');
-    return (window as any).electronBackupAPI;
-  }
-  
-  // Last resort - use previously saved emergency API
-  if (emergencyApiBackup) {
-    console.log('Using emergency API backup');
-    return emergencyApiBackup;
-  }
-  
-  console.error('No Electron API available');
+  console.error('No Electron API available at window.electron');
   return null;
 }
 
 /**
- * Force API recovery attempt
- * Simplified for reliability
- */
-export function forceApiRecovery(): boolean {
-  console.log('Forcing API recovery attempt...');
-  
-  try {
-    // First check if API is already available
-    if (window.electron) {
-      console.log('API is already available at window.electron');
-      return true;
-    }
-    
-    // Try backup API
-    if ((window as any).electronBackupAPI) {
-      window.electron = (window as any).electronBackupAPI;
-      console.log('Restored API from backup');
-      return true;
-    }
-    
-    // Last resort - emergency mode
-    return activateEmergencyMode();
-  } catch (error) {
-    console.error('Error during API recovery:', error);
-    return false;
-  }
-}
-
-/**
- * API availability check
+ * API availability check - simplified to just check window.electron
  */
 export function isElectronAPIAvailable(): boolean {
   return window.electron !== undefined;
@@ -121,11 +71,8 @@ export function testConnection(): ConnectionTestResult {
   }
 }
 
-// Export shared emergency API backup for use in other modules
-export function setEmergencyApiBackup(api: ElectronAPI): void {
-  emergencyApiBackup = api;
-}
-
-export function getEmergencyApiBackup(): ElectronAPI | null {
-  return emergencyApiBackup;
+// Keep simple stub for forceApiRecovery to maintain API compatibility
+export function forceApiRecovery(): boolean {
+  console.log('API recovery requested, but not needed in direct mode');
+  return isElectronAPIAvailable();
 }
