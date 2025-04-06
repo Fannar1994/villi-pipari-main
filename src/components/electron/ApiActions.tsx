@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileOutput } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { testPdfGeneration } from '@/lib/electron/pdfTester';
+import { testPdfGeneration } from '@/lib/timesheet/pdf/pdfGenerator';
 
 interface ApiActionsProps {
   apiStatus: {
