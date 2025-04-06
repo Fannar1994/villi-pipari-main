@@ -32,7 +32,11 @@ function setupIPCHandlers() {
     ipcMain.handle('select-directory', async () => {
       console.log('📂 Handler: select-directory called');
       try {
-        const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+        const result = await dialog.showOpenDialog({
+          properties: ['openDirectory'],
+          title: 'Veldu möppu', // "Choose a folder" in Icelandic
+          buttonLabel: 'Velja' // "Select" in Icelandic
+        });
         console.log('📂 Dialog result:', result);
         return result.canceled ? null : result.filePaths[0];
       } catch (error) {
@@ -86,13 +90,21 @@ function setupIPCHandlers() {
   if (!channels.includes('test-ipc')) {
     ipcMain.handle('test-ipc', async () => {
       console.log('🧪 Handler: test-ipc called');
-      return { success: true, time: new Date().toString(), mainVersion: '3.0' };
+      return { success: true, time: new Date().toString(), mainVersion: '5.0' };
     });
     console.log('✅ Registered test-ipc handler');
   }
+  
+  // Listen for renderer status messages
+  if (!channels.includes('renderer-status')) {
+    ipcMain.on('renderer-status', (event, status) => {
+      console.log('📡 Renderer status received:', status);
+    });
+    console.log('✅ Registered renderer-status listener');
+  }
 }
 
-// Apply setupIPCHandlers immediately on startup, not during window creation
+// Apply setupIPCHandlers immediately on startup
 setupIPCHandlers();
 
 function createWindow() {
@@ -100,20 +112,26 @@ function createWindow() {
   
   // Get the absolute path to the preload script
   const preloadPath = path.join(__dirname, 'preload.cjs');
-  
-  // Verify preload script exists before proceeding
-  if (!fs.existsSync(preloadPath)) {
-    console.error(`❌ CRITICAL: Preload script not found at ${preloadPath}`);
-    dialog.showErrorBox('Critical Error', `Preload script not found at ${preloadPath}`);
-    app.quit();
-    return;
-  }
-  
   console.log('⚙️ Using preload script:', preloadPath);
   console.log('Preload script exists:', fs.existsSync(preloadPath));
   
-  // Create the browser window
-  const win = new BrowserWindow({
+  // Verify preload script exists
+  if (!fs.existsSync(preloadPath)) {
+    console.error(`❌ CRITICAL: Preload script not found at ${preloadPath}`);
+    throw new Error(`Preload script not found at ${preloadPath}`);
+  }
+  
+  // Read preload script for verification
+  try {
+    const preloadContent = fs.readFileSync(preloadPath, 'utf8');
+    console.log('Preload script content length:', preloadContent.length);
+    console.log('Preload content starts with:', preloadContent.substring(0, 100) + '...');
+  } catch (e) {
+    console.error('Failed to read preload script:', e);
+  }
+  
+  // Create the browser window with verified preload script
+  mainWindow = new BrowserWindow({
     width: 1000,
     height: 800,
     backgroundColor: '#2d2d2d',
@@ -124,50 +142,43 @@ function createWindow() {
       sandbox: false, // Disable sandbox for easier debugging
       webSecurity: false // Allow local file access
     },
-    icon: path.join(__dirname, '../public/favicon.ico'),
     show: false
   });
-
-  mainWindow = win;
   
   // Set up window listeners
   mainWindow.once('ready-to-show', () => {
     console.log('🎉 Window ready to show');
     mainWindow.show();
     
-    // Always open DevTools for debugging
-    mainWindow.webContents.openDevTools();
-    console.log('🛠️ DevTools opened');
+    // Always open DevTools in development
+    if (isDev) {
+      mainWindow.webContents.openDevTools();
+      console.log('🛠️ DevTools opened');
+    }
     
-    // Verify preload script injection after window is shown
-    mainWindow.webContents.executeJavaScript(`
-      console.log("🔍 Checking Electron API from main process:");
-      console.log("window.electron exists:", typeof window.electron !== "undefined");
-      console.log("window.electronBackupAPI exists:", typeof window.electronBackupAPI !== "undefined");
-      if (window.electron) {
-        console.log("Primary API methods:", Object.keys(window.electron));
-      }
-      if (window.electronBackupAPI) {
-        console.log("Backup API methods:", Object.keys(window.electronBackupAPI));
-      }
-    `).catch(err => console.error("Error executing verification script:", err));
+    // Check API injection after a short delay
+    setTimeout(() => {
+      console.log('Sending main-world-check to renderer');
+      mainWindow.webContents.send('main-world-check');
+      
+      // Also verify API injection using executeJavaScript
+      mainWindow.webContents.executeJavaScript(`
+        console.log("🔍 Checking Electron API from main process:");
+        console.log("window.electron exists:", typeof window.electron !== "undefined");
+        console.log("window.electronBackupAPI exists:", typeof window.electronBackupAPI !== "undefined");
+        if (window.electron) {
+          console.log("Primary API methods:", Object.keys(window.electron).join(", "));
+        }
+      `).catch(err => console.error("Error executing verification script:", err));
+    }, 1000);
   });
 
-  // Log all console messages from renderer to main process
-  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+  // Log console messages from renderer
+  mainWindow.webContents.on('console-message', (_, level, message) => {
     const levels = ['debug', 'log', 'warn', 'error'];
     console.log(`[Renderer] ${levels[level] || 'log'}: ${message}`);
   });
   
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('❌ Failed to load:', errorCode, errorDescription);
-    dialog.showErrorBox('Loading Failed', `Error ${errorCode}: ${errorDescription}`);
-  });
-
-  mainWindow.webContents.on('did-finish-load', () => {
-    console.log('✅ Page loaded successfully');
-  });
-
   // Load the app
   if (isDev) {
     loadDev();
@@ -251,7 +262,7 @@ function loadProd() {
 }
 
 // Handle app lifecycle events
-app.on('ready', () => {
+app.whenReady().then(() => {
   console.log('🚀 App is ready');
   createWindow();
   
@@ -266,12 +277,6 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
-});
-
-// Handle any startup errors
-app.on('render-process-gone', (event, webContents, details) => {
-  console.error('❌ Render process gone:', details.reason);
-  dialog.showErrorBox('Application Error', `The application encountered an error: ${details.reason}`);
 });
 
 // Set application name

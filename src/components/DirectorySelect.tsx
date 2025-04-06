@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,43 @@ interface DirectorySelectProps {
   disabled?: boolean;
 }
 
+// Function to get best available API
+function getBestElectronAPI() {
+  if (typeof window === 'undefined') return null;
+  
+  // Try primary API
+  if (window.electron && typeof window.electron.selectDirectory === 'function') {
+    console.log('Using primary electron API');
+    return window.electron;
+  }
+  
+  // Try backup API
+  if (window.electronBackupAPI && typeof window.electronBackupAPI.selectDirectory === 'function') {
+    console.log('Using backup electron API');
+    return window.electronBackupAPI;
+  }
+  
+  // Try global backup (should work in dev mode)
+  try {
+    if (typeof global !== 'undefined' && global.__ELECTRON_API__) {
+      console.log('Using global backup API');
+      
+      // Also restore it to window while we're here
+      if (typeof window !== 'undefined') {
+        window.electron = global.__ELECTRON_API__;
+        window.electronBackupAPI = global.__ELECTRON_API__;
+      }
+      
+      return global.__ELECTRON_API__;
+    }
+  } catch (e) {
+    console.error('Error accessing global backup API:', e);
+  }
+  
+  console.error('No electron API available');
+  return null;
+}
+
 export function DirectorySelect({
   value,
   onChange,
@@ -21,64 +58,68 @@ export function DirectorySelect({
   disabled = false,
 }: DirectorySelectProps) {
   const [isSelecting, setIsSelecting] = useState(false);
+  const [apiAvailable, setApiAvailable] = useState(false);
 
-  // Enhanced directory selection with multiple fallbacks and better error handling
+  useEffect(() => {
+    // Check API availability on mount and every 2 seconds
+    const checkApi = () => {
+      const api = getBestElectronAPI();
+      const available = !!api;
+      setApiAvailable(available);
+    };
+    
+    // Initial check
+    checkApi();
+    
+    // Set up periodic checks
+    const interval = setInterval(checkApi, 2000);
+    
+    // Cleanup
+    return () => clearInterval(interval);
+  }, []);
+
   const handleButtonClick = async () => {
     try {
       setIsSelecting(true);
       
-      // First try the main API
-      if (typeof window !== 'undefined' && window.electron && window.electron.selectDirectory) {
-        console.log('Using primary Electron API to select directory');
+      const api = getBestElectronAPI();
+      
+      if (api) {
         try {
-          const result = await window.electron.selectDirectory();
+          console.log('Calling selectDirectory...');
+          const result = await api.selectDirectory();
+          console.log('selectDirectory result:', result);
+          
           if (result) {
             onChange(result);
             console.log('Directory selected successfully:', result);
-            setIsSelecting(false);
             return;
+          } else {
+            console.warn('No directory selected or dialog was cancelled');
           }
-        } catch (primaryError) {
-          console.error('Error using primary API:', primaryError);
+        } catch (error) {
+          console.error('Error selecting directory:', error);
         }
+      } else {
+        console.error('No API available for directory selection');
+        toast({
+          title: "Villa",
+          description: "Ekki næst samband við skráakerfi. Endurræstu forritið.",
+          variant: "destructive",
+        });
       }
       
-      // If that fails, try the backup API
-      if (typeof window !== 'undefined' && window.electronBackupAPI) {
-        console.log('Using backup Electron API to select directory');
-        try {
-          const result = await window.electronBackupAPI.selectDirectory();
-          if (result) {
-            onChange(result);
-            console.log('Directory selected successfully via backup API:', result);
-            setIsSelecting(false);
-            return;
-          }
-        } catch (backupError) {
-          console.error('Error using backup API:', backupError);
-        }
-      }
-      
-      // If all API attempts fail, show error and provide fallback
-      console.log('All API attempts failed, using fallback path');
-      toast({
-        title: "Villa",
-        description: "Ekki náðist að opna möppuval - notaður sjálfgefinn slóð",
-        variant: "destructive",
-      });
-      
-      // Use fallback path for testing/demo purposes
-      onChange('C:/Users/User/Documents');
+      // Use fallback path if all else fails
+      onChange('C:/temp');
       
     } catch (error) {
-      console.error("Error selecting directory:", error);
+      console.error("Unexpected error selecting directory:", error);
       toast({
         title: "Villa",
         description: "Villa kom upp við möppuval",
         variant: "destructive",
       });
-      // Still provide a fallback path so the app doesn't completely break
-      onChange('C:/Users/User/Documents');
+      onChange('C:/temp');
     } finally {
       setIsSelecting(false);
     }
@@ -97,15 +138,20 @@ export function DirectorySelect({
         />
         <Button
           type="button"
-          variant="default"
+          variant={apiAvailable ? "default" : "destructive"}
           onClick={handleButtonClick}
           disabled={disabled || isSelecting}
           className="whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90"
         >
           {icon}
-          {isSelecting ? 'Velur...' : 'Velja möppu'}
+          {isSelecting ? 'Velur...' : apiAvailable ? 'Velja möppu' : 'API vantar'}
         </Button>
       </div>
+      {!apiAvailable && (
+        <p className="text-xs text-destructive">
+          Electron API ekki tiltækt. Endurræstu forritið.
+        </p>
+      )}
     </div>
   );
 }

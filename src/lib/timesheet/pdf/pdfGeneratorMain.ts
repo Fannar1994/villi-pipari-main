@@ -6,16 +6,14 @@ import {
   validatePdfPrerequisites, 
   prepareEntriesForPdfGeneration,
   getCurrentDateString,
-  isElectronFileApiAvailable,
-  checkElectronConnection,
-  getBestAvailableApi
 } from './pdfUtils';
 import { toast } from '@/hooks/use-toast';
+import { isElectronAPIAvailable } from '@/lib/electron/api';
 
 /**
  * Generates PDF files from timesheet entries
  * Main function that orchestrates all PDF generation process
- * Enhanced with better error handling and API recovery
+ * Uses our new centralized API access
  */
 export async function generatePdfFiles(
   timesheetEntries: TimesheetEntry[],
@@ -31,29 +29,8 @@ export async function generatePdfFiles(
       throw new Error('PDF generation requires browser environment');
     }
     
-    // Try to restore API from backup if needed - aggressive approach
-    if (!window.electron && window.electronBackupAPI) {
-      try {
-        console.log("Restoring window.electron from backup API");
-        window.electron = window.electronBackupAPI;
-        console.log("API restored:", !!window.electron);
-        
-        // Test the API after restoration
-        if (window.electron && window.electron._testConnection) {
-          const testResult = window.electron._testConnection();
-          console.log("API test after restoration:", testResult);
-        }
-      } catch (e) {
-        console.error("Error restoring API:", e);
-      }
-    }
-    
-    // Perform detailed API check
-    const isAPIConnected = await checkElectronConnection();
-    console.log("Detailed API check result:", isAPIConnected);
-    
-    // Check if any viable API is available (primary or backup)
-    if (!isElectronFileApiAvailable()) {
+    // Check if any viable API is available using our new helper
+    if (!isElectronAPIAvailable()) {
       console.error("No viable Electron API available for file operations");
       toast({
         title: "Villa",
@@ -71,18 +48,6 @@ export async function generatePdfFiles(
         variant: "destructive",
       });
       throw new Error('Engar færslur fundust til að búa til PDF skjöl');
-    }
-    
-    // Get the API to use (either primary or backup)
-    const api = getBestAvailableApi();
-    if (!api) {
-      console.error("Failed to get a viable API even after all recovery attempts");
-      toast({
-        title: "Villa",
-        description: "API aðgangur ekki til staðar. Endurræstu forritið.",
-        variant: "destructive",
-      });
-      throw new Error('API aðgangur ekki til staðar. Endurræstu forritið.');
     }
     
     // Group entries by location and apartment

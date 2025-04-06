@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { parseTimesheetFile, generateInvoices, generatePdfFiles } from '@/lib/excelProcessor';
-import { isElectronFileApiAvailable, getBestAvailableApi } from '@/lib/timesheet/pdf/pdfUtils';
+import { isElectronAPIAvailable, getElectronAPI } from '@/lib/electron/api';
 
 export type ProcessStatus = {
   status: 'idle' | 'processing' | 'success' | 'error';
@@ -81,6 +81,7 @@ export const useTimesheetProcessor = () => {
     timesheetFile: File | null,
     outputDir: string
   ) => {
+    // Validate inputs
     if (!timesheetFile) {
       toast({
         title: 'Villa',
@@ -99,38 +100,12 @@ export const useTimesheetProcessor = () => {
       return;
     }
 
-    // Try aggressive API recovery before proceeding
-    try {
-      // Force API check and restoration with special handling
-      if (typeof window !== 'undefined') {
-        console.log('Force checking and restoring Electron API');
-        
-        // If we have backup API but not main API, restore it
-        if (!window.electron && window.electronBackupAPI) {
-          window.electron = window.electronBackupAPI;
-          console.log('Forced API restoration from backup before PDF generation');
-        }
-        
-        // Try to get the best available API
-        const api = getBestAvailableApi();
-        console.log('Best available API:', api ? 'Available' : 'Not available');
-        
-        // If API is available, test it
-        if (api && api._testConnection) {
-          const testResult = api._testConnection();
-          console.log('API test result:', testResult);
-        }
-      }
-    } catch (e) {
-      console.error('Error during API recovery:', e);
-    }
-
-    // Check if API is available after recovery attempt
-    const hasElectronApi = isElectronFileApiAvailable();
-    console.log('Electron API available after recovery:', hasElectronApi);
+    // Check API availability using our new centralized helper
+    const hasElectronApi = isElectronAPIAvailable();
+    console.log('Electron API available:', hasElectronApi);
     
     if (!hasElectronApi) {
-      const errorMsg = 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.';
+      const errorMsg = 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Endurræstu forritið.';
       
       toast({
         title: 'Villa',
@@ -182,7 +157,7 @@ export const useTimesheetProcessor = () => {
       let errorMessage = 'Ekki tókst að búa til PDF skjöl';
       if (error instanceof Error) {
         if (error.message.includes('skráarkerfisvirkni')) {
-          errorMessage = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.';
+          errorMessage = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Endurræstu forritið.';
         } else if (error.message) {
           errorMessage = `Villa kom upp: ${error.message}`;
         }
