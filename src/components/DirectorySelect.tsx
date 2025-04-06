@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { selectDirectory } from '@/lib/electron/fileSystem'; // Import the function directly
+import { getElectronAPI, forceApiRecovery, selectDirectory } from '@/lib/electron/api'; 
 
 interface DirectorySelectProps {
   value: string;
@@ -28,8 +28,20 @@ export function DirectorySelect({
       setIsSelecting(true);
       console.log('Directory selection button clicked');
       
-      // Use the selectDirectory function directly from our fileSystem module
-      const result = await selectDirectory();
+      // Try to use the enhanced selectDirectory from our API
+      let result = await selectDirectory();
+      
+      // If it fails, attempt recovery and try again
+      if (!result) {
+        console.log('First attempt failed, trying API recovery...');
+        const recoverySuccessful = forceApiRecovery();
+        
+        if (recoverySuccessful) {
+          console.log('API recovery successful, trying directory selection again...');
+          result = await selectDirectory();
+        }
+      }
+      
       console.log('Directory selection result:', result);
       
       if (result) {
@@ -41,12 +53,17 @@ export function DirectorySelect({
         });
       } else {
         console.warn('No directory selected or dialog was cancelled');
+        toast({
+          title: "Villa",
+          description: "Ekki tókst að velja möppu. Reyndu aftur eða endurræstu forritið.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Unexpected error selecting directory:", error);
       toast({
         title: "Villa",
-        description: "Villa kom upp við möppuval",
+        description: "Villa kom upp við möppuval. Reyndu aftur eða endurræstu forritið.",
         variant: "destructive",
       });
     } finally {

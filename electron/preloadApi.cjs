@@ -25,7 +25,17 @@ function createElectronAPI(ipcRenderer) {
       console.log('Preload: selectDirectory called');
       try {
         console.log('Invoking select-directory IPC call...');
-        const result = await ipcRenderer.invoke('select-directory');
+        // Add timeout handling for robustness
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Directory selection timed out')), 30000);
+        });
+        
+        // Race the actual call with the timeout
+        const result = await Promise.race([
+          ipcRenderer.invoke('select-directory'),
+          timeoutPromise
+        ]);
+        
         console.log('Preload: selectDirectory result:', result);
         
         // Enhanced reliability - ensure we always return a string or null, never undefined
@@ -60,7 +70,7 @@ function createElectronAPI(ipcRenderer) {
       return { 
         available: true, 
         time: new Date().toString(),
-        preloadVersion: '5.0' // Standard version, not emergency
+        preloadVersion: '5.1' // Updated version for the enhanced API
       };
     }
   };
