@@ -19,6 +19,12 @@ export async function generatePdfFiles(
 ): Promise<number> {
   try {
     console.log("Starting PDF generation with", timesheetEntries.length, "entries");
+    console.log("Output directory:", outputDirectory);
+    
+    // Check if we're running in Electron environment
+    if (typeof window === 'undefined') {
+      throw new Error('PDF generation requires browser environment');
+    }
     
     // Check if Electron API is available
     if (!isElectronFileApiAvailable()) {

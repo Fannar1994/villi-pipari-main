@@ -24,9 +24,21 @@ export function prepareEntriesForPdfGeneration(
  * Checks if Electron file API is available
  */
 export function isElectronFileApiAvailable(): boolean {
-  return typeof window !== 'undefined' && 
-         'electron' in window && 
-         typeof window.electron?.writeFile === 'function';
+  console.log('Checking for Electron API availability');
+  
+  // Log what Window.electron contains to help debugging
+  if (typeof window !== 'undefined' && 'electron' in window) {
+    console.log('Electron object found:', Object.keys(window.electron || {}));
+  } else {
+    console.log('Electron object not found in window');
+  }
+  
+  const isAvailable = typeof window !== 'undefined' && 
+                      window.electron && 
+                      typeof window.electron.writeFile === 'function';
+  
+  console.log('Is Electron API available:', isAvailable);
+  return isAvailable;
 }
 
 /**
@@ -53,11 +65,12 @@ export async function savePdfToFile(
   console.log("Attempting to save PDF to:", filePath);
   
   if (!isElectronFileApiAvailable()) {
-    console.warn("Electron API not available for saving PDF");
+    console.error("Electron API not available for saving PDF");
     return false;
   }
   
   try {
+    console.log("Calling window.electron.writeFile with:", { filePath });
     const result = await window.electron.writeFile({
       filePath: filePath,
       data: pdfData
