@@ -37,28 +37,22 @@ function createWindow() {
       console.log('Preload script size:', stats.size, 'bytes');
       console.log('Preload script modified:', stats.mtime);
     }
-    
-    // Read preload script for verification
-    const preloadContent = fs.readFileSync(preloadPath, 'utf8');
-    console.log('Preload script content length:', preloadContent.length);
-    console.log('Preload content starts with:', preloadContent.substring(0, 100) + '...');
   } catch (e) {
     console.error('Failed to verify preload script:', e);
   }
   
-  // Create the browser window with intensely secure preload setup
+  // Create the browser window with direct API integration
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 800,
     backgroundColor: '#2d2d2d',
     webPreferences: {
       preload: preloadPath,
-      contextIsolation: false, // Temporarily disable for direct access
-      nodeIntegration: true,  // Enable for maximum API availability
-      sandbox: false,         // Disable sandbox to ensure API works
+      contextIsolation: false, // Disable for direct window access
+      nodeIntegration: true,  // Enable for direct node access
+      sandbox: false,         // Disable sandbox for best compatibility
       webSecurity: true,      // Keep web security
-      allowRunningInsecureContent: false,
-      additionalArguments: ['--disable-renderer-backgrounding', '--renderer-process-limit=100']
+      allowRunningInsecureContent: false
     },
     show: false
   });
@@ -93,7 +87,7 @@ function setupWindowListeners(window) {
       console.log('🛠️ DevTools opened');
     }
     
-    // Perform periodic API checks
+    // Perform API checks
     setupAPIChecks(window);
     
     // Add emergency API injection
