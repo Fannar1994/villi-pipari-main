@@ -8,11 +8,15 @@ import { PageFooter } from '@/components/PageFooter';
 import { ProcessStatus } from '@/components/ProcessStatus';
 import { useTimesheetProcessor } from '@/hooks/useTimesheetProcessor';
 import { ElectronTester } from '@/components/ElectronTester';
+import { useElectronAutoInit } from '@/hooks/useElectronAutoInit';
 
 const Index = () => {
   const [timesheetFile, setTimesheetFile] = useState<File | null>(null);
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [outputDir, setOutputDir] = useState<string>('');
+  
+  // Auto-initialize Electron API
+  const { apiAvailable, emergencyActive } = useElectronAutoInit();
   
   const { 
     isProcessing, 
@@ -32,6 +36,12 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <ElectronTester />
+      
+      {emergencyActive && (
+        <div className="w-full max-w-md mb-2 p-2 bg-amber-100 border border-amber-300 rounded text-amber-800 text-sm text-center">
+          Neyðarhamur virkar - forritið kann að vera óstöðugt. Vinsamlegast endurræstu appið.
+        </div>
+      )}
       
       <Card className="w-full max-w-md shadow-lg border-primary">
         <PageHeader />
