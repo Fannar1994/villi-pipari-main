@@ -7,7 +7,6 @@ import { PageHeader } from '@/components/PageHeader';
 import { PageFooter } from '@/components/PageFooter';
 import { ProcessStatus } from '@/components/ProcessStatus';
 import { useTimesheetProcessor } from '@/hooks/useTimesheetProcessor';
-import { ElectronTester } from '@/components/ElectronTester';
 import { useElectronAutoInit } from '@/hooks/useElectronAutoInit';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
@@ -37,18 +36,14 @@ const Index = () => {
     await generatePdfsFromTimesheet(timesheetFile, outputDir);
   };
 
-  // Simple reload function
   const handleReload = () => {
     window.location.reload();
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-      <ElectronTester />
-      
       {!apiAvailable && (
         <div className="w-full max-w-md mb-2 p-3 bg-amber-100 border border-amber-300 rounded text-amber-800 text-center">
-          <p className="font-medium mb-2">Electron API not available</p>
           <Button 
             onClick={handleReload} 
             variant="outline" 
@@ -56,7 +51,7 @@ const Index = () => {
             size="sm"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
-            Reload Application
+            Reload
           </Button>
         </div>
       )}

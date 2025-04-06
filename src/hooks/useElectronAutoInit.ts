@@ -6,18 +6,13 @@ export function useElectronAutoInit() {
   const [apiAvailable, setApiAvailable] = useState<boolean>(false);
 
   useEffect(() => {
-    // Simple check if API is available
-    const isAvailable = !!(
-      window.electron && 
-      typeof window.electron.writeFile === 'function' && 
-      typeof window.electron.selectDirectory === 'function'
-    );
+    // Very simple API check
+    const api = window.electron;
+    setApiAvailable(!!api);
     
-    setApiAvailable(isAvailable);
-    
-    if (!isAvailable) {
+    if (!api) {
       toast({
-        title: "API Not Available",
+        title: "Restart needed",
         description: "Please restart the application",
         variant: "destructive"
       });
