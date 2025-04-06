@@ -1,4 +1,3 @@
-
 /**
  * Enhanced Electron API access with multiple fallback strategies and auto-repair
  */
@@ -126,16 +125,40 @@ export function getElectronAPI(): ElectronAPI | null {
           }
         },
         
-        // Proper implementation for selectDirectory in emergency mode
+        // Enhanced directory picker with better file system access
         selectDirectory: async () => {
           console.log('Emergency API called: selectDirectory');
           
-          // Check if we have the File System Access API
+          // Check if we have the modern File System Access API
           if ('showDirectoryPicker' in window) {
             try {
-              const dirHandle = await (window as any).showDirectoryPicker();
-              // Convert the directory handle to a path-like string
-              return `selected-directory://${dirHandle.name}`;
+              // Request permission with all available options
+              const dirHandle = await (window as any).showDirectoryPicker({
+                id: 'directorySelection',
+                mode: 'readwrite', // Request read/write permission
+                startIn: 'documents' // Try to start in Documents folder
+              });
+              
+              // Check if we have permission and get any available path
+              // The path representation is limited in web context
+              try {
+                // Keep a reference to the directory handle for future operations
+                (window as any)._lastSelectedDirHandle = dirHandle;
+                
+                // Try to get permission status
+                const permission = await dirHandle.queryPermission({ mode: 'readwrite' });
+                if (permission !== 'granted') {
+                  // Try to request permission if not already granted
+                  const newPermission = await dirHandle.requestPermission({ mode: 'readwrite' });
+                  console.log('Directory permission:', newPermission);
+                }
+                
+                // Return a path representation
+                return `system-directory://${dirHandle.name}`;
+              } catch (permissionErr) {
+                console.error('Permission error:', permissionErr);
+                return `selected-directory://${dirHandle.name}`;
+              }
             } catch (e) {
               console.error('Emergency directory picker failed:', e);
               if (e.name === 'AbortError') {
@@ -156,8 +179,26 @@ export function getElectronAPI(): ElectronAPI | null {
         // Proper implementation for fileExists in emergency mode
         fileExists: async (filePath: string) => {
           console.error('Emergency API called: fileExists');
-          // In web context, we can't check if a file exists on the filesystem
-          // We'll assume it doesn't exist
+          // Try to use the last selected directory handle if available
+          if ((window as any)._lastSelectedDirHandle) {
+            try {
+              const fileName = filePath.split('/').pop();
+              if (!fileName) return false;
+              
+              try {
+                // Try to get the file from the directory
+                await (window as any)._lastSelectedDirHandle.getFileHandle(fileName);
+                return true;
+              } catch (e) {
+                // File not found
+                return false;
+              }
+            } catch (e) {
+              console.error('Error checking file existence:', e);
+            }
+          }
+          
+          // In web context, we can't reliably check if a file exists
           return false;
         },
         
@@ -166,7 +207,7 @@ export function getElectronAPI(): ElectronAPI | null {
           return {
             available: true,
             time: new Date().toString(),
-            preloadVersion: 'emergency-fallback-1.0'
+            preloadVersion: 'emergency-fallback-2.0'
           };
         }
       };

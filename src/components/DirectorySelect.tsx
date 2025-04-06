@@ -90,7 +90,7 @@ export function DirectorySelect({
               toast({
                 title: "Neyðarhamur",
                 description: "Forritið keyrir í neyðarham. Sumir eiginleikar gætu verið takmarkaðir.",
-                variant: "warning",
+                variant: "destructive", // Changed from 'warning' to 'destructive'
               });
             }
             

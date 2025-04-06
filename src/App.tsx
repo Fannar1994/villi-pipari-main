@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import './App.css'; // Import the CSS file
 import { Toaster } from "@/components/ui/toaster";
@@ -85,7 +86,7 @@ const App = () => {
             toast({
               title: 'Electron tenging í neyðarham',
               description: 'Forritið keyrir með takmarkaða virkni. Sumir eiginleikar virka ekki að fullu.',
-              variant: 'warning',
+              variant: 'destructive', // Changed from 'warning' to 'destructive'
             });
           } else {
             toast({
