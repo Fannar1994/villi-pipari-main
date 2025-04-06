@@ -16,9 +16,3 @@ export interface SummaryEntry {
   isHoliday: boolean;
   location?: string; // Added location field
 }
-
-// Added interface for font style to fix TypeScript errors
-export interface FontStyle {
-  color: string;
-  bold?: boolean;
-}
