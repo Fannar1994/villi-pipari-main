@@ -10,7 +10,7 @@ import { formatDateIcelandic } from '../utils/dateUtils';
 export function checkElectronApi(): boolean {
   const isElectronAvailable = typeof window !== 'undefined' && 
     window.electron && 
-    window.electron.writeFile;
+    typeof window.electron.writeFile === 'function';
   
   if (!isElectronAvailable) {
     console.error("Electron API is not available");
