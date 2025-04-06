@@ -42,6 +42,12 @@ export const ExcelTab = () => {
       // Parse the timesheet file to get entries
       const timesheetEntries = await parseTimesheetFile(excelFile);
       
+      if (!timesheetEntries || timesheetEntries.length === 0) {
+        throw new Error('Engar færslur fundust í skjalinu.');
+      }
+      
+      setProcessStatus(`Búa til PDF skjöl fyrir ${timesheetEntries.length} færslur...`);
+      
       // Generate PDF files from the entries
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
       
@@ -50,7 +56,7 @@ export const ExcelTab = () => {
         description: `${pdfCount} PDF skjöl hafa verið búin til.`,
       });
       
-      setProcessStatus(`${pdfCount} PDF skjöl hafa verið búin til.`);
+      setProcessStatus(`${pdfCount} PDF skjöl hafa verið búin til í ${outputDir}`);
       
     } catch (error) {
       console.error('Error generating PDFs:', error);

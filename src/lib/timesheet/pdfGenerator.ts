@@ -14,23 +14,34 @@ export async function generatePdfFiles(
   outputDirectory: string
 ): Promise<number> {
   try {
+    console.log("Starting PDF generation process...");
+    
     // Check if we can access the Electron API for file writing
     if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
       console.error('Electron API not available for file writing');
       throw new Error('Skráarskrifun er ekki í boði í þessari útgáfu. Vinsamlegast notaðu Electron útgáfuna.');
     }
+    
+    // Verify the output directory exists
+    if (!outputDirectory || outputDirectory.trim() === '') {
+      throw new Error('Úttak mappa verður að vera valin.');
+    }
+    
+    console.log(`Using output directory: ${outputDirectory}`);
 
     // Create summary data
     const { data: summaryData } = createSummarySheetData(timesheetEntries);
     
     // Group entries by location and apartment
     const groupedEntries = groupEntriesByLocation(timesheetEntries);
-    console.log("Generating PDFs for groups:", Object.keys(groupedEntries).length);
+    console.log(`Generating PDFs for ${Object.keys(groupedEntries).length} location groups`);
     
     let pdfCount = 0;
     const currentDate = new Date().toISOString().split('T')[0];
+    const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
     
     // Create summary PDF
+    console.log("Creating summary PDF...");
     const summaryPdf = new jsPDF();
     summaryPdf.setFont('helvetica', 'bold');
     summaryPdf.text('Samantekt', 14, 15);
@@ -55,18 +66,22 @@ export async function generatePdfFiles(
       },
     });
     
-    // Save the summary PDF
+    // Save the summary PDF with validation
+    const summaryPath = `${normalizedDir}/Samantekt_${currentDate}.pdf`;
+    console.log(`Attempting to save summary PDF to: ${summaryPath}`);
+    
     try {
-      const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
-      const summaryPath = `${normalizedDir}/Samantekt_${currentDate}.pdf`;
-      
       const summaryPdfBlob = summaryPdf.output('arraybuffer');
-      await window.electron.writeFile({
+      const summaryResult = await window.electron.writeFile({
         filePath: summaryPath,
         data: new Uint8Array(summaryPdfBlob)
       });
       
-      console.log(`Summary PDF saved to: ${summaryPath}`);
+      if (!summaryResult || summaryResult.error) {
+        throw new Error(summaryResult?.error || 'Failed to write summary PDF');
+      }
+      
+      console.log(`Summary PDF successfully saved to: ${summaryPath}`);
       pdfCount++;
     } catch (error) {
       console.error('Failed to save summary PDF:', error);
@@ -77,13 +92,27 @@ export async function generatePdfFiles(
     // Use a Map to track used filenames to avoid duplicates
     const usedFilenames = new Map<string, number>();
     const fileWritePromises: Promise<void>[] = [];
+    const locationGroups = Object.entries(groupedEntries);
     
-    for (const [key, entries] of Object.entries(groupedEntries)) {
-      if (entries.length > 0) {
-        const firstEntry = entries[0];
-        const locationName = firstEntry.location;
-        const apartmentName = firstEntry.apartment || '';
-        
+    console.log(`Processing ${locationGroups.length} location groups for PDF generation...`);
+    
+    if (locationGroups.length === 0) {
+      console.warn("No location groups found to generate PDFs for.");
+    }
+    
+    for (const [key, entries] of locationGroups) {
+      if (entries.length === 0) {
+        console.warn(`Skipping empty location group: ${key}`);
+        continue;
+      }
+      
+      const firstEntry = entries[0];
+      const locationName = firstEntry.location || 'Unknown';
+      const apartmentName = firstEntry.apartment || '';
+      
+      console.log(`Creating PDF for location: ${locationName}, apartment: ${apartmentName}`);
+      
+      try {
         // Create new PDF document
         const pdf = new jsPDF();
         
@@ -140,30 +169,45 @@ export async function generatePdfFiles(
         usedFilenames.set(baseName, uniqueSuffix);
         
         const safeFileName = uniqueSuffix > 1 ? `${baseName}_${uniqueSuffix}` : baseName;
-        
-        const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
         const pdfPath = `${normalizedDir}/${safeFileName}_${currentDate}.pdf`;
         
         const pdfBlob = pdf.output('arraybuffer');
+        console.log(`Attempting to save PDF to: ${pdfPath}`);
         
-        // Add promise to array so we can wait for all to complete
+        // Create a promise that resolves only when the file is successfully written
         const filePromise = window.electron.writeFile({
           filePath: pdfPath,
           data: new Uint8Array(pdfBlob)
-        }).then(() => {
-          console.log(`PDF saved to: ${pdfPath}`);
-          pdfCount++;
+        }).then((result) => {
+          if (!result || result.error) {
+            throw new Error(result?.error || 'Unknown error writing file');
+          }
+          console.log(`PDF successfully saved to: ${pdfPath}`);
+          return true;
         }).catch(error => {
           console.error(`Failed to save PDF ${safeFileName}:`, error);
           throw new Error(`Villa við að vista skrá ${safeFileName}: ${error instanceof Error ? error.message : 'Óþekkt villa'}`);
         });
         
-        fileWritePromises.push(filePromise);
+        fileWritePromises.push(filePromise.then(() => {
+          pdfCount++;
+        }));
+      } catch (error) {
+        console.error(`Error creating PDF for ${locationName}:`, error);
+        // Continue with other PDFs rather than failing completely
+        fileWritePromises.push(Promise.resolve());
       }
     }
     
     // Wait for all file write operations to complete
-    await Promise.all(fileWritePromises);
+    console.log(`Waiting for ${fileWritePromises.length} PDF write operations to complete...`);
+    
+    try {
+      await Promise.all(fileWritePromises);
+    } catch (error) {
+      console.error('Error in PDF write operations:', error);
+      throw new Error(`Villa við að vista PDF skjöl: ${error instanceof Error ? error.message : 'Óþekkt villa'}`);
+    }
     
     if (pdfCount === 0) {
       throw new Error('Engar skrár voru vistaðar. Athugaðu hvort úttak mappa sé rétt valin og skráarheimild sé til staðar.');
