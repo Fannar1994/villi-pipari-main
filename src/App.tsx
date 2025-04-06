@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import './App.css'; // Import the CSS file
 import { Toaster } from "@/components/ui/toaster";
@@ -42,6 +41,22 @@ const initializeElectronAPI = () => {
       return typeof window.electron.writeFile === 'function';
     }
     
+    // Last resort: Setup emergency mode API
+    // This creates a minimal but functional API that uses web APIs
+    try {
+      console.log('Setting up emergency API mode');
+      
+      // Force API initialization through our helper function
+      const api = getElectronAPI();
+      
+      if (api && typeof api.selectDirectory === 'function') {
+        console.log('✓ Emergency API initialized successfully');
+        return true;
+      }
+    } catch (e) {
+      console.error('Failed to initialize emergency API:', e);
+    }
+    
     // Last resort: Check if we're in Electron context by checking for process
     if (typeof process !== 'undefined' && process && (process as any).versions && (process as any).versions.electron) {
       console.log('Running in Electron:', (process as any).versions.electron);
@@ -64,17 +79,28 @@ const App = () => {
         try {
           const result = api._testConnection();
           console.log('API test result:', result);
+          
+          // Check if we're in emergency mode
+          if (result.preloadVersion && result.preloadVersion.includes('emergency')) {
+            toast({
+              title: 'Electron tenging í neyðarham',
+              description: 'Forritið keyrir með takmarkaða virkni. Sumir eiginleikar virka ekki að fullu.',
+              variant: 'warning',
+            });
+          } else {
+            toast({
+              title: 'Electron tenging virkar',
+              description: 'Samband við skráakerfi er komið á',
+            });
+          }
         } catch (e) {
           console.error('API test failed:', e);
+          toast({
+            title: 'Electron tenging ekki virk',
+            description: 'Endurræstu forritið til að nota PDF virkni',
+            variant: 'destructive',
+          });
         }
-      }
-      
-      // Show toast with API status
-      if (isElectronAPIAvailable()) {
-        toast({
-          title: 'Electron tenging virkar',
-          description: 'Samband við skráakerfi er komið á',
-        });
       } else {
         toast({
           title: 'Electron tenging ekki virk',

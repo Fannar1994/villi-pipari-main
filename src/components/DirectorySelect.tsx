@@ -23,6 +23,7 @@ export function DirectorySelect({
 }: DirectorySelectProps) {
   const [isSelecting, setIsSelecting] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(false);
+  const [apiMode, setApiMode] = useState<'standard' | 'emergency' | 'unavailable'>('unavailable');
 
   // Enhanced API check using our improved methods
   useEffect(() => {
@@ -30,6 +31,32 @@ export function DirectorySelect({
       const available = isElectronAPIAvailable();
       console.log('Directory selector - API available:', available);
       setApiAvailable(available);
+      
+      // Determine the API mode
+      if (available) {
+        const api = getElectronAPI();
+        
+        // Check if we're in emergency mode by testing the connection info
+        if (api && typeof api._testConnection === 'function') {
+          try {
+            const result = api._testConnection();
+            if (result.preloadVersion && result.preloadVersion.includes('emergency')) {
+              setApiMode('emergency');
+              console.log('Running in emergency API mode');
+            } else {
+              setApiMode('standard');
+              console.log('Running in standard API mode');
+            }
+          } catch (e) {
+            console.error('Error checking API mode:', e);
+            setApiMode('standard'); // Default to standard if check fails
+          }
+        } else {
+          setApiMode('standard');
+        }
+      } else {
+        setApiMode('unavailable');
+      }
     };
     
     // Initial check
@@ -57,6 +84,16 @@ export function DirectorySelect({
           
           if (result) {
             onChange(result);
+            
+            // Show a special notification for emergency mode
+            if (apiMode === 'emergency') {
+              toast({
+                title: "Neyðarhamur",
+                description: "Forritið keyrir í neyðarham. Sumir eiginleikar gætu verið takmarkaðir.",
+                variant: "warning",
+              });
+            }
+            
             console.log('Directory selected successfully:', result);
             return;
           } else {
@@ -136,6 +173,11 @@ export function DirectorySelect({
       {!apiAvailable && (
         <p className="text-xs text-destructive">
           Electron API ekki tiltækt. Smelltu á "Endurreyna" eða endurræstu forritið.
+        </p>
+      )}
+      {apiMode === 'emergency' && (
+        <p className="text-xs text-amber-500">
+          Keyrt í neyðarham - takmarkaður aðgangur að skráakerfi.
         </p>
       )}
     </div>
