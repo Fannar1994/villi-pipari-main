@@ -60,8 +60,9 @@ export async function generatePdfFiles(
       }
     });
     
-    // Generate summary table - cast the return value to TableOutput
-    const summaryTable = autoTable(summaryPdf, {
+    // Generate summary table - use as unknown first then cast to TableOutput
+    let summaryTable: TableOutput = {};
+    autoTable(summaryPdf, {
       head: [['Staðsetning', 'Tímar']],
       body: summaryTableRows,
       startY: 20,
@@ -75,7 +76,11 @@ export async function generatePdfFiles(
         textColor: [0, 0, 0],
         fontStyle: 'bold',
       },
-    }) as TableOutput;
+      didDrawPage: function(data) {
+        // Store the final Y position
+        summaryTable.finalY = data.cursor.y;
+      }
+    });
     
     // Add total row - use the finalY from TableOutput with a fallback value
     summaryPdf.setFont('helvetica', 'bold');
@@ -147,8 +152,9 @@ export async function generatePdfFiles(
         entry.employee || ''
       ]);
       
-      // Generate the table - EXACTLY like the invoice format and cast return value to TableOutput
-      const table = autoTable(pdf, {
+      // Generate the table - create object for TableOutput and use didDrawPage
+      let table: TableOutput = {};
+      autoTable(pdf, {
         head: [['Dagsetning:', 'Tímar:', 'Vinnuliður:', 'Starfsmaður:']],
         body: rows,
         startY: 30,
@@ -162,7 +168,11 @@ export async function generatePdfFiles(
           textColor: [0, 0, 0],
           fontStyle: 'bold',
         },
-      }) as TableOutput;
+        didDrawPage: function(data) {
+          // Store the final Y position
+          table.finalY = data.cursor.y;
+        }
+      });
       
       // Add location information section - match Excel layout
       const locationY = table?.finalY ? table.finalY + 15 : 80;
