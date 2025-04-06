@@ -28,78 +28,24 @@ export async function generatePdfFiles(
       throw new Error('PDF generation requires browser environment');
     }
     
-    console.log("Window object exists:", !!window);
-    console.log("Window electron property exists:", 'electron' in window);
-    
-    // Try to access the Electron API directly to check if it's defined
-    const electronApiDefined = typeof window.electron !== 'undefined';
-    console.log("Electron API defined:", electronApiDefined);
-    
-    // Direct troubleshooting - make a small PDF in memory and try to save it
-    if (electronApiDefined && typeof window.electron.writeFile === 'function') {
+    // Try to restore API from backup if needed
+    if (!window.electron && (window as any).electronBackupAPI) {
       try {
-        console.log("DIRECT TEST: Attempting to create and save a simple test PDF");
-        // Import jsPDF directly here to avoid issues if it's not loaded elsewhere
-        const { jsPDF } = await import('jspdf');
-        const testPdf = new jsPDF();
-        testPdf.text('Test PDF', 10, 10);
-        const testPdfBlob = testPdf.output('arraybuffer');
-        const testPath = `${outputDirectory}/test_pdf_${Date.now()}.pdf`;
-        console.log("DIRECT TEST: Writing test PDF to:", testPath);
-        
-        const testResult = await window.electron.writeFile({
-          filePath: testPath,
-          data: new Uint8Array(testPdfBlob)
-        });
-        
-        console.log("DIRECT TEST: Test PDF result:", testResult);
-        if (testResult && testResult.success) {
-          console.log("DIRECT TEST: Test PDF creation successful!");
-        } else {
-          console.error("DIRECT TEST: Test PDF creation failed:", testResult?.error || "Unknown error");
-        }
+        console.log("Restoring window.electron from backup API");
+        window.electron = (window as any).electronBackupAPI;
       } catch (e) {
-        console.error("DIRECT TEST: Error creating test PDF:", e);
+        console.error("Error restoring API:", e);
       }
-    }
-    
-    if (electronApiDefined) {
-      // List available methods on the electron object
-      console.log("Available electron API methods:", Object.keys(window.electron || {}));
-      
-      // Check specific methods
-      console.log("writeFile method exists:", typeof window.electron?.writeFile === 'function');
-      console.log("selectDirectory method exists:", typeof window.electron?.selectDirectory === 'function');
-      console.log("fileExists method exists:", typeof window.electron?.fileExists === 'function');
     }
     
     // Perform detailed API check
     const isAPIConnected = await checkElectronConnection();
     console.log("Detailed API check result:", isAPIConnected);
     
-    // Test if we can actually call one of the methods
-    if (electronApiDefined && typeof window.electron.selectDirectory === 'function') {
-      try {
-        console.log("Attempting to call selectDirectory to test API");
-        const testDir = await window.electron.selectDirectory();
-        console.log("selectDirectory test result:", testDir);
-      } catch (e) {
-        console.error("Error calling selectDirectory:", e);
-      }
-    }
-    
-    // More verbose check for Electron API
-    if ('electron' in window) {
-      console.log("Electron object is available in window");
-    } else {
-      console.error("Electron object is NOT available in window");
-      throw new Error('Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni');
-    }
-    
     // Check if Electron API is available
     if (!isElectronFileApiAvailable()) {
-      console.error("Electron file API is not available");
-      throw new Error('Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni');
+      console.error("Electron file API is not available after restoration attempts");
+      throw new Error('Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Endurræstu forritið.');
     }
     
     if (!validatePdfPrerequisites(timesheetEntries)) {

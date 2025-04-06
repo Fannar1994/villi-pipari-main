@@ -22,18 +22,49 @@ export function DirectorySelect({
 }: DirectorySelectProps) {
   const handleButtonClick = async () => {
     try {
-      // Check if we're running in Electron with the required API
+      // First try the main API
       if (typeof window !== 'undefined' && window.electron && window.electron.selectDirectory) {
-        // Use Electron's native dialog
+        console.log('Using primary Electron API to select directory');
         const result = await window.electron.selectDirectory();
         if (result) {
           onChange(result);
+          return;
         }
-      } else {
-        // Fallback for web version (demo mode)
-        console.log("Electron API not available, using demo path");
-        onChange('C:/Users/User/Documents');
       }
+      
+      // If that fails, try the backup API
+      if (typeof window !== 'undefined' && (window as any).electronBackupAPI && 
+          typeof (window as any).electronBackupAPI.selectDirectory === 'function') {
+        console.log('Using backup Electron API to select directory');
+        const result = await (window as any).electronBackupAPI.selectDirectory();
+        if (result) {
+          onChange(result);
+          return;
+        }
+      }
+      
+      // If all else fails, try to restore API from backup
+      if (typeof window !== 'undefined' && (window as any).electronBackupAPI) {
+        try {
+          console.log('Attempting to restore window.electron from backup API');
+          window.electron = (window as any).electronBackupAPI;
+          
+          if (window.electron && typeof window.electron.selectDirectory === 'function') {
+            console.log('Using restored Electron API to select directory');
+            const result = await window.electron.selectDirectory();
+            if (result) {
+              onChange(result);
+              return;
+            }
+          }
+        } catch (restoreError) {
+          console.error("Error restoring API:", restoreError);
+        }
+      }
+      
+      // Fallback for web version (demo mode)
+      console.log("Electron API not available, using demo path");
+      onChange('C:/Users/User/Documents');
     } catch (error) {
       console.error("Error selecting directory:", error);
       // Still provide a fallback path so the app doesn't completely break

@@ -61,7 +61,7 @@ const electronAPI = {
     return { 
       available: true, 
       time: new Date().toString(),
-      preloadVersion: '2.0' // Updated version to confirm we're using this new preload
+      preloadVersion: '3.0' // Updated version to confirm we're using this new preload
     };
   }
 };
@@ -69,20 +69,47 @@ const electronAPI = {
 // Log the API we're about to expose
 console.log('📦 Electron API object created with methods:', Object.keys(electronAPI));
 
-// This is the critical part - expose the API to the renderer
+// IMPORTANT: Make multiple attempts to expose the API to maximize chance of success
 try {
+  console.log('🔌 First attempt: Exposing API via contextBridge...');
   contextBridge.exposeInMainWorld('electron', electronAPI);
   console.log('✅ Electron API successfully exposed via contextBridge');
-  
-  // Add a global variable as a backup method (in case contextBridge isn't working)
-  console.log('🔄 Adding backup global.electronBackupAPI');
-  global.electronBackupAPI = electronAPI;
 } catch (error) {
-  console.error('❌ CRITICAL: Failed to expose API via contextBridge:', error);
+  console.error('❌ First attempt failed:', error);
+  
+  try {
+    console.log('🔌 Second attempt: Exposing API via contextBridge with delay...');
+    setTimeout(() => {
+      try {
+        contextBridge.exposeInMainWorld('electron', electronAPI);
+        console.log('✅ Delayed exposure successful');
+      } catch (e) {
+        console.error('❌ Delayed exposure failed:', e);
+      }
+    }, 500);
+  } catch (e2) {
+    console.error('❌ Second attempt failed:', e2);
+  }
 }
 
-// Confirmation message at the end of preload script execution
-console.log('🏁 Electron preload script completed');
+// Always set up the backup method
+console.log('🔄 Adding backup global.electronBackupAPI');
+try {
+  global.electronBackupAPI = electronAPI;
+  console.log('✅ Backup API added to global');
+} catch (backupError) {
+  console.error('❌ Failed to add backup API:', backupError);
+}
+
+// Direct window assignment attempt (this is usually blocked by contextIsolation)
+try {
+  console.log('🔄 Attempting direct window.electron assignment (unlikely to work)');
+  if (typeof window !== 'undefined') {
+    window.electron = electronAPI;
+  }
+} catch (windowError) {
+  console.error('❌ Direct window assignment failed as expected:', windowError);
+}
 
 // Add an initialization check that can be observed in DevTools
 setTimeout(() => {
@@ -93,3 +120,6 @@ setTimeout(() => {
     error => console.error('❌ IPC test failed:', error)
   );
 }, 1000);
+
+// CRITICAL: Confirm preload script has finished executing
+console.log('🏁 Electron preload script completed');

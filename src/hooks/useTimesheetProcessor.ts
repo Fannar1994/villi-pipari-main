@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { parseTimesheetFile, generateInvoices, generatePdfFiles } from '@/lib/excelProcessor';
+import { isElectronFileApiAvailable } from '@/lib/timesheet/pdf/pdfUtils';
 
 export type ProcessStatus = {
   status: 'idle' | 'processing' | 'success' | 'error';
@@ -98,25 +99,38 @@ export const useTimesheetProcessor = () => {
       return;
     }
 
-    // Check for Electron API or backup API
-    const hasElectronApi = typeof window !== 'undefined' && (
-      (window.electron && typeof window.electron.writeFile === 'function') || 
-      ((window as any).electronBackupAPI && typeof (window as any).electronBackupAPI.writeFile === 'function')
-    );
+    // First verify the API is available - with potential restoration attempt
+    const hasElectronApi = isElectronFileApiAvailable();
 
     if (!hasElectronApi) {
-      toast({
-        title: 'Villa',
-        description: 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.',
-        variant: 'destructive',
-      });
+      // Try to force API restoration
+      try {
+        if (typeof window !== 'undefined' && (window as any).electronBackupAPI) {
+          window.electron = (window as any).electronBackupAPI;
+          console.log('Attempted to restore API from backup before PDF generation');
+        }
+      } catch (e) {
+        console.error('Error during API restoration attempt:', e);
+      }
       
-      setProcessStatus({
-        status: 'error',
-        message: 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Endurræstu forritið.',
-      });
+      // Check again after restoration attempt
+      const apiAfterRestore = isElectronFileApiAvailable();
       
-      return;
+      if (!apiAfterRestore) {
+        const errorMsg = 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.';
+        toast({
+          title: 'Villa',
+          description: errorMsg,
+          variant: 'destructive',
+        });
+        
+        setProcessStatus({
+          status: 'error',
+          message: errorMsg,
+        });
+        
+        return;
+      }
     }
 
     try {

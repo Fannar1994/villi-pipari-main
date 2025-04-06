@@ -78,7 +78,7 @@ export async function checkElectronConnection(): Promise<boolean> {
         try {
           const testResult = api._testConnection();
           console.log('Test connection result:', testResult);
-          if ('preloadVersion' in testResult) {
+          if (testResult && 'preloadVersion' in testResult) {
             console.log('Using preload script version:', testResult.preloadVersion);
           }
         } catch (err) {
@@ -117,13 +117,30 @@ export function isElectronFileApiAvailable(): boolean {
                       (window as any).electronBackupAPI !== undefined && 
                       typeof (window as any).electronBackupAPI.writeFile === 'function';
   
+  // Try to assign backup to primary if primary is missing
+  if (!hasPrimaryApi && hasBackupApi) {
+    try {
+      console.log('Attempting to restore window.electron from backup API');
+      window.electron = (window as any).electronBackupAPI;
+      console.log('Restored window.electron from backup');
+    } catch (e) {
+      console.error('Failed to restore API:', e);
+    }
+  }
+  
+  // Re-check after potential restoration
+  const primaryAfterRestore = 'electron' in window && 
+                             window.electron !== undefined && 
+                             typeof window.electron.writeFile === 'function';
+  
   console.log('API availability check:', {
     primary: hasPrimaryApi,
-    backup: hasBackupApi
+    backup: hasBackupApi,
+    afterRestore: primaryAfterRestore
   });
   
   // Return true if either API is available
-  return hasPrimaryApi || hasBackupApi;
+  return primaryAfterRestore || hasPrimaryApi || hasBackupApi;
 }
 
 /**
@@ -142,6 +159,17 @@ function getBestAvailableApi() {
       (window as any).electronBackupAPI && 
       typeof (window as any).electronBackupAPI.writeFile === 'function') {
     return (window as any).electronBackupAPI;
+  }
+  
+  // Try to restore from backup
+  if (typeof window !== 'undefined' && 
+      (window as any).electronBackupAPI) {
+    try {
+      window.electron = (window as any).electronBackupAPI;
+      return window.electron;
+    } catch (e) {
+      console.error('Failed to restore API from backup:', e);
+    }
   }
   
   // No API available
@@ -164,6 +192,7 @@ export function getCurrentDateString(): string {
 
 /**
  * Save PDF data to a file using Electron's file writing API (or backup)
+ * Enhanced with retries and better error handling
  */
 export async function savePdfToFile(
   pdfData: Uint8Array,
@@ -179,19 +208,38 @@ export async function savePdfToFile(
     return false;
   }
   
-  try {
-    console.log("Calling API.writeFile with data length:", pdfData.length);
-    console.log("Using API from:", api === window.electron ? "window.electron" : "backup");
+  // Try multiple times to save the file
+  const maxRetries = 3;
+  let lastError = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Attempt ${attempt}/${maxRetries}: Calling API.writeFile with data length:`, pdfData.length);
+      console.log("Using API from:", api === window.electron ? "window.electron" : "backup");
+      
+      const result = await api.writeFile({
+        filePath: filePath,
+        data: pdfData
+      });
+      
+      console.log(`Attempt ${attempt} result:`, result);
+      if (result && result.success === true) {
+        return true;
+      }
+      
+      lastError = result?.error || "Unknown error";
+    } catch (error) {
+      console.error(`Attempt ${attempt} error:`, error);
+      lastError = error;
+    }
     
-    const result = await api.writeFile({
-      filePath: filePath,
-      data: pdfData
-    });
-    
-    console.log("PDF save result:", result);
-    return result && result.success === true;
-  } catch (error) {
-    console.error("Error saving PDF file:", error);
-    return false;
+    // Wait before retry
+    if (attempt < maxRetries) {
+      console.log(`Waiting before retry ${attempt + 1}...`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
   }
+  
+  console.error(`All ${maxRetries} attempts failed. Last error:`, lastError);
+  return false;
 }
