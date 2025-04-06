@@ -1,64 +1,63 @@
 
 import { useEffect, useState } from 'react';
-import { isElectronAPIAvailable } from '@/lib/electron/detector';
-import { enableEmergencyMode } from '@/lib/electron/emergency-mode';
-import { startApiMonitor } from '@/lib/electron/api-listener';
 import { toast } from '@/hooks/use-toast';
 
 /**
  * Hook that automatically initializes the Electron API
- * when the application starts
+ * when the application starts - Simplified version
  */
 export function useElectronAutoInit() {
   const [initialized, setInitialized] = useState<boolean>(false);
   const [apiAvailable, setApiAvailable] = useState<boolean>(false);
-  const [emergencyActive, setEmergencyActive] = useState<boolean>(false);
 
   useEffect(() => {
     // Run initialization only once
     if (initialized) return;
     
-    const initializeAPI = async () => {
-      console.log('🚀 Auto-initializing Electron API...');
+    const initializeAPI = () => {
+      console.log('🚀 Checking Electron API availability...');
       
-      // First check if API is already available
-      const available = isElectronAPIAvailable();
+      // Simple check if API is available directly
+      const isAvailable = !!(
+        window.electron && 
+        typeof window.electron.writeFile === 'function' && 
+        typeof window.electron.selectDirectory === 'function' && 
+        typeof window.electron.fileExists === 'function'
+      );
       
-      if (available) {
-        console.log('✅ Electron API already available');
+      if (isAvailable) {
+        console.log('✅ Electron API is available');
         setApiAvailable(true);
       } else {
-        console.log('❌ Electron API not available, trying emergency mode');
+        console.log('❌ Electron API not available');
         
-        // Try emergency mode
-        const recoverySuccess = enableEmergencyMode();
-        
-        if (recoverySuccess) {
-          console.log('✅ Successfully recovered API with emergency mode');
+        // Try backup location as a simple fallback
+        if (window.electronBackupAPI) {
+          console.log('🔄 Restoring API from backup location');
+          window.electron = window.electronBackupAPI;
           setApiAvailable(true);
-          setEmergencyActive(true);
           
-          // Show toast notification
           toast({
-            title: "API endurheimt",
-            description: "API hefur verið endurheimt í neyðarham",
+            title: "API restored",
+            description: "API has been restored from backup",
           });
         } else {
-          console.error('❌ Failed to recover API');
+          console.error('❌ No API available - restart may be required');
           
-          // Start monitoring for API availability changes
-          startApiMonitor();
+          toast({
+            title: "API Not Available",
+            description: "Please restart the application",
+            variant: "destructive"
+          });
         }
       }
       
       setInitialized(true);
     };
     
-    // Run initialization with slight delay to let other systems initialize
-    const timer = setTimeout(initializeAPI, 500);
-    
-    return () => clearTimeout(timer);
+    // Run initialization immediately
+    initializeAPI();
   }, [initialized]);
 
-  return { initialized, apiAvailable, emergencyActive };
+  return { initialized, apiAvailable };
 }

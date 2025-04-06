@@ -9,14 +9,16 @@ import { ProcessStatus } from '@/components/ProcessStatus';
 import { useTimesheetProcessor } from '@/hooks/useTimesheetProcessor';
 import { ElectronTester } from '@/components/ElectronTester';
 import { useElectronAutoInit } from '@/hooks/useElectronAutoInit';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 
 const Index = () => {
   const [timesheetFile, setTimesheetFile] = useState<File | null>(null);
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [outputDir, setOutputDir] = useState<string>('');
   
-  // Auto-initialize Electron API
-  const { apiAvailable, emergencyActive } = useElectronAutoInit();
+  // Auto-initialize Electron API - simplified approach
+  const { apiAvailable } = useElectronAutoInit();
   
   const { 
     isProcessing, 
@@ -33,13 +35,28 @@ const Index = () => {
     await generatePdfsFromTimesheet(timesheetFile, outputDir);
   };
 
+  // Simple reload function
+  const handleReload = () => {
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <ElectronTester />
       
-      {emergencyActive && (
-        <div className="w-full max-w-md mb-2 p-2 bg-amber-100 border border-amber-300 rounded text-amber-800 text-sm text-center">
-          Neyðarhamur virkar - forritið kann að vera óstöðugt. Vinsamlegast endurræstu appið.
+      {!apiAvailable && (
+        <div className="w-full max-w-md mb-2 p-3 bg-amber-100 border border-amber-300 rounded text-amber-800 text-center">
+          <p className="font-medium mb-2">Electron API not available</p>
+          <p className="text-sm mb-2">The application may not function correctly</p>
+          <Button 
+            onClick={handleReload} 
+            variant="outline" 
+            className="border-amber-500 text-amber-800"
+            size="sm"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Reload Application
+          </Button>
         </div>
       )}
       
