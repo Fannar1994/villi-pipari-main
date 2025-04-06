@@ -36,7 +36,7 @@ if (!electronAPI) {
   }
 }
 
-// Expose the API to the renderer
+// Expose the API to the renderer via contextBridge
 exposeAPI(electronAPI);
 
 // Set up IPC handlers

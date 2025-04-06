@@ -1,4 +1,3 @@
-
 /**
  * Core API detection utilities for Electron
  */
@@ -14,7 +13,7 @@ export function getElectronAPI(): ElectronAPI | null {
     return null;
   }
   
-  // Direct window.electron access - only method we use
+  // Direct window.electron access
   if (window.electron) {
     console.log('Found API at window.electron');
     return window.electron;
@@ -96,8 +95,7 @@ export function forceApiRecovery(): boolean {
   return isElectronAPIAvailable();
 }
 
-// Add missing functions to store and retrieve emergency API backup
-// These are stub implementations since we're moving away from emergency mode
+// Stub functions for emergency API backup
 export function setEmergencyApiBackup(api: ElectronAPI): void {
   console.log('Emergency API backup requested, but not implemented in direct mode');
   // No implementation - just a stub to fix TypeScript errors

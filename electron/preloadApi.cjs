@@ -9,7 +9,7 @@
  * @returns {Object} The API object to be exposed
  */
 function createElectronAPI(ipcRenderer) {
-  console.log('Creating Electron API object - SIMPLIFIED VERSION');
+  console.log('Creating Electron API object');
   
   // Make sure we have a valid ipcRenderer
   if (!ipcRenderer) {
@@ -17,7 +17,8 @@ function createElectronAPI(ipcRenderer) {
     return null;
   }
   
-  return {
+  // Create the API object with all required methods
+  const api = {
     writeFile: async (options) => {
       console.log('Preload: writeFile called with:', options.filePath);
       try {
@@ -55,7 +56,7 @@ function createElectronAPI(ipcRenderer) {
         return { 
           available: true, 
           time: new Date().toString(),
-          preloadVersion: '7.0' // Simplified direct version
+          preloadVersion: '7.0' // Version identifier
         };
       } catch (error) {
         console.error('Preload: _testConnection error:', error);
@@ -63,6 +64,12 @@ function createElectronAPI(ipcRenderer) {
       }
     }
   };
+  
+  // Check that all methods are properly defined
+  const methods = Object.keys(api);
+  console.log(`API created with ${methods.length} methods:`, methods.join(', '));
+  
+  return api;
 }
 
 module.exports = {

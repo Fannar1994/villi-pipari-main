@@ -1,48 +1,29 @@
 
 /**
- * Emergency mode for Electron API access when normal methods fail
- * This module is being phased out in favor of direct window.electron access
+ * SIMPLIFIED EMERGENCY MODE ADAPTER
+ * This file exists only to maintain compatibility with the rest of the code
  */
+
 import { ElectronAPI } from './types';
-import { toast } from '@/hooks/use-toast';
-import { 
-  getElectronAPI, 
-  isElectronAPIAvailable, 
-  setEmergencyApiBackup, 
-  getEmergencyApiBackup 
-} from './detector-core'; // Import directly from detector-core
+import { getElectronAPI, setEmergencyApiBackup, getEmergencyApiBackup } from './detector-core';
 
 /**
- * Activate emergency mode
- * This creates a simple emergency-mode API that can access file system
- * by using direct DOM-based communication with the Electron main process
- * 
- * Note: This function is deprecated and will be removed in a future version
+ * Emergency mode is now disabled in favor of using direct window.electron approach
  */
-export function activateEmergencyMode(): boolean {
-  console.log('🚨 ACTIVATING EMERGENCY MODE...');
-  console.log('⚠️ Emergency mode is deprecated. Please use window.electron directly.');
-  
-  // Check if window.electron already exists - if so, we don't need emergency mode
-  if (isElectronAPIAvailable()) {
-    console.log('✓ Standard API is available - no need for emergency mode');
-    return true;
-  }
-  
-  // Show toast notification about deprecation
-  toast({
-    title: "Neyðarhamur ekki lengur studdur",
-    description: "Vinsamlega endurræstu forritið til að nota staðlað API",
-    variant: "destructive",
-  });
-  
-  return false; // Always return false as this mode is being phased out
+export function enableEmergencyMode(): boolean {
+  console.log('Emergency mode is disabled - using direct window.electron approach only');
+  return false;
 }
 
 /**
- * Set up handlers for the emergency message passing system
- * This is a stub function that doesn't do anything anymore
+ * Check if backup API is available
+ * Simplified to just check window.electron
  */
-function setupEmergencyMessageHandlers() {
-  console.log('Emergency mode is deprecated - message handlers not set up');
+export function isBackupApiAvailable(): boolean {
+  return !!window.electron;
 }
+
+export default {
+  enableEmergencyMode,
+  isBackupApiAvailable
+};

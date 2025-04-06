@@ -21,6 +21,8 @@ function exposeAPI(electronAPI) {
     // Check if contextBridge is available (it should be with contextIsolation: true)
     if (contextBridge) {
       console.log('🔗 Exposing API via contextBridge as "electron"');
+      
+      // Expose the API with direct assignment
       contextBridge.exposeInMainWorld('electron', electronAPI);
       
       // Verify the API was properly exposed
