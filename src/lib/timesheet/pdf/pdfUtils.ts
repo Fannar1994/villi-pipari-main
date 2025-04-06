@@ -21,12 +21,62 @@ export function prepareEntriesForPdfGeneration(
 }
 
 /**
+ * Check connection to Electron API with detailed diagnostics
+ */
+export async function checkElectronConnection(): Promise<boolean> {
+  console.log('Running detailed Electron API check');
+  
+  if (typeof window === 'undefined') {
+    console.error('Window is undefined - not in browser context');
+    return false;
+  }
+  
+  console.log('Window object available:', typeof window);
+  console.log('Has electron property:', 'electron' in window);
+  
+  if (!('electron' in window)) {
+    console.error('Electron API not found on window object');
+    console.log('Window keys:', Object.keys(window));
+    return false;
+  }
+
+  // Test if API methods exist
+  const api = window.electron;
+  console.log('Electron API object:', typeof api);
+  console.log('Electron API keys:', api ? Object.keys(api) : 'none');
+
+  // Try to use test connection function
+  if (api && typeof api._testConnection === 'function') {
+    try {
+      const testResult = api._testConnection();
+      console.log('Test connection result:', testResult);
+      return testResult.available;
+    } catch (error) {
+      console.error('Error using test connection:', error);
+    }
+  }
+
+  // Fall back to checking individual methods
+  const hasWriteFile = api && typeof api.writeFile === 'function';
+  const hasSelectDirectory = api && typeof api.selectDirectory === 'function';
+  const hasFileExists = api && typeof api.fileExists === 'function';
+  
+  console.log('API methods check:', {
+    writeFile: hasWriteFile,
+    selectDirectory: hasSelectDirectory,
+    fileExists: hasFileExists
+  });
+  
+  return hasWriteFile && hasSelectDirectory && hasFileExists;
+}
+
+/**
  * Checks if Electron file API is available
  */
 export function isElectronFileApiAvailable(): boolean {
   console.log('Checking for Electron API availability');
   
-  // More detailed logging of the window object
+  // Thorough logging of the window object
   console.log('Window type:', typeof window);
   
   if (typeof window !== 'undefined') {

@@ -44,6 +44,12 @@ const electronAPI = {
   }
 };
 
+// Add this diagnostic function to help debugging
+electronAPI._testConnection = () => {
+  console.log('Preload: _testConnection called');
+  return { available: true, time: new Date().toString() };
+};
+
 // Expose the API to the renderer process
 contextBridge.exposeInMainWorld('electron', electronAPI);
 

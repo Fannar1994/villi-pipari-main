@@ -6,7 +6,8 @@ import {
   validatePdfPrerequisites, 
   prepareEntriesForPdfGeneration,
   getCurrentDateString,
-  isElectronFileApiAvailable
+  isElectronFileApiAvailable,
+  checkElectronConnection
 } from './pdfUtils';
 
 /**
@@ -26,6 +27,10 @@ export async function generatePdfFiles(
       console.error('PDF generation requires browser environment');
       throw new Error('PDF generation requires browser environment');
     }
+    
+    // Perform detailed API check
+    const isAPIConnected = await checkElectronConnection();
+    console.log("Detailed API check result:", isAPIConnected);
     
     // More verbose check for Electron API
     if ('electron' in window) {
