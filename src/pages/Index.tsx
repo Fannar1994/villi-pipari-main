@@ -7,7 +7,6 @@ import { PageHeader } from '@/components/PageHeader';
 import { PageFooter } from '@/components/PageFooter';
 import { ProcessStatus } from '@/components/ProcessStatus';
 import { useTimesheetProcessor } from '@/hooks/useTimesheetProcessor';
-import { ElectronTester } from '@/components/ElectronTester';
 
 const Index = () => {
   const [timesheetFile, setTimesheetFile] = useState<File | null>(null);
@@ -31,9 +30,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-      {/* Add the ElectronTester component at the top */}
-      <ElectronTester />
-      
       <Card className="w-full max-w-md shadow-lg border-primary">
         <PageHeader />
         
