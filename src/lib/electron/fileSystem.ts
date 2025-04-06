@@ -26,46 +26,57 @@ export async function writeFile(filePath: string, data: Uint8Array): Promise<boo
 }
 
 /**
- * Directory selection function with enhanced error handling and logging
+ * Enhanced directory selection function with multiple fallback methods
  */
 export async function selectDirectory(): Promise<string | null> {
   console.log('selectDirectory called from lib');
-  const api = getElectronAPI();
-  if (!api) {
-    console.error('Cannot select directory: Electron API not available');
-    return null;
+  
+  // Try multiple methods to ensure at least one works
+  let result: string | null = null;
+  
+  // Method 1: Direct window.electron access (most reliable)
+  if (window.electron && typeof window.electron.selectDirectory === 'function') {
+    try {
+      console.log('Trying direct window.electron call...');
+      result = await window.electron.selectDirectory();
+      console.log('Direct selectDirectory result:', result);
+      
+      if (result) return result;
+    } catch (e) {
+      console.error('Direct window.electron call failed:', e);
+    }
   }
   
-  try {
-    console.log('Invoking selectDirectory through Electron API...');
-    
-    // First try direct window access if available (most reliable)
-    if (window.electron && typeof window.electron.selectDirectory === 'function') {
-      console.log('Trying direct window.electron call...');
-      const directResult = await window.electron.selectDirectory();
-      console.log('Direct selectDirectory result:', directResult);
+  // Method 2: Backup API
+  if (!result && (window as any).electronBackupAPI && 
+      typeof (window as any).electronBackupAPI.selectDirectory === 'function') {
+    try {
+      console.log('Trying backup API call...');
+      result = await (window as any).electronBackupAPI.selectDirectory();
+      console.log('Backup API selectDirectory result:', result);
       
-      if (directResult) {
-        return directResult;
-      } else {
-        console.log('Direct call returned no path, trying through API helper...');
-      }
+      if (result) return result;
+    } catch (e) {
+      console.error('Backup API call failed:', e);
     }
-    
-    // Fall back to our API helper
-    const result = await api.selectDirectory();
-    console.log('selectDirectory result from helper:', result);
-    
-    if (result === undefined) {
-      console.warn('selectDirectory returned undefined, converting to null');
-      return null;
-    }
-    
-    return result;
-  } catch (e) {
-    console.error('Error selecting directory:', e);
-    return null;
   }
+  
+  // Method 3: Use API helper
+  if (!result) {
+    try {
+      const api = getElectronAPI();
+      if (api && typeof api.selectDirectory === 'function') {
+        console.log('Trying through API helper...');
+        result = await api.selectDirectory();
+        console.log('Helper selectDirectory result:', result);
+      }
+    } catch (e) {
+      console.error('API helper call failed:', e);
+    }
+  }
+  
+  // Return final result (or null if all methods failed)
+  return result;
 }
 
 /**

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { getElectronAPI, isElectronAPIAvailable } from '@/lib/electron/api';
+import { selectDirectory } from '@/lib/electron/fileSystem'; // Import the function directly
 
 interface DirectorySelectProps {
   value: string;
@@ -22,73 +22,25 @@ export function DirectorySelect({
   disabled = false,
 }: DirectorySelectProps) {
   const [isSelecting, setIsSelecting] = useState(false);
-  const [apiAvailable, setApiAvailable] = useState(false);
-
-  // Check API availability
-  useEffect(() => {
-    const checkApi = () => {
-      const available = isElectronAPIAvailable();
-      console.log('Directory selector - API available:', available);
-      setApiAvailable(available);
-    };
-    
-    // Initial check
-    checkApi();
-    
-    // Set up periodic checks
-    const interval = setInterval(checkApi, 2000);
-    
-    // Cleanup
-    return () => clearInterval(interval);
-  }, []);
 
   const handleButtonClick = async () => {
     try {
       setIsSelecting(true);
       console.log('Directory selection button clicked');
       
-      const api = getElectronAPI();
+      // Use the selectDirectory function directly from our fileSystem module
+      const result = await selectDirectory();
+      console.log('Directory selection result:', result);
       
-      if (api && typeof api.selectDirectory === 'function') {
-        console.log('Calling selectDirectory from DirectorySelect component...');
-        
-        // Force a direct call to make sure it works
-        let result;
-        try {
-          result = await window.electron?.selectDirectory();
-          console.log('selectDirectory direct result:', result);
-        } catch (err) {
-          console.error('Direct select directory failed, trying backup method...', err);
-        }
-        
-        // If direct call failed, try our helper function
-        if (!result) {
-          try {
-            result = await api.selectDirectory();
-            console.log('selectDirectory result from helper:', result);
-          } catch (directError) {
-            console.error('Helper select directory failed:', directError);
-            throw directError;
-          }
-        }
-        
-        if (result) {
-          onChange(result);
-          console.log('Directory selected successfully:', result);
-          toast({
-            title: "Mappa valin",
-            description: `Mappa: ${result}`,
-          });
-        } else {
-          console.warn('No directory selected or dialog was cancelled');
-        }
-      } else {
-        console.error('No API available for directory selection');
+      if (result) {
+        onChange(result);
+        console.log('Directory selected successfully:', result);
         toast({
-          title: "Villa",
-          description: "Ekki næst samband við skráakerfi. Endurræstu forritið.",
-          variant: "destructive",
+          title: "Mappa valin",
+          description: `Mappa: ${result}`,
         });
+      } else {
+        console.warn('No directory selected or dialog was cancelled');
       }
     } catch (error) {
       console.error("Unexpected error selecting directory:", error);

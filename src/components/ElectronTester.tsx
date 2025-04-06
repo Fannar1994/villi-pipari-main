@@ -1,24 +1,42 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Terminal } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiStatusDisplay } from './electron/ApiStatusDisplay';
 import { ApiActions } from './electron/ApiActions';
 import { DebugInfo } from './electron/DebugInfo';
 import { useElectronAPI } from '@/hooks/useElectronAPI';
+import { Button } from './ui/button';
 
 /**
  * A component that tests if the Electron API is correctly available
- * Refactored version with functionality split into smaller, focused components
+ * Hidden by default, can be shown with a special button
  */
 export function ElectronTester() {
   const [testOutputPath, setTestOutputPath] = useState<string | null>(null);
   const { apiStatus, isChecking, checkApi } = useElectronAPI();
+  const [isVisible, setIsVisible] = useState<boolean>(false);
+
+  if (!isVisible) {
+    return (
+      <div className="text-xs text-right mb-2">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          className="opacity-50 hover:opacity-100"
+          onClick={() => setIsVisible(true)}
+        >
+          <Terminal size={14} className="mr-1" />
+          Show API Tester
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md mb-4">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between py-3">
         <CardTitle className="flex items-center gap-2">
           Electron API Tester
           {apiStatus.available ? (
@@ -27,6 +45,14 @@ export function ElectronTester() {
             <XCircle className="text-red-500" size={20} />
           )}
         </CardTitle>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => setIsVisible(false)}
+          className="h-8 w-8 p-0 rounded-full"
+        >
+          ×
+        </Button>
       </CardHeader>
       
       <CardContent className="space-y-3">

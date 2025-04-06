@@ -28,15 +28,22 @@ function createElectronAPI(ipcRenderer) {
         const result = await ipcRenderer.invoke('select-directory');
         console.log('Preload: selectDirectory result:', result);
         
-        // Ensure we always return a string or null, never undefined
+        // Enhanced reliability - ensure we always return a string or null, never undefined
         if (result === undefined || result === '') {
           console.log('Empty or undefined path received, returning null');
           return null;
         }
         
+        // Force conversion to string if we somehow got something else
+        if (result !== null && typeof result !== 'string') {
+          console.warn('Non-string result received, converting:', result);
+          return String(result);
+        }
+        
         return result;
       } catch (error) {
         console.error('Preload: selectDirectory error:', error);
+        // Make sure we have consistent error handling
         return null;
       }
     },
