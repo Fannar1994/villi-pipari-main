@@ -111,15 +111,17 @@ export function createSummaryData(entries: TimesheetEntry[]): SummaryEntry[] {
 
 /**
  * Creates formatted summary sheet data with styling information
+ * Uses Excel formulas for automatic calculation of totals
  */
 export function createSummarySheetData(entries: TimesheetEntry[]): {
-  data: (string | number)[][];
+  data: (string | number | { f: string })[][];
   styles: { [cell: string]: { font: { color: string } } };
+  merges: { s: { c: number; r: number }; e: { c: number; r: number } }[];
 } {
   const summaryEntries = createSummaryData(entries);
   
   // Create headers
-  const data: (string | number)[][] = [
+  const data: (string | number | { f: string })[][] = [
     ['Samantekt'], // Title
     [], // Empty row
     ['Dagsetning', 'Starfsmaður', 'Heildar tímar', 'Staðsetning'], // Headers with location
@@ -128,6 +130,12 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   // Styling information for cells
   const styles: { [cell: string]: { font: { color: string } } } = {};
   
+  // For merging cells
+  const merges = [
+    // Merge the title row
+    { s: { c: 0, r: 0 }, e: { c: 3, r: 0 } }
+  ];
+  
   // Add data rows
   summaryEntries.forEach((entry, index) => {
     const rowIndex = index + 3; // Start after headers
@@ -135,7 +143,7 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
     data[rowIndex] = [
       formatDateIcelandic(entry.date),
       entry.employee,
-      formatNumber(entry.totalHours),
+      entry.totalHours,
       entry.location || '' // Include location information
     ];
     
@@ -150,5 +158,44 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
     }
   });
   
-  return { data, styles };
+  // Calculate totals for each employee and add them to the summary
+  const employeeTotals = new Map<string, number>();
+  summaryEntries.forEach(entry => {
+    const currentTotal = employeeTotals.get(entry.employee) || 0;
+    employeeTotals.set(entry.employee, currentTotal + entry.totalHours);
+  });
+  
+  // Add a separator row
+  const separatorRowIndex = data.length;
+  data.push(['', '', '', '']);
+  
+  // Add employee subtotals using formulas
+  let employeeRowStart = separatorRowIndex + 1;
+  employeeTotals.forEach((total, employee) => {
+    data.push([
+      '',
+      `Samtals - ${employee}`,
+      { f: `SUMIF(B4:B${separatorRowIndex}, "${employee}", C4:C${separatorRowIndex})` }, // Formula for employee total
+      ''
+    ]);
+    
+    styles[`B${employeeRowStart + 1}`] = { font: { color: '000000', bold: true } };
+    styles[`C${employeeRowStart + 1}`] = { font: { color: '000000', bold: true } };
+    employeeRowStart++;
+  });
+  
+  // Add grand total using formula
+  const grandTotalRowIndex = data.length;
+  data.push([
+    '',
+    'HEILDARTALA',
+    { f: `SUM(C4:C${separatorRowIndex})` }, // Formula for grand total
+    ''
+  ]);
+  
+  // Style for grand total
+  styles[`B${grandTotalRowIndex + 1}`] = { font: { color: '000000', bold: true } };
+  styles[`C${grandTotalRowIndex + 1}`] = { font: { color: '000000', bold: true } };
+  
+  return { data, styles, merges };
 }

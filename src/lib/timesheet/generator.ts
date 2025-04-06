@@ -25,16 +25,17 @@ export async function generateInvoices(
       outputWorkbook = XLSX.utils.book_new();
     }
     
-    // Add summary sheet
-    const { data: summaryData, styles: summaryStyles } = createSummarySheetData(timesheetEntries);
+    // Add summary sheet with formulas
+    const { data: summaryData, styles: summaryStyles, merges } = createSummarySheetData(timesheetEntries);
     const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
     
-    // Apply styles to the summary worksheet
+    // Apply column widths to the summary worksheet
     if (!summaryWorksheet['!cols']) {
       summaryWorksheet['!cols'] = [
         { wch: 12 }, // Date column width
         { wch: 20 }, // Employee column width
-        { wch: 12 }  // Hours column width
+        { wch: 12 }, // Hours column width
+        { wch: 25 }  // Location column width
       ];
     }
     
@@ -50,11 +51,16 @@ export async function generateInvoices(
         summaryWorksheet[cell].s = {};
       }
       
-      // Apply the font color
+      // Apply the font color and other style properties
       summaryWorksheet[cell].s = {
         ...summaryWorksheet[cell].s,
         ...style
       };
+    }
+    
+    // Apply merges if any
+    if (merges && merges.length > 0) {
+      summaryWorksheet['!merges'] = merges;
     }
     
     XLSX.utils.book_append_sheet(outputWorkbook, summaryWorksheet, 'Samantekt');
