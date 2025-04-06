@@ -46,10 +46,6 @@ export const useTimesheetProcessor = () => {
 
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
-      if (timesheetEntries.length === 0) {
-        throw new Error('Engar færslur fundust í vinnuskýrslu');
-      }
-      
       const invoiceCount = await generateInvoices(timesheetEntries, templateFile, outputDir);
       
       setIsProcessing(false);
@@ -69,7 +65,7 @@ export const useTimesheetProcessor = () => {
       setIsProcessing(false);
       setProcessStatus({
         status: 'error',
-        message: error instanceof Error ? error.message : 'Óþekkt villa kom upp',
+        message: `Villa kom upp: ${error.message || 'Óþekkt villa'}`,
       });
       
       toast({
@@ -106,16 +102,9 @@ export const useTimesheetProcessor = () => {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að PDF gerð...' });
 
-      console.log("Starting PDF generation process");
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
-      if (timesheetEntries.length === 0) {
-        throw new Error('Engar færslur fundust í vinnuskýrslu');
-      }
-      
-      console.log("Starting PDF generation with", timesheetEntries.length, "entries");
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
-      console.log("PDF generation completed, count:", pdfCount);
       
       setIsProcessing(false);
       setProcessStatus({
@@ -134,7 +123,7 @@ export const useTimesheetProcessor = () => {
       setIsProcessing(false);
       setProcessStatus({
         status: 'error',
-        message: error instanceof Error ? error.message : 'Óþekkt villa kom upp',
+        message: `Villa kom upp: ${error.message || 'Óþekkt villa'}`,
       });
       
       toast({

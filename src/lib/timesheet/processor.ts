@@ -83,17 +83,12 @@ export function createSummaryData(entries: TimesheetEntry[]): SummaryEntry[] {
     
     if (existingEntry) {
       existingEntry.totalHours += entry.hours;
-      // If the location isn't already recorded, add it
-      if (!existingEntry.location && entry.location) {
-        existingEntry.location = entry.location;
-      }
     } else {
       summaryMap.set(key, {
         date: entry.date,
         employee: entry.employee,
         totalHours: entry.hours,
-        isHoliday: isIcelandicHoliday(entry.date),
-        location: entry.location || ''
+        isHoliday: isIcelandicHoliday(entry.date)
       });
     }
   });
@@ -122,7 +117,7 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   const data: (string | number)[][] = [
     ['Samantekt'], // Title
     [], // Empty row
-    ['Dagsetning', 'Starfsmaður', 'Heildar tímar', 'Staðsetning'], // Headers with location
+    ['Dagsetning', 'Starfsmaður', 'Heildar tímar'], // Headers
   ];
   
   // Styling information for cells
@@ -135,8 +130,7 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
     data[rowIndex] = [
       formatDateIcelandic(entry.date),
       entry.employee,
-      formatNumber(entry.totalHours),
-      entry.location || '' // Include location information
+      formatNumber(entry.totalHours)
     ];
     
     // Mark overtime (over 8 hours) in red

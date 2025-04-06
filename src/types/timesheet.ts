@@ -14,5 +14,4 @@ export interface SummaryEntry {
   employee: string;
   totalHours: number;
   isHoliday: boolean;
-  location?: string; // Added location field
 }
