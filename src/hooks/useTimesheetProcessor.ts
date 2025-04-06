@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { parseTimesheetFile, generateInvoices, generatePdfFiles } from '@/lib/excelProcessor';
-import { isElectronFileApiAvailable } from '@/lib/timesheet/pdf/pdfUtils';
+import { isElectronFileApiAvailable, getBestAvailableApi } from '@/lib/timesheet/pdf/pdfUtils';
 
 export type ProcessStatus = {
   status: 'idle' | 'processing' | 'success' | 'error';
@@ -99,38 +99,51 @@ export const useTimesheetProcessor = () => {
       return;
     }
 
-    // First verify the API is available - with potential restoration attempt
-    const hasElectronApi = isElectronFileApiAvailable();
-
-    if (!hasElectronApi) {
-      // Try to force API restoration
-      try {
-        if (typeof window !== 'undefined' && (window as any).electronBackupAPI) {
-          window.electron = (window as any).electronBackupAPI;
-          console.log('Attempted to restore API from backup before PDF generation');
+    // Try aggressive API recovery before proceeding
+    try {
+      // Force API check and restoration with special handling
+      if (typeof window !== 'undefined') {
+        console.log('Force checking and restoring Electron API');
+        
+        // If we have backup API but not main API, restore it
+        if (!window.electron && window.electronBackupAPI) {
+          window.electron = window.electronBackupAPI;
+          console.log('Forced API restoration from backup before PDF generation');
         }
-      } catch (e) {
-        console.error('Error during API restoration attempt:', e);
-      }
-      
-      // Check again after restoration attempt
-      const apiAfterRestore = isElectronFileApiAvailable();
-      
-      if (!apiAfterRestore) {
-        const errorMsg = 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.';
-        toast({
-          title: 'Villa',
-          description: errorMsg,
-          variant: 'destructive',
-        });
         
-        setProcessStatus({
-          status: 'error',
-          message: errorMsg,
-        });
+        // Try to get the best available API
+        const api = getBestAvailableApi();
+        console.log('Best available API:', api ? 'Available' : 'Not available');
         
-        return;
+        // If API is available, test it
+        if (api && api._testConnection) {
+          const testResult = api._testConnection();
+          console.log('API test result:', testResult);
+        }
       }
+    } catch (e) {
+      console.error('Error during API recovery:', e);
+    }
+
+    // Check if API is available after recovery attempt
+    const hasElectronApi = isElectronFileApiAvailable();
+    console.log('Electron API available after recovery:', hasElectronApi);
+    
+    if (!hasElectronApi) {
+      const errorMsg = 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.';
+      
+      toast({
+        title: 'Villa',
+        description: errorMsg,
+        variant: 'destructive',
+      });
+      
+      setProcessStatus({
+        status: 'error',
+        message: errorMsg,
+      });
+      
+      return;
     }
 
     try {
@@ -140,6 +153,10 @@ export const useTimesheetProcessor = () => {
       console.log('Parsing timesheet file for PDF generation');
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       console.log(`Parsed ${timesheetEntries.length} entries from timesheet`);
+      
+      if (timesheetEntries.length === 0) {
+        throw new Error('Engar færslur fundust í vinnuskýrslu');
+      }
       
       console.log('Starting PDF generation process');
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
@@ -163,10 +180,12 @@ export const useTimesheetProcessor = () => {
       
       // Provide more specific error messages
       let errorMessage = 'Ekki tókst að búa til PDF skjöl';
-      if (error.message && error.message.includes('skráarkerfisvirkni')) {
-        errorMessage = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.';
-      } else if (error.message) {
-        errorMessage = `Villa kom upp: ${error.message}`;
+      if (error instanceof Error) {
+        if (error.message.includes('skráarkerfisvirkni')) {
+          errorMessage = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.';
+        } else if (error.message) {
+          errorMessage = `Villa kom upp: ${error.message}`;
+        }
       }
       
       setProcessStatus({

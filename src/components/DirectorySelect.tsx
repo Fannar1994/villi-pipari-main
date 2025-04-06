@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 interface DirectorySelectProps {
   value: string;
@@ -20,55 +20,67 @@ export function DirectorySelect({
   icon,
   disabled = false,
 }: DirectorySelectProps) {
+  const [isSelecting, setIsSelecting] = useState(false);
+
+  // Enhanced directory selection with multiple fallbacks and better error handling
   const handleButtonClick = async () => {
     try {
+      setIsSelecting(true);
+      
       // First try the main API
       if (typeof window !== 'undefined' && window.electron && window.electron.selectDirectory) {
         console.log('Using primary Electron API to select directory');
-        const result = await window.electron.selectDirectory();
-        if (result) {
-          onChange(result);
-          return;
+        try {
+          const result = await window.electron.selectDirectory();
+          if (result) {
+            onChange(result);
+            console.log('Directory selected successfully:', result);
+            setIsSelecting(false);
+            return;
+          }
+        } catch (primaryError) {
+          console.error('Error using primary API:', primaryError);
         }
       }
       
       // If that fails, try the backup API
-      if (typeof window !== 'undefined' && (window as any).electronBackupAPI && 
-          typeof (window as any).electronBackupAPI.selectDirectory === 'function') {
+      if (typeof window !== 'undefined' && window.electronBackupAPI) {
         console.log('Using backup Electron API to select directory');
-        const result = await (window as any).electronBackupAPI.selectDirectory();
-        if (result) {
-          onChange(result);
-          return;
-        }
-      }
-      
-      // If all else fails, try to restore API from backup
-      if (typeof window !== 'undefined' && (window as any).electronBackupAPI) {
         try {
-          console.log('Attempting to restore window.electron from backup API');
-          window.electron = (window as any).electronBackupAPI;
-          
-          if (window.electron && typeof window.electron.selectDirectory === 'function') {
-            console.log('Using restored Electron API to select directory');
-            const result = await window.electron.selectDirectory();
-            if (result) {
-              onChange(result);
-              return;
-            }
+          const result = await window.electronBackupAPI.selectDirectory();
+          if (result) {
+            onChange(result);
+            console.log('Directory selected successfully via backup API:', result);
+            setIsSelecting(false);
+            return;
           }
-        } catch (restoreError) {
-          console.error("Error restoring API:", restoreError);
+        } catch (backupError) {
+          console.error('Error using backup API:', backupError);
         }
       }
       
-      // Fallback for web version (demo mode)
-      console.log("Electron API not available, using demo path");
+      // If all API attempts fail, show error and provide fallback
+      console.log('All API attempts failed, using fallback path');
+      toast({
+        title: "Villa",
+        description: "Ekki náðist að opna möppuval - notaður sjálfgefinn slóð",
+        variant: "destructive",
+      });
+      
+      // Use fallback path for testing/demo purposes
       onChange('C:/Users/User/Documents');
+      
     } catch (error) {
       console.error("Error selecting directory:", error);
+      toast({
+        title: "Villa",
+        description: "Villa kom upp við möppuval",
+        variant: "destructive",
+      });
       // Still provide a fallback path so the app doesn't completely break
       onChange('C:/Users/User/Documents');
+    } finally {
+      setIsSelecting(false);
     }
   };
 
@@ -87,11 +99,11 @@ export function DirectorySelect({
           type="button"
           variant="default"
           onClick={handleButtonClick}
-          disabled={disabled}
+          disabled={disabled || isSelecting}
           className="whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90"
         >
           {icon}
-          Velja möppu
+          {isSelecting ? 'Velur...' : 'Velja möppu'}
         </Button>
       </div>
     </div>

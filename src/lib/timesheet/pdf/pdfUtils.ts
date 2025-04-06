@@ -46,7 +46,7 @@ export async function checkElectronConnection(): Promise<boolean> {
   const hasPrimaryApi = 'electron' in window && window.electron !== undefined;
   
   // Check for backup API
-  const hasBackupApi = 'electronBackupAPI' in window && (window as any).electronBackupAPI !== undefined;
+  const hasBackupApi = 'electronBackupAPI' in window && window.electronBackupAPI !== undefined;
   
   // If neither API is available, we can't proceed
   if (!hasPrimaryApi && !hasBackupApi) {
@@ -55,7 +55,7 @@ export async function checkElectronConnection(): Promise<boolean> {
   }
 
   // Use whichever API is available
-  const api = hasPrimaryApi ? window.electron : (window as any).electronBackupAPI;
+  const api = hasPrimaryApi ? window.electron : window.electronBackupAPI;
   console.log('Using API from:', hasPrimaryApi ? 'window.electron' : 'window.electronBackupAPI');
   
   if (api) {
@@ -97,6 +97,7 @@ export async function checkElectronConnection(): Promise<boolean> {
 
 /**
  * Checks if Electron file API is available (including backup)
+ * Enhanced with aggressive API restoration
  */
 export function isElectronFileApiAvailable(): boolean {
   console.log('Checking for Electron API availability including backup');
@@ -107,6 +108,21 @@ export function isElectronFileApiAvailable(): boolean {
     return false;
   }
   
+  const tryDirectAssignment = () => {
+    // Try direct API assignment (this can work in some contexts)
+    try {
+      if ((window as any).electronBackupAPI && !window.electron) {
+        console.log('Trying direct API assignment from backup');
+        (window as any).electron = (window as any).electronBackupAPI;
+      }
+    } catch (e) {
+      console.error('Direct API assignment failed:', e);
+    }
+  };
+  
+  // Try to restore API from backup first
+  tryDirectAssignment();
+  
   // Check for primary API
   const hasPrimaryApi = 'electron' in window && 
                        window.electron !== undefined && 
@@ -114,65 +130,113 @@ export function isElectronFileApiAvailable(): boolean {
   
   // Check for backup API
   const hasBackupApi = 'electronBackupAPI' in window && 
-                      (window as any).electronBackupAPI !== undefined && 
-                      typeof (window as any).electronBackupAPI.writeFile === 'function';
-  
-  // Try to assign backup to primary if primary is missing
-  if (!hasPrimaryApi && hasBackupApi) {
-    try {
-      console.log('Attempting to restore window.electron from backup API');
-      window.electron = (window as any).electronBackupAPI;
-      console.log('Restored window.electron from backup');
-    } catch (e) {
-      console.error('Failed to restore API:', e);
-    }
-  }
-  
-  // Re-check after potential restoration
-  const primaryAfterRestore = 'electron' in window && 
-                             window.electron !== undefined && 
-                             typeof window.electron.writeFile === 'function';
+                      window.electronBackupAPI !== undefined && 
+                      typeof window.electronBackupAPI.writeFile === 'function';
   
   console.log('API availability check:', {
     primary: hasPrimaryApi,
-    backup: hasBackupApi,
-    afterRestore: primaryAfterRestore
+    backup: hasBackupApi
   });
   
+  // If neither API is available after first attempt, try more aggressive measures
+  if (!hasPrimaryApi && !hasBackupApi) {
+    console.log('No API available, trying indirect assignment via eval');
+    
+    try {
+      // This is a more aggressive approach that might work in some contexts
+      const script = `
+        if (window.electronBackupAPI && typeof window.electronBackupAPI.writeFile === 'function') {
+          window.electron = window.electronBackupAPI;
+          true;
+        } else {
+          false;
+        }
+      `;
+      const result = eval(script);
+      console.log('Indirect assignment result:', result);
+      
+      // Re-check API availability
+      const primaryAfterFix = 'electron' in window && 
+                             window.electron !== undefined && 
+                             typeof window.electron.writeFile === 'function';
+      
+      console.log('API availability after fix:', { primary: primaryAfterFix });
+      
+      if (primaryAfterFix) {
+        return true;
+      }
+    } catch (e) {
+      console.error('Indirect API assignment failed:', e);
+    }
+  }
+  
   // Return true if either API is available
-  return primaryAfterRestore || hasPrimaryApi || hasBackupApi;
+  return hasPrimaryApi || hasBackupApi;
 }
 
 /**
  * Returns the best available API (primary or backup)
+ * with more aggressive fallbacks
  */
-function getBestAvailableApi() {
-  // Check for primary API
-  if (typeof window !== 'undefined' && 
-      window.electron && 
-      typeof window.electron.writeFile === 'function') {
-    return window.electron;
-  }
+export function getBestAvailableApi() {
+  console.log('Getting best available API');
   
-  // Check for backup API
+  // Check if we need to restore the API
   if (typeof window !== 'undefined' && 
-      (window as any).electronBackupAPI && 
-      typeof (window as any).electronBackupAPI.writeFile === 'function') {
-    return (window as any).electronBackupAPI;
-  }
-  
-  // Try to restore from backup
-  if (typeof window !== 'undefined' && 
-      (window as any).electronBackupAPI) {
+      !window.electron && 
+      window.electronBackupAPI) {
     try {
-      window.electron = (window as any).electronBackupAPI;
-      return window.electron;
+      console.log('Restoring window.electron from backup API');
+      window.electron = window.electronBackupAPI;
     } catch (e) {
       console.error('Failed to restore API from backup:', e);
     }
   }
   
+  // Check for primary API
+  if (typeof window !== 'undefined' && 
+      window.electron && 
+      typeof window.electron.writeFile === 'function') {
+    console.log('Using primary API');
+    return window.electron;
+  }
+  
+  // Check for backup API
+  if (typeof window !== 'undefined' && 
+      window.electronBackupAPI && 
+      typeof window.electronBackupAPI.writeFile === 'function') {
+    console.log('Using backup API');
+    return window.electronBackupAPI;
+  }
+  
+  // Try more aggressive approach
+  try {
+    // Try invoking some known browser API methods to "wake up" the environment
+    if (typeof document !== 'undefined') {
+      const div = document.createElement('div');
+      div.id = 'electron-api-activator';
+      div.style.display = 'none';
+      document.body.appendChild(div);
+      setTimeout(() => {
+        document.body.removeChild(div);
+        console.log('Browser environment stimulated, rechecking API');
+        
+        if (window.electron && typeof window.electron.writeFile === 'function') {
+          return window.electron;
+        }
+        
+        if (window.electronBackupAPI && typeof window.electronBackupAPI.writeFile === 'function') {
+          window.electron = window.electronBackupAPI;
+          return window.electron;
+        }
+      }, 0);
+    }
+  } catch (e) {
+    console.error('Error during aggressive API recovery:', e);
+  }
+  
   // No API available
+  console.error('No viable API found');
   return null;
 }
 
