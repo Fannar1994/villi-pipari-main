@@ -7,11 +7,14 @@ import { FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
+import { parseTimesheetFile } from '@/lib/timesheet/parser';
+import { generatePdfFiles } from '@/lib/timesheet/pdfGenerator';
 
 export const ExcelTab = () => {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [outputDir, setOutputDir] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processStatus, setProcessStatus] = useState('');
 
   const handleExport = async () => {
     if (!excelFile) {
@@ -34,20 +37,27 @@ export const ExcelTab = () => {
 
     try {
       setIsProcessing(true);
+      setProcessStatus('Vinnur að PDF skjölum...');
       
-      // Just a placeholder for now - can be expanded with actual Excel processing
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Parse the timesheet file to get entries
+      const timesheetEntries = await parseTimesheetFile(excelFile);
+      
+      // Generate PDF files from the entries
+      const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
       
       toast({
         title: 'Árangur!',
-        description: 'Excel vinnuskýrsla hefur verið unnin.',
+        description: `${pdfCount} PDF skjöl hafa verið búin til.`,
       });
       
+      setProcessStatus(`${pdfCount} PDF skjöl hafa verið búin til.`);
+      
     } catch (error) {
-      console.error('Error processing Excel:', error);
+      console.error('Error generating PDFs:', error);
+      setProcessStatus('Villa kom upp við að búa til PDF skjöl.');
       toast({
         title: 'Villa',
-        description: 'Ekki tókst að vinna Excel skrá.',
+        description: error.message || 'Villa við að búa til PDF skjöl.',
         variant: 'destructive',
       });
     } finally {
@@ -78,7 +88,7 @@ export const ExcelTab = () => {
       </CardContent>
       
       <div className="px-6 py-3">
-        {isProcessing && <p className="text-sm text-muted-foreground">Vinnsla í gangi...</p>}
+        {processStatus && <p className="text-sm text-muted-foreground">{processStatus}</p>}
       </div>
       
       <div className="border-t border-primary bg-card p-4">
@@ -87,7 +97,7 @@ export const ExcelTab = () => {
           className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
           disabled={isProcessing}
         >
-          {isProcessing ? 'Vinnur...' : 'Vinna Excel skrá'}
+          {isProcessing ? 'Vinnur...' : 'Búa til PDF skjöl'}
         </Button>
       </div>
     </>
