@@ -59,7 +59,8 @@ export async function generateInvoices(
     
     XLSX.utils.book_append_sheet(outputWorkbook, summaryWorksheet, 'Samantekt');
     
-    // Group entries by location and apartment
+    // Group entries by location and apartment - this is the key function
+    // that ensures employees at the same location are grouped together
     const groupedEntries = groupEntriesByLocation(timesheetEntries);
     console.log("Grouped entries:", Object.keys(groupedEntries).length);
     let invoiceCount = 0;

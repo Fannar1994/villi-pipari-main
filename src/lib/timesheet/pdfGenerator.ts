@@ -92,9 +92,10 @@ export async function generatePdfFiles(
           pdf.text(`Annað: ${firstEntry.other}`, 14, 90);
         }
         
-        // Format data for the table
+        // Format data for the table - sort entries by date first
         const headers = ['Dagsetning', 'Tímar', 'Vinnuliður', 'Starfsmaður'];
-        const rows = entries.slice(0, 7).map(entry => [
+        const sortedEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+        const rows = sortedEntries.slice(0, 7).map(entry => [
           formatDateIcelandic(entry.date),
           entry.hours.toString(),
           entry.workType,
