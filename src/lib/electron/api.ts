@@ -1,4 +1,3 @@
-
 /**
  * Enhanced Electron API access with multiple fallback strategies and auto-repair
  */
@@ -90,8 +89,8 @@ export function getElectronAPI(): ElectronAPI | null {
                 suggestedName: filePath.split('/').pop() || 'file.txt',
                 types: [
                   {
-                    description: 'Files',
-                    accept: { 'application/octet-stream': ['.pdf', '.xlsx', '.txt'] },
+                    description: 'PDF Files',
+                    accept: { 'application/pdf': ['.pdf'] },
                   },
                 ],
               };
@@ -111,11 +110,11 @@ export function getElectronAPI(): ElectronAPI | null {
           
           // Fallback - create a download
           try {
-            const blob = new Blob([data], { type: 'application/octet-stream' });
+            const blob = new Blob([data], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = filePath.split('/').pop() || 'download';
+            a.download = filePath.split('/').pop() || 'document.pdf';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -130,98 +129,112 @@ export function getElectronAPI(): ElectronAPI | null {
         selectDirectory: async () => {
           console.log('Emergency API called: selectDirectory');
           
-          // Better direct file system access using FileSystem Access API
+          // Use File System Access API for directory selection
           if ('showDirectoryPicker' in window) {
             try {
-              // Configure picker with maximum permissions
+              // Show user-facing warning about system file access
+              const userConfirmed = confirm(
+                'Þú ert að fara að velja möppu í neyðarham.\n\n' +
+                'Athugið: Veljið ekki möppu sem inniheldur kerfiskrár eða hefur takmarkaðan aðgang.\n\n' +
+                'Mælt er með að velja nýja, tóma möppu eða möppu í Documents/Downloads.'
+              );
+              
+              if (!userConfirmed) {
+                console.log('User cancelled directory selection after warning');
+                return null;
+              }
+              
+              // Configure picker for downloads or documents directory
               const pickerOptions = {
-                id: 'directorySelection',
+                id: 'downloadDirectorySelection',
                 mode: 'readwrite' as const,
-                startIn: 'documents' as const,
+                startIn: 'downloads' as const, // Start in downloads folder which is usually accessible
               };
               
-              // Request high-permission access to directories
+              console.log('Showing directory picker with options:', pickerOptions);
               const dirHandle = await (window as any).showDirectoryPicker(pickerOptions);
               
               // Store the handle for future operations
               (window as any)._lastSelectedDirHandle = dirHandle;
               
-              // Ensure we have maximum permission level
-              try {
-                const permission = await dirHandle.queryPermission({ mode: 'readwrite' });
-                console.log('Initial permission status:', permission);
-                
-                // Request elevated permissions if not already granted
-                if (permission !== 'granted') {
-                  const newPermission = await dirHandle.requestPermission({ mode: 'readwrite' });
-                  console.log('Elevated permission status:', newPermission);
-                }
-                
-                // Get directory name and create a custom URI that notes this is a special handle
-                // Rather than a system path (which browsers can't fully access)
-                const uniqueId = Math.random().toString(36).substring(2, 15);
-                const dirPath = `safe-directory://${dirHandle.name}-${uniqueId}`;
-                
-                // Store mapping between path and handle for later use
-                if (!(window as any)._dirHandleMap) {
-                  (window as any)._dirHandleMap = new Map();
-                }
-                (window as any)._dirHandleMap.set(dirPath, dirHandle);
-                
-                console.log('Directory selected:', dirPath);
-                return dirPath;
-              } catch (e) {
-                console.error('Permission negotiation failed:', e);
-                // Fallback with limited permissions
-                const safeId = Date.now().toString();
-                return `limited-access://${dirHandle.name}-${safeId}`;
-              }
-            } catch (e) {
-              console.error('Directory selection failed:', e);
+              // Ensure we have permission
+              const permission = await dirHandle.queryPermission({ mode: 'readwrite' });
+              console.log('Permission status:', permission);
               
-              // Check if the user cancelled the operation
+              if (permission !== 'granted') {
+                const newPermission = await dirHandle.requestPermission({ mode: 'readwrite' });
+                console.log('Permission after request:', newPermission);
+                
+                if (newPermission !== 'granted') {
+                  alert('Skortur á heimildum til að skrifa í möppuna. Vinsamlegast veldu aðra möppu.');
+                  return null;
+                }
+              }
+              
+              // Create a virtual path that the app can track
+              const safeId = new Date().getTime().toString(36);
+              const virtualPath = `web-directory://${dirHandle.name}-${safeId}`;
+              
+              // Store mapping for future use
+              if (!(window as any)._dirHandleMap) {
+                (window as any)._dirHandleMap = new Map();
+              }
+              (window as any)._dirHandleMap.set(virtualPath, dirHandle);
+              
+              console.log('Selected directory with virtual path:', virtualPath);
+              
+              // Show success notification to user
+              alert(`Mappa valin: ${dirHandle.name}\nSkrár verða vistaðar þar þegar þú býrð til PDF.`);
+              
+              return virtualPath;
+            } catch (e) {
+              console.error('Directory selection error:', e);
+              
+              // Handle user cancel separately
               if (e.name === 'AbortError') {
+                console.log('User cancelled the directory selection');
                 return null;
               }
               
-              // Fallback to a text prompt as last resort
-              return prompt('Vinsamlegast sláðu inn möppu (t.d. /Documents/MyFolder):', 
-                           `/temp-${Date.now()}`);
+              // For other errors, show error message
+              alert('Villa við möppuval: ' + e.toString() + '\n\nPrófaðu aðra möppu eða endurræstu forritið.');
+              return null;
             }
-          } else {
-            // For browsers without File System Access API
-            return prompt('Vinsamlegast sláðu inn möppu fyrir skrárnar:', `/temp-${Date.now()}`);
-          }
+          } 
+          
+          // Fallback for browsers that don't support directory picker
+          alert('Vafrinn þinn styður ekki möppuval. Skrárnar verða vistaðar sem niðurhal.');
+          return 'download://browser';
         },
         
         // Enhanced fileExists implementation using stored directory handles
         fileExists: async (filePath: string) => {
           console.log('Emergency API called: fileExists for', filePath);
           
-          // Check if we have a directory handle map
-          if ((window as any)._dirHandleMap && (window as any)._lastSelectedDirHandle) {
-            try {
-              const dirHandle = (window as any)._lastSelectedDirHandle;
-              const fileName = filePath.split('/').pop();
-              
-              if (!fileName) return false;
-              
+          // Special handling for web directory paths
+          if (filePath.startsWith('web-directory://')) {
+            // Extract the directory part and filename
+            const lastSlash = filePath.lastIndexOf('/');
+            if (lastSlash === -1) return false;
+            
+            const dirPath = filePath.substring(0, lastSlash);
+            const fileName = filePath.substring(lastSlash + 1);
+            
+            if ((window as any)._dirHandleMap && (window as any)._dirHandleMap.has(dirPath)) {
               try {
+                const dirHandle = (window as any)._dirHandleMap.get(dirPath);
+                
                 // Try to get the file from the directory
                 await dirHandle.getFileHandle(fileName);
                 return true;
               } catch (e) {
                 // File not found or access denied
-                console.log('File not found in directory:', fileName);
                 return false;
               }
-            } catch (e) {
-              console.error('Error checking file existence:', e);
-              return false;
             }
           }
           
-          // Default fallback
+          // Default fallback - assume files don't exist in emergency mode
           return false;
         },
         
@@ -230,12 +243,12 @@ export function getElectronAPI(): ElectronAPI | null {
           return {
             available: true,
             time: new Date().toString(),
-            preloadVersion: 'emergency-fallback-3.0'
+            preloadVersion: 'emergency-web-5.0' // Updated version number
           };
         }
       };
       
-      console.log('Created emergency fallback API with proper implementations');
+      console.log('Created emergency fallback API with enhanced implementations');
       
       // Also create backup reference
       (window as any).electronBackupAPI = window.electron;

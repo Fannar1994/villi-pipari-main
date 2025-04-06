@@ -33,11 +33,12 @@ export function isElectronFileApiAvailable(): boolean {
  * Normalizes an output directory path
  */
 export function normalizeOutputDirectory(outputDirectory: string): string {
-  // Handle special URI schemes from the emergency API
-  if (outputDirectory.startsWith('safe-directory://') || 
-      outputDirectory.startsWith('limited-access://')) {
+  // Handle special URI schemes for web directory access
+  if (outputDirectory.startsWith('web-directory://') || 
+      outputDirectory.startsWith('safe-directory://') || 
+      outputDirectory.startsWith('limited-access://') ||
+      outputDirectory.startsWith('download://')) {
     // For web-based directory handles, we just keep the URI as is
-    // The actual file operations will use the stored directory handle
     return outputDirectory;
   }
   
@@ -62,8 +63,10 @@ export async function savePdfToFile(
 ): Promise<boolean> {
   console.log("Saving PDF to:", filePath, "data length:", pdfData.length);
   
-  // Special handling for safe directory URIs
-  if (filePath.includes('safe-directory://') || filePath.includes('limited-access://')) {
+  // Special handling for web directory URIs
+  if (filePath.includes('web-directory://') || 
+      filePath.includes('safe-directory://') || 
+      filePath.includes('limited-access://')) {
     console.log("Using web-based directory handle for save operation");
     
     try {
@@ -75,9 +78,9 @@ export async function savePdfToFile(
       console.log("Using directory path:", dirPath);
       
       // In emergency mode with a stored directory handle
-      if ((window as any)._dirHandleMap && (window as any)._lastSelectedDirHandle) {
+      if ((window as any)._dirHandleMap && (window as any)._dirHandleMap.has(dirPath)) {
         try {
-          const dirHandle = (window as any)._lastSelectedDirHandle;
+          const dirHandle = (window as any)._dirHandleMap.get(dirPath);
           
           // Get or create the file
           const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
@@ -130,6 +133,29 @@ export async function savePdfToFile(
       return true;
     } catch (e) {
       console.error("All emergency save methods failed:", e);
+      return false;
+    }
+  } else if (filePath.startsWith('download://')) {
+    // Direct download mode
+    try {
+      // Create a filename with timestamp to avoid conflicts
+      const fileName = `document-${Date.now()}.pdf`;
+      
+      // Create a download
+      const blob = new Blob([pdfData], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log("Successfully triggered direct download");
+      return true;
+    } catch (e) {
+      console.error("Download failed:", e);
       return false;
     }
   }

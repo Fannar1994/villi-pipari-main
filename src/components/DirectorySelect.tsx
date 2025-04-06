@@ -23,7 +23,7 @@ export function DirectorySelect({
 }: DirectorySelectProps) {
   const [isSelecting, setIsSelecting] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(false);
-  const [apiMode, setApiMode] = useState<'standard' | 'emergency' | 'unavailable'>('unavailable');
+  const [apiMode, setApiMode] = useState<'standard' | 'web' | 'unavailable'>('unavailable');
 
   // Enhanced API check using our improved methods
   useEffect(() => {
@@ -36,13 +36,15 @@ export function DirectorySelect({
       if (available) {
         const api = getElectronAPI();
         
-        // Check if we're in emergency mode by testing the connection info
+        // Check if we're in web mode by testing the connection info
         if (api && typeof api._testConnection === 'function') {
           try {
             const result = api._testConnection();
-            if (result.preloadVersion && result.preloadVersion.includes('emergency')) {
-              setApiMode('emergency');
-              console.log('Running in emergency API mode');
+            if (result.preloadVersion && 
+               (result.preloadVersion.includes('emergency') || 
+                result.preloadVersion.includes('web'))) {
+              setApiMode('web');
+              console.log('Running in web API mode');
             } else {
               setApiMode('standard');
               console.log('Running in standard API mode');
@@ -86,23 +88,22 @@ export function DirectorySelect({
             onChange(result);
             
             // Show special notifications based on the type of path returned
-            if (apiMode === 'emergency') {
-              // Check if we got a secure path from the new implementation
-              if (result.startsWith('safe-directory://')) {
+            if (apiMode === 'web') {
+              // Check if we got a special path format
+              if (result.startsWith('web-directory://')) {
                 toast({
-                  title: "Mappa valin í neyðarham",
-                  description: "Skrárnar verða vistaðar gegnum öruggari vafraviðmót.",
+                  title: "Mappa valin í vafraham",
+                  description: "Skrárnar verða vistaðar gegnum vafraviðmót.",
                 });
-              } else if (result.startsWith('limited-access://')) {
+              } else if (result.startsWith('download://')) {
                 toast({
-                  title: "Takmarkaður aðgangur",
-                  description: "Skrárnar verða vistaðar með takmörkuðum heimildum.",
-                  variant: "destructive",
+                  title: "Niðurhal valið",
+                  description: "Skrárnar verða vistaðar sem niðurhal.",
                 });
               } else {
                 toast({
-                  title: "Neyðarhamur",
-                  description: "Forritið keyrir í neyðarham. Sumir eiginleikar gætu verið takmarkaðir.",
+                  title: "Vafrahamur",
+                  description: "Forritið keyrir í vafraham. Sumir eiginleikar gætu verið takmarkaðir.",
                   variant: "destructive", 
                 });
               }
@@ -166,11 +167,15 @@ export function DirectorySelect({
   const getDisplayValue = () => {
     if (!value) return '';
     
-    // For safe directory URIs, show a more user-friendly value
-    if (value.startsWith('safe-directory://')) {
+    // For web directory URIs, show a more user-friendly value
+    if (value.startsWith('web-directory://')) {
+      return value.replace('web-directory://', '🌐 ');
+    } else if (value.startsWith('safe-directory://')) {
       return value.replace('safe-directory://', '📁 ');
     } else if (value.startsWith('limited-access://')) {
       return value.replace('limited-access://', '⚠️ ');
+    } else if (value.startsWith('download://')) {
+      return 'Niðurhal í vafra 📥';
     } else {
       return value;
     }
@@ -204,9 +209,9 @@ export function DirectorySelect({
           Electron API ekki tiltækt. Smelltu á "Endurreyna" eða endurræstu forritið.
         </p>
       )}
-      {apiMode === 'emergency' && (
+      {apiMode === 'web' && (
         <p className="text-xs text-amber-500">
-          Keyrt í neyðarham - takmarkaður aðgangur að skráakerfi.
+          Keyrt í vafraham - veldu möppu sem vafri hefur aðgang að (ekki kerfisskrár).
         </p>
       )}
     </div>
