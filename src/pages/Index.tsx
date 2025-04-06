@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { FileCheck, FolderOutput, FileSpreadsheet, FileText, FilePdf } from 'lucide-react';
+import { FileCheck, FolderOutput, FileSpreadsheet, FileText, FileOutput } from 'lucide-react';
 import { parseTimesheetFile, generateInvoices } from '@/lib/excelProcessor';
 import { generatePdfFiles } from '@/lib/timesheet/pdfGenerator';
 
@@ -23,7 +23,6 @@ const Index = () => {
   }>({ status: 'idle', message: '' });
 
   const handleGenerateInvoices = async () => {
-    // Validate inputs
     if (!timesheetFile) {
       toast({
         title: 'Villa',
@@ -46,10 +45,8 @@ const Index = () => {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að reikningagerð...' });
 
-      // Parse the timesheet file
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
-      // Generate invoices using the template file (optional) and writing to the selected output directory
       const invoiceCount = await generateInvoices(timesheetEntries, templateFile, outputDir);
       
       setIsProcessing(false);
@@ -81,7 +78,6 @@ const Index = () => {
   };
 
   const handleGeneratePdfs = async () => {
-    // Validate inputs
     if (!timesheetFile) {
       toast({
         title: 'Villa',
@@ -104,10 +100,8 @@ const Index = () => {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að PDF gerð...' });
 
-      // Parse the timesheet file
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
-      // Generate PDF files and write to the selected output directory
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
       
       setIsProcessing(false);
@@ -193,7 +187,7 @@ const Index = () => {
               className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90"
               disabled={isProcessing}
             >
-              <FilePdf className="mr-2 h-4 w-4" />
+              <FileOutput className="mr-2 h-4 w-4" />
               {isProcessing ? 'Vinnur...' : 'Búa til PDF skjöl'}
             </Button>
           </div>

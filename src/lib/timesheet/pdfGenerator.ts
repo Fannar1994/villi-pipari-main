@@ -65,6 +65,9 @@ export async function generatePdfFiles(
     }
     
     // Create individual invoice PDFs
+    // Use a Map to track used filenames to avoid duplicates
+    const usedFilenames = new Map<string, number>();
+    
     for (const [key, entries] of Object.entries(groupedEntries)) {
       if (entries.length > 0) {
         const firstEntry = entries[0];
@@ -117,7 +120,18 @@ export async function generatePdfFiles(
         
         // Save the PDF
         if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
-          const safeName = `${locationName}_${apartmentName}`.replace(/[^a-z0-9]/gi, '_');
+          const baseName = `${locationName}_${apartmentName}`.replace(/[^a-z0-9]/gi, '_');
+          
+          // Create a unique filename by adding a counter suffix if the name exists
+          let safeName = baseName;
+          if (usedFilenames.has(baseName)) {
+            const count = usedFilenames.get(baseName)! + 1;
+            usedFilenames.set(baseName, count);
+            safeName = `${baseName}_${count}`;
+          } else {
+            usedFilenames.set(baseName, 1);
+          }
+          
           const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
           const pdfPath = `${normalizedDir}/${safeName}_${currentDate}.pdf`;
           
