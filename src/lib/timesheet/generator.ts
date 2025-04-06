@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { TimesheetEntry } from '@/types/timesheet';
 import { createSafeSheetName } from '../utils/formatters';
 import { groupEntriesByLocation, createInvoiceData, createSummarySheetData } from './processor';
+import { checkElectronApi } from './pdfUtils';
 
 /**
  * Generates Excel invoices from timesheet entries
@@ -122,7 +123,7 @@ export async function generateInvoices(
     const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer', bookSST: false });
 
     // Check if we're in an Electron environment with the required API
-    if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+    if (!checkElectronApi()) {
       console.log("Running in browser environment or electron API not available, skipping file write");
       // For browser demo, offer file download
       if (typeof document !== 'undefined') {
