@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { DirectorySelect } from '@/components/DirectorySelect';
@@ -7,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { FileCheck, FolderOutput, FileSpreadsheet, FileText } from 'lucide-react';
+import { FileCheck, FolderOutput, FileSpreadsheet, FileText, FilePdf } from 'lucide-react';
 import { parseTimesheetFile, generateInvoices } from '@/lib/excelProcessor';
+import { generatePdfFiles } from '@/lib/timesheet/pdfGenerator';
 
 const Index = () => {
   const [timesheetFile, setTimesheetFile] = useState<File | null>(null);
@@ -19,6 +19,7 @@ const Index = () => {
     status: 'idle' | 'processing' | 'success' | 'error';
     message: string;
     invoiceCount?: number;
+    pdfCount?: number;
   }>({ status: 'idle', message: '' });
 
   const handleGenerateInvoices = async () => {
@@ -79,6 +80,64 @@ const Index = () => {
     }
   };
 
+  const handleGeneratePdfs = async () => {
+    // Validate inputs
+    if (!timesheetFile) {
+      toast({
+        title: 'Villa',
+        description: 'Vinsamlegast veldu vinnuskýrslu skrá.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!outputDir) {
+      toast({
+        title: 'Villa',
+        description: 'Vinsamlegast veldu úttak möppu.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      setProcessStatus({ status: 'processing', message: 'Vinnur að PDF gerð...' });
+
+      // Parse the timesheet file
+      const timesheetEntries = await parseTimesheetFile(timesheetFile);
+      
+      // Generate PDF files and write to the selected output directory
+      const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
+      
+      setIsProcessing(false);
+      setProcessStatus({
+        status: 'success',
+        message: 'PDF skjöl hafa verið búin til!',
+        pdfCount,
+      });
+      
+      toast({
+        title: 'Árangur!',
+        description: `${pdfCount} PDF skjöl hafa verið búin til.`,
+      });
+      
+    } catch (error) {
+      console.error('Error generating PDFs:', error);
+      setIsProcessing(false);
+      setProcessStatus({
+        status: 'error',
+        message: `Villa kom upp: ${error.message || 'Óþekkt villa'}`,
+      });
+      
+      toast({
+        title: 'Villa',
+        description: 'Ekki tókst að búa til PDF skjöl.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md shadow-lg border-primary">
@@ -119,14 +178,25 @@ const Index = () => {
           
           <ProcessStatus status={processStatus} />
         </CardContent>
-        <CardFooter className="border-t border-primary bg-card">
-          <Button 
-            onClick={handleGenerateInvoices} 
-            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-            disabled={isProcessing}
-          >
-            {isProcessing ? 'Vinnur...' : 'Búa til reikninga'}
-          </Button>
+        <CardFooter className="border-t border-primary bg-card flex flex-col gap-2">
+          <div className="flex w-full gap-2">
+            <Button 
+              onClick={handleGenerateInvoices} 
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={isProcessing}
+            >
+              <FileCheck className="mr-2 h-4 w-4" />
+              {isProcessing ? 'Vinnur...' : 'Búa til reikninga'}
+            </Button>
+            <Button 
+              onClick={handleGeneratePdfs} 
+              className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              disabled={isProcessing}
+            >
+              <FilePdf className="mr-2 h-4 w-4" />
+              {isProcessing ? 'Vinnur...' : 'Búa til PDF skjöl'}
+            </Button>
+          </div>
         </CardFooter>
       </Card>
       
