@@ -1,68 +1,76 @@
 
 /**
  * Handles API exposure to the renderer process
+ * SIMPLIFIED VERSION - Direct window assignment with contextBridge fallback
  */
 const { contextBridge } = require('electron');
 
 /**
- * Exposes the API via contextBridge if available
+ * Exposes the API via multiple methods to ensure it's available
  * @param {Object} electronAPI - The API object to expose
  */
 function exposeAPI(electronAPI) {
-  // Ensure we have valid API to expose
   if (!electronAPI) {
     console.error('❌ No API object provided to expose');
     return;
   }
   
-  console.log('📢 Exposing API with methods:', Object.keys(electronAPI).join(', '));
+  console.log('📢 SIMPLIFIED: Exposing API with methods:', Object.keys(electronAPI).join(', '));
   
   try {
-    // Check if contextBridge is available
+    // First try: Use contextBridge if available (recommended secure approach)
     if (contextBridge) {
-      console.log('🔗 Exposing API via contextBridge as "electron"');
+      console.log('🔒 Using contextBridge to expose API');
       
-      // Expose the API
+      // Expose as 'electron'
       contextBridge.exposeInMainWorld('electron', electronAPI);
       
-      // Also create a backup copy that can be used for recovery
+      // Also expose as 'electronBackupAPI' for redundancy
       contextBridge.exposeInMainWorld('electronBackupAPI', electronAPI);
       
-      // Verify the API was properly exposed
-      setTimeout(() => {
-        try {
-          contextBridge.exposeInMainWorld('_apiExposureCheck', {
-            verify: () => {
-              return {
-                exposed: true,
-                methods: Object.keys(electronAPI),
-                timestamp: new Date().toISOString()
-              };
-            }
-          });
-          console.log('✅ API exposure verification added');
-        } catch (e) {
-          console.error('❌ Could not add API verification:', e);
-        }
-      }, 100);
-      
-      console.log('✅ API exposed via contextBridge successfully');
+      console.log('✅ API exposed via contextBridge');
     } else {
-      console.error('❌ contextBridge not available! API cannot be exposed securely.');
-      
-      // Last resort fallback - direct exposure (not recommended in production)
-      if (typeof window !== 'undefined') {
-        console.warn('⚠️ Using INSECURE direct window assignment as last resort!');
-        window.electron = electronAPI;
-        window.electronBackupAPI = electronAPI;
+      console.warn('⚠️ contextBridge not available, using direct window assignment');
+    }
+    
+    // SECOND LAYER: Direct global assignment as fallback
+    // This ensures API is available even if contextBridge fails
+    try {
+      if (typeof global !== 'undefined') {
+        global.electronBackupAPI = electronAPI;
+        console.log('✅ Backup API set on global object');
       }
+    } catch (e) {
+      console.error('❌ Failed to set global backup:', e);
+    }
+    
+    // THIRD LAYER: Direct window assignment as last resort
+    // This approach is not recommended for production but ensures availability
+    try {
+      if (typeof window !== 'undefined') {
+        console.log('🔓 Setting API directly on window as last resort');
+        window.electronEmergencyAPI = electronAPI;
+      }
+    } catch (e) {
+      console.error('❌ Failed to set window.electronEmergencyAPI:', e);
     }
   } catch (e) {
-    console.error('❌ Error exposing API:', e);
+    console.error('❌ Error in API exposure:', e);
   }
-
-  // Log successful API exposure
-  console.log('🔌 API exposure process completed');
+  
+  // Verify exposure with setTimeout to ensure it happens after all other operations
+  setTimeout(() => {
+    try {
+      if (contextBridge) {
+        contextBridge.exposeInMainWorld('_apiVerification', {
+          check: () => ({ exposed: true, timestamp: new Date().toISOString() })
+        });
+      }
+      console.log('🚀 API exposure process completed');
+    } catch (e) {
+      console.error('❌ Final verification failed:', e);
+    }
+  }, 100);
 }
 
 module.exports = {

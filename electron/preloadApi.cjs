@@ -1,6 +1,7 @@
 
 /**
  * Defines the electron API that will be exposed to the renderer process
+ * SIMPLIFIED VERSION - More defensive coding
  */
 
 /**
@@ -9,7 +10,7 @@
  * @returns {Object} The API object to be exposed
  */
 function createElectronAPI(ipcRenderer) {
-  console.log('Creating Electron API object');
+  console.log('👷 Creating Electron API object');
   
   // Make sure we have a valid ipcRenderer
   if (!ipcRenderer) {
@@ -17,36 +18,47 @@ function createElectronAPI(ipcRenderer) {
     return null;
   }
   
+  // Define a simple wrapper for IPC calls with better error handling
+  const safeIpcCall = async (channel, ...args) => {
+    console.log(`🔊 Calling ${channel}`);
+    try {
+      return await ipcRenderer.invoke(channel, ...args);
+    } catch (error) {
+      console.error(`❌ Error in ${channel}:`, error);
+      throw error;
+    }
+  };
+  
   // Create the API object with all required methods
   const api = {
     writeFile: async (options) => {
-      console.log('Preload: writeFile called with:', options.filePath);
+      console.log('📝 writeFile called with:', options.filePath);
       try {
-        return await ipcRenderer.invoke('write-file', options);
+        return await safeIpcCall('write-file', options);
       } catch (error) {
-        console.error('Preload: writeFile error:', error);
+        console.error('❌ writeFile error:', error);
         return { success: false, error: error.toString() };
       }
     },
     
     selectDirectory: async () => {
-      console.log('Preload: selectDirectory called');
+      console.log('📂 selectDirectory called');
       try {
-        const result = await ipcRenderer.invoke('select-directory');
-        console.log('Preload: selectDirectory result:', result);
+        const result = await safeIpcCall('select-directory');
+        console.log('📂 selectDirectory result:', result);
         return result || null;
       } catch (error) {
-        console.error('Preload: selectDirectory error:', error);
+        console.error('❌ selectDirectory error:', error);
         return null;
       }
     },
     
     fileExists: async (filePath) => {
-      console.log('Preload: fileExists called with:', filePath);
+      console.log('🔍 fileExists called with:', filePath);
       try {
-        return await ipcRenderer.invoke('file-exists', filePath);
+        return await safeIpcCall('file-exists', filePath);
       } catch (error) {
-        console.error('Preload: fileExists error:', error);
+        console.error('❌ fileExists error:', error);
         return false;
       }
     },
@@ -56,10 +68,10 @@ function createElectronAPI(ipcRenderer) {
         return { 
           available: true, 
           time: new Date().toString(),
-          preloadVersion: '7.0' // Version identifier
+          preloadVersion: '8.0' // Version identifier - increased for tracking
         };
       } catch (error) {
-        console.error('Preload: _testConnection error:', error);
+        console.error('❌ _testConnection error:', error);
         return { available: false, time: new Date().toString(), error: String(error) };
       }
     }
@@ -67,7 +79,7 @@ function createElectronAPI(ipcRenderer) {
   
   // Check that all methods are properly defined
   const methods = Object.keys(api);
-  console.log(`API created with ${methods.length} methods:`, methods.join(', '));
+  console.log(`✅ API created with ${methods.length} methods:`, methods.join(', '));
   
   return api;
 }

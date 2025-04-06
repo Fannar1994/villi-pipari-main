@@ -3,29 +3,41 @@ const { ipcRenderer, contextBridge } = require('electron');
 const { createElectronAPI } = require('./preloadApi.cjs');
 const { exposeAPI } = require('./exposer.cjs');
 const { setupIpcHandlers } = require('./preloadIpc.cjs');
+const path = require('path');
 
-console.log('🚀 Preload script starting...');
+console.log('🚀 Preload script starting at:', new Date().toISOString());
+console.log('📂 Preload running from:', __dirname);
+
+// Log node and process versions for debugging
+console.log('🔧 Node version:', process.versions.node);
+console.log('⚡ Electron version:', process.versions.electron);
+console.log('🖥️ Chrome version:', process.versions.chrome);
 
 // Verify required APIs are available
 if (!contextBridge) {
-  console.error('❌ CRITICAL: contextBridge is not available!');
+  console.warn('⚠️ contextBridge not available (this may be intentional)');
+} else {
+  console.log('✅ contextBridge is available');
 }
 
 if (!ipcRenderer) {
   console.error('❌ CRITICAL: ipcRenderer is not available!');
+} else {
+  console.log('✅ ipcRenderer is available');
 }
 
 // Create the Electron API object
+console.log('📦 Creating API object...');
 const electronAPI = createElectronAPI(ipcRenderer);
 
 // Explicitly check API was created correctly
 if (!electronAPI) {
   console.error('❌ CRITICAL: electronAPI was not created correctly!');
 } else {
-  // Log API methods to help with debugging
+  // Log API methods to confirm creation
   console.log('📦 Electron API created with methods:', Object.keys(electronAPI).join(', '));
   
-  // Make a global backup of the API that can be accessed even if contextBridge fails
+  // Make a direct global backup
   try {
     global.electronBackupAPI = electronAPI;
     console.log('✅ Created global API backup');
@@ -34,37 +46,50 @@ if (!electronAPI) {
   }
 }
 
-// Expose the API to the renderer via contextBridge
+// First attempt: Normal API exposure
+console.log('🔄 First exposure attempt...');
 exposeAPI(electronAPI);
 
 // Set up IPC handlers
 setupIpcHandlers(ipcRenderer, electronAPI);
 
+// Second exposure attempt with delay to ensure it happens after any possible race conditions
+setTimeout(() => {
+  console.log('🔄 Second exposure attempt (delayed)...');
+  // Try again to make really sure it works
+  exposeAPI(electronAPI);
+  
+  // Direct self-check
+  try {
+    if (typeof window !== 'undefined') {
+      console.log('🔍 window.electron exists:', !!window.electron);
+      console.log('🔍 window.electronBackupAPI exists:', !!window.electronBackupAPI);
+      console.log('🔍 window.electronEmergencyAPI exists:', !!window.electronEmergencyAPI);
+      
+      // Last resort: direct assignment if nothing else worked
+      if (!window.electron && !window.electronBackupAPI && electronAPI) {
+        console.warn('⚠️ EMERGENCY: Direct window.electron assignment');
+        window.electron = electronAPI;
+        window.electronEmergencyAPI = electronAPI;
+        console.log('🚨 Emergency API assignment completed');
+      }
+    }
+  } catch (e) {
+    console.error('❌ Self-check error:', e);
+  }
+}, 500);
+
 // Add debug logging for IPC calls
 const originalInvoke = ipcRenderer.invoke;
 ipcRenderer.invoke = function(channel, ...args) {
-  console.log(`🔍 Invoking IPC channel '${channel}' with args:`, args);
+  console.log(`🔍 Invoking IPC channel '${channel}'`);
   const promise = originalInvoke.call(this, channel, ...args);
   promise.then(result => {
-    console.log(`📬 IPC '${channel}' result:`, result);
+    console.log(`📬 IPC '${channel}' success`);
   }).catch(err => {
     console.error(`❌ IPC '${channel}' error:`, err);
   });
   return promise;
 };
 
-// Direct self-check before exiting preload
-setTimeout(() => {
-  try {
-    if (typeof window !== 'undefined') {
-      console.log('🔍 Final preload check - window.electron exists:', !!window.electron);
-      if (window.electron) {
-        console.log('🔍 Available methods:', Object.keys(window.electron).join(', '));
-      }
-    }
-  } catch (e) {
-    console.error('Self-check error:', e);
-  }
-}, 100);
-
-console.log('🏁 Preload script completed');
+console.log('🏁 Preload script completed at:', new Date().toISOString());
