@@ -144,8 +144,8 @@ export async function generateInvoices(
       return invoiceCount;
     }
 
-    // Create a valid filename with the current date
-    const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
+    // Create a valid filename with the current date and predefined prefix
+    const filename = `Húsnæðisnefnd í Kópavogi - Núverandi mánuður ${new Date().toISOString().split('T')[0]}.xlsx`;
     
     // Log the output directory for debugging
     console.log("Output directory:", outputDirectory);

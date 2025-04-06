@@ -32,8 +32,8 @@ const Index = () => {
         
         <Tabs defaultValue="excel" className="w-full">
           <TabsList className="grid grid-cols-2 mb-2 mx-6">
-            <TabsTrigger value="excel">Excel Reikningagerð</TabsTrigger>
-            <TabsTrigger value="sheet">Vinnuskýrsla</TabsTrigger>
+            <TabsTrigger value="excel">Vinnuskýrslur</TabsTrigger>
+            <TabsTrigger value="pdf">PDF</TabsTrigger>
           </TabsList>
           
           <TabsContent value="excel">
@@ -57,7 +57,7 @@ const Index = () => {
             />
           </TabsContent>
           
-          <TabsContent value="sheet">
+          <TabsContent value="pdf">
             <ExcelTab />
           </TabsContent>
         </Tabs>
