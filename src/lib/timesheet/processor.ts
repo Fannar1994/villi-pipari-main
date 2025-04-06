@@ -115,7 +115,7 @@ export function createSummaryData(entries: TimesheetEntry[]): SummaryEntry[] {
  */
 export function createSummarySheetData(entries: TimesheetEntry[]): {
   data: (string | number | { f: string })[][];
-  styles: { [cell: string]: { font: { color: string } } };
+  styles: { [cell: string]: { font: { color: string; bold?: boolean } } }; // Updated to allow bold property
   merges: { s: { c: number; r: number }; e: { c: number; r: number } }[];
 } {
   const summaryEntries = createSummaryData(entries);
@@ -128,7 +128,7 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   ];
   
   // Styling information for cells
-  const styles: { [cell: string]: { font: { color: string } } } = {};
+  const styles: { [cell: string]: { font: { color: string; bold?: boolean } } } = {}; // Updated type definition
   
   // For merging cells
   const merges = [

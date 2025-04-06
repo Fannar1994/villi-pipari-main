@@ -21,6 +21,12 @@ export async function generatePdfFiles(
     // Ensure output directory ends without slash
     const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
     
+    // Check if Electron API is available BEFORE starting PDF generation
+    if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+      console.error("Electron API is not available. Cannot save files.");
+      throw new Error('Electron API er ekki aðgengileg til að vista skrár.');
+    }
+    
     // Create a summary PDF
     const summaryPdf = new jsPDF();
     
@@ -63,32 +69,22 @@ export async function generatePdfFiles(
     
     console.log("Saving summary PDF to:", summaryPath);
     
-    // Verify if Electron API is available and use it properly
-    if (typeof window !== 'undefined' && window.electron) {
-      try {
-        if (!window.electron.writeFile) {
-          console.error("Electron writeFile API is not available");
-          throw new Error("Electron writeFile API is not available");
-        }
-        
-        const pdfOutput = summaryPdf.output('arraybuffer');
-        const result = await window.electron.writeFile({
-          filePath: summaryPath,
-          data: new Uint8Array(pdfOutput)
-        });
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to save summary PDF');
-        }
-        
-        console.log("Successfully saved summary PDF!");
-      } catch (error) {
-        console.error("Error saving summary PDF:", error);
-        throw error;
+    // Save summary PDF using Electron API
+    try {
+      const pdfOutput = summaryPdf.output('arraybuffer');
+      const result = await window.electron.writeFile({
+        filePath: summaryPath,
+        data: new Uint8Array(pdfOutput)
+      });
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save summary PDF');
       }
-    } else {
-      console.error("Electron environment not detected for summary PDF");
-      throw new Error("Unable to save files - Electron environment not detected");
+      
+      console.log("Successfully saved summary PDF!");
+    } catch (error) {
+      console.error("Error saving summary PDF:", error);
+      throw error;
     }
     
     // Create individual invoice PDFs
@@ -176,28 +172,24 @@ export async function generatePdfFiles(
       
       console.log(`Saving PDF for ${employee} at ${location} to: ${filePath}`);
       
-      // Save file using Electron API with proper error checking
-      if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
-        try {
-          const pdfOutput = pdf.output('arraybuffer');
-          const result = await window.electron.writeFile({
-            filePath: filePath,
-            data: new Uint8Array(pdfOutput)
-          });
-          
-          if (result.success) {
-            console.log(`Successfully saved PDF for ${employee} at ${location}`);
-            pdfCount++;
-          } else {
-            console.error(`Failed to save PDF for ${employee} at ${location}: ${result.error}`);
-          }
-        } catch (error) {
-          console.error(`Error saving PDF for ${employee} at ${location}:`, error);
+      // Save file using Electron API (We know it's available from our check above)
+      try {
+        const pdfOutput = pdf.output('arraybuffer');
+        const result = await window.electron.writeFile({
+          filePath: filePath,
+          data: new Uint8Array(pdfOutput)
+        });
+        
+        if (result.success) {
+          console.log(`Successfully saved PDF for ${employee} at ${location}`);
+          pdfCount++;
+        } else {
+          console.error(`Failed to save PDF for ${employee} at ${location}: ${result.error}`);
           // Continue with other PDFs rather than stopping the whole process
         }
-      } else {
-        console.error("Electron writeFile API is not available for individual PDF");
-        throw new Error("Electron writeFile API is not available");
+      } catch (error) {
+        console.error(`Error saving PDF for ${employee} at ${location}:`, error);
+        // Continue with other PDFs rather than stopping the whole process
       }
     }
     

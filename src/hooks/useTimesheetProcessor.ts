@@ -39,6 +39,20 @@ export const useTimesheetProcessor = () => {
       });
       return;
     }
+    
+    // Check if Electron API is available before starting
+    if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+      toast({
+        title: 'Villa',
+        description: 'Electron API er ekki aðgengileg til að vista skrár.',
+        variant: 'destructive',
+      });
+      setProcessStatus({
+        status: 'error',
+        message: 'Electron API er ekki aðgengileg til að vista skrár.',
+      });
+      return;
+    }
 
     try {
       setIsProcessing(true);
@@ -101,6 +115,20 @@ export const useTimesheetProcessor = () => {
       });
       return;
     }
+    
+    // Check if Electron API is available before starting
+    if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+      toast({
+        title: 'Villa',
+        description: 'Electron API er ekki aðgengileg til að vista skrár.',
+        variant: 'destructive',
+      });
+      setProcessStatus({
+        status: 'error',
+        message: 'Electron API er ekki aðgengileg til að vista skrár.',
+      });
+      return;
+    }
 
     try {
       setIsProcessing(true);
@@ -114,11 +142,6 @@ export const useTimesheetProcessor = () => {
       }
       
       console.log("Starting PDF generation with", timesheetEntries.length, "entries");
-      
-      // Check if Electron API is available
-      if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
-        throw new Error('Electron API er ekki aðgengileg til að vista skrár');
-      }
       
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
       console.log("PDF generation completed, count:", pdfCount);
