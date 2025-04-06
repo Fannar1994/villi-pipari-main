@@ -6,18 +6,18 @@ export interface ApiStatusType {
   available: boolean;
   details: string;
   methods: Record<string, boolean>;
-  backupAvailable?: boolean; // Add the missing property
+  backupAvailable?: boolean;
 }
 
 /**
  * A hook for checking and monitoring Electron API availability
- * Simplified to only check window.electron
  */
 export function useElectronAPI() {
   const [apiStatus, setApiStatus] = useState<ApiStatusType>({
     available: false,
     details: 'Checking...',
     methods: {},
+    backupAvailable: false
   });
   const [isChecking, setIsChecking] = useState(false);
 
@@ -62,15 +62,20 @@ export function useElectronAPI() {
           
           // Try the test connection method
           if (methods._testConnection) {
-            const result = window.electron._testConnection();
-            console.log('- Test connection result:', result);
-            details += ` (Test: ${result.available ? 'SUCCESS' : 'FAILED'})`;
-            if (result && 'preloadVersion' in result) {
-              details += ` [Preload v${result.preloadVersion}]`;
+            try {
+              const result = window.electron._testConnection();
+              console.log('- Test connection result:', result);
+              details += ` (Test: ${result.available ? 'SUCCESS' : 'FAILED'})`;
+              if (result && 'preloadVersion' in result) {
+                details += ` [Preload v${result.preloadVersion}]`;
+              }
+              
+              // Add timestamp to show this is a fresh result
+              details += ` at ${new Date().toLocaleTimeString()}`;
+            } catch (error) {
+              console.error('- Error in test connection:', error);
+              details += ' (Test method failed)';
             }
-            
-            // Add timestamp to show this is a fresh result
-            details += ` at ${new Date().toLocaleTimeString()}`;
           }
         } catch (error) {
           console.error('- Error checking API methods:', error);
@@ -85,7 +90,7 @@ export function useElectronAPI() {
         available: hasElectron && allMethodsAvailable,
         details,
         methods,
-        backupAvailable: false, // Set default value for the property
+        backupAvailable: false // Set default value for the property
       });
       
       // Show toast with result
@@ -94,10 +99,16 @@ export function useElectronAPI() {
           title: 'API Check Successful',
           description: 'Electron API is available',
         });
+      } else if (hasElectron) {
+        toast({
+          title: 'API Incomplete',
+          description: 'Some Electron API methods are missing',
+          variant: 'destructive',
+        });
       } else {
         toast({
           title: 'API Check Failed',
-          description: 'Electron API is not fully available',
+          description: 'Electron API is not available. Please restart the application.',
           variant: 'destructive',
         });
       }
@@ -108,7 +119,7 @@ export function useElectronAPI() {
         available: false,
         details: `Error: ${(error as Error).message}`,
         methods: {},
-        backupAvailable: false,
+        backupAvailable: false
       });
       
       toast({

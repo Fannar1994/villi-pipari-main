@@ -19,8 +19,22 @@ if (!ipcRenderer) {
 // Create the Electron API object
 const electronAPI = createElectronAPI(ipcRenderer);
 
-// Log created API
-console.log('📦 Electron API created with methods:', Object.keys(electronAPI).join(', '));
+// Verify API was created correctly
+if (!electronAPI) {
+  console.error('❌ CRITICAL: electronAPI was not created correctly!');
+} else {
+  console.log('📦 Electron API created with methods:', Object.keys(electronAPI).join(', '));
+  
+  // Verify all required methods exist
+  const requiredMethods = ['writeFile', 'selectDirectory', 'fileExists', '_testConnection'];
+  const missingMethods = requiredMethods.filter(method => typeof electronAPI[method] !== 'function');
+  
+  if (missingMethods.length > 0) {
+    console.error(`❌ CRITICAL: API is missing required methods: ${missingMethods.join(', ')}`);
+  } else {
+    console.log('✅ All required API methods are present');
+  }
+}
 
 // Expose the API to the renderer
 exposeAPI(electronAPI);

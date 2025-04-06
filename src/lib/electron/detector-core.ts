@@ -25,10 +25,28 @@ export function getElectronAPI(): ElectronAPI | null {
 }
 
 /**
- * API availability check - simplified to just check window.electron
+ * API availability check - check if all required methods are present
  */
 export function isElectronAPIAvailable(): boolean {
-  return window.electron !== undefined;
+  if (!window.electron) return false;
+  
+  // Check if all required methods are available
+  const api = window.electron;
+  const requiredMethods = [
+    'writeFile',
+    'selectDirectory',
+    'fileExists',
+    '_testConnection'
+  ];
+  
+  for (const method of requiredMethods) {
+    if (typeof api[method as keyof typeof api] !== 'function') {
+      console.error(`Electron API method '${method}' is not available`);
+      return false;
+    }
+  }
+  
+  return true;
 }
 
 /**

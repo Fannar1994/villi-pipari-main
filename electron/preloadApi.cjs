@@ -1,7 +1,6 @@
 
 /**
  * Defines the electron API that will be exposed to the renderer process
- * SUPER SIMPLIFIED VERSION FOR MAXIMUM RELIABILITY
  */
 
 /**
@@ -11,6 +10,12 @@
  */
 function createElectronAPI(ipcRenderer) {
   console.log('Creating Electron API object - SIMPLIFIED VERSION');
+  
+  // Make sure we have a valid ipcRenderer
+  if (!ipcRenderer) {
+    console.error('❌ No ipcRenderer provided! Cannot create API.');
+    return null;
+  }
   
   return {
     writeFile: async (options) => {
@@ -46,11 +51,16 @@ function createElectronAPI(ipcRenderer) {
     },
     
     _testConnection: () => {
-      return { 
-        available: true, 
-        time: new Date().toString(),
-        preloadVersion: '7.0' // Simplified direct version
-      };
+      try {
+        return { 
+          available: true, 
+          time: new Date().toString(),
+          preloadVersion: '7.0' // Simplified direct version
+        };
+      } catch (error) {
+        console.error('Preload: _testConnection error:', error);
+        return { available: false, time: new Date().toString(), error: String(error) };
+      }
     }
   };
 }

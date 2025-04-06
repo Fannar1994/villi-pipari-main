@@ -22,6 +22,25 @@ function exposeAPI(electronAPI) {
     if (contextBridge) {
       console.log('🔗 Exposing API via contextBridge as "electron"');
       contextBridge.exposeInMainWorld('electron', electronAPI);
+      
+      // Verify the API was properly exposed
+      setTimeout(() => {
+        try {
+          contextBridge.exposeInMainWorld('_apiExposureCheck', {
+            verify: () => {
+              return {
+                exposed: true,
+                methods: Object.keys(electronAPI),
+                timestamp: new Date().toISOString()
+              };
+            }
+          });
+          console.log('✅ API exposure verification added');
+        } catch (e) {
+          console.error('❌ Could not add API exposure verification:', e);
+        }
+      }, 100);
+      
       console.log('✅ API exposed via contextBridge successfully');
     } else {
       console.error('❌ contextBridge not available! API cannot be exposed securely.');
