@@ -3,6 +3,7 @@
  * API detection utilities for Electron
  */
 import { ElectronAPI, ConnectionTestResult } from './types';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Attempts to access the Electron API
@@ -40,7 +41,7 @@ export function getElectronAPI(): ElectronAPI | null {
           typeof backupAPI.selectDirectory === 'function') {
         console.log('✓ Required methods found on backup API');
         
-        // Copy backup API to the standard location for unified access
+        // Enhanced recovery: Copy backup API to the standard location for unified access
         console.log('Restoring API from backup to standard location');
         window.electron = backupAPI;
         return window.electron;
@@ -50,9 +51,91 @@ export function getElectronAPI(): ElectronAPI | null {
     }
   }
   
+  // Attempt to access global backup as last resort
+  if (typeof global !== 'undefined' && (global as any).electronBackupAPI) {
+    console.log('! Using global backup API location');
+    const globalBackupAPI = (global as any).electronBackupAPI;
+    
+    if (typeof globalBackupAPI.writeFile === 'function' && 
+        typeof globalBackupAPI.selectDirectory === 'function') {
+      console.log('✓ Required methods found on global backup API');
+      
+      // Copy global backup to window
+      console.log('Restoring API from global backup to window');
+      window.electron = globalBackupAPI;
+      return window.electron;
+    }
+  }
+  
   // No valid API found
   console.error('❌ No Electron API available after all attempts');
   return null;
+}
+
+/**
+ * Force API recovery attempt
+ * Tries all possible API recovery methods and returns true if successful
+ */
+export function forceApiRecovery(): boolean {
+  console.log('🔄 Forcing API recovery attempt...');
+  
+  try {
+    // Check if we already have a working API
+    if (isElectronAPIAvailable()) {
+      console.log('✓ API is already available, no recovery needed');
+      return true;
+    }
+    
+    // Try all backup locations
+    const backupAPI = (window as any).electronBackupAPI;
+    const globalBackupAPI = typeof global !== 'undefined' ? (global as any).electronBackupAPI : null;
+    
+    // Try window backup first
+    if (backupAPI) {
+      console.log('Found backup API, copying to window.electron');
+      window.electron = backupAPI;
+      
+      // Verify recovery worked
+      if (isElectronAPIAvailable()) {
+        console.log('✓ API successfully recovered from window backup');
+        
+        // Show toast notification
+        toast({
+          title: "API endurheimt",
+          description: "API hefur verið endurheimt frá öryggisafritun",
+        });
+        
+        return true;
+      }
+    }
+    
+    // Try global backup if window backup failed
+    if (globalBackupAPI) {
+      console.log('Found global backup API, copying to window.electron');
+      window.electron = globalBackupAPI;
+      
+      // Verify recovery worked
+      if (isElectronAPIAvailable()) {
+        console.log('✓ API successfully recovered from global backup');
+        
+        // Show toast notification
+        toast({
+          title: "API endurheimt",
+          description: "API hefur verið endurheimt frá alheims öryggisafritun",
+        });
+        
+        return true;
+      }
+    }
+    
+    // All recovery attempts failed
+    console.error('❌ All API recovery attempts failed');
+    return false;
+    
+  } catch (error) {
+    console.error('Error during API recovery:', error);
+    return false;
+  }
 }
 
 /**

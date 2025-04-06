@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { EnvironmentInfo, getEnvironmentInfo } from '@/lib/electron/environmentInfo';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Check, X, Bug } from 'lucide-react';
-import { isElectronAPIAvailable, getElectronAPI } from '@/lib/electron/detector';
+import { AlertTriangle, Check, X, Bug, WrenchIcon } from 'lucide-react';
+import { isElectronAPIAvailable, getElectronAPI, forceApiRecovery } from '@/lib/electron/detector';
 
 export function DebugInfo() {
   const envInfo: EnvironmentInfo = getEnvironmentInfo();
@@ -44,6 +44,7 @@ export function DebugInfo() {
       // Try to get direct API access for debugging
       const standardApi = window.electron;
       const backupApi = (window as any).electronBackupAPI;
+      const globalBackupApi = typeof global !== 'undefined' ? (global as any).electronBackupAPI : null;
       
       // Try to run the test connection if available
       let testResult = "Not available";
@@ -54,6 +55,9 @@ export function DebugInfo() {
         } else if (backupApi && typeof backupApi._testConnection === 'function') {
           const result = backupApi._testConnection();
           testResult = `Success (backup): v${result.preloadVersion || 'unknown'} at ${result.time}`;
+        } else if (globalBackupApi && typeof globalBackupApi._testConnection === 'function') {
+          const result = globalBackupApi._testConnection();
+          testResult = `Success (global): v${result.preloadVersion || 'unknown'} at ${result.time}`;
         }
       } catch (err) {
         testResult = `Error: ${(err as Error).message}`;
@@ -61,9 +65,9 @@ export function DebugInfo() {
       
       // Gather comprehensive debug info
       const info = [
-        `API found: ${!!standardApi || !!backupApi}`,
-        `API source: ${standardApi ? 'window.electron' : (backupApi ? 'backup' : 'none')}`,
-        `Context Isolation: ${'contextIsolation' in (window as any) ? 'Enabled' : 'Unknown'}`,
+        `API found: ${!!standardApi || !!backupApi || !!globalBackupApi}`,
+        `API source: ${standardApi ? 'window.electron' : (backupApi ? 'backup' : (globalBackupApi ? 'global' : 'none'))}`,
+        `Context Isolation: ${('contextIsolation' in window) ? 'Enabled' : 'Unknown'}`,
         `Test Connection: ${testResult}`,
         `All methods available: ${isElectronAPIAvailable()}`,
         `Window properties: ${Object.keys(window).slice(0, 20).join(', ')}...`
@@ -75,37 +79,32 @@ export function DebugInfo() {
     }
   };
 
-  // Function to attempt API recovery
-  const attemptRepair = () => {
+  // Function to attempt enhanced API recovery
+  const attemptEnhancedRepair = () => {
     try {
-      // Check if backup API exists and copy it to standard location
-      if ((window as any).electronBackupAPI && !window.electron) {
-        console.log("🔧 Attempting API repair: copying backup API to standard location");
-        window.electron = (window as any).electronBackupAPI;
+      // Use our new enhanced recovery function
+      const recoverySuccessful = forceApiRecovery();
+      
+      // Update UI based on recovery result
+      if (recoverySuccessful) {
+        // Update state to reflect changes
+        setApiAvailable(true);
+        setApiObject('window.electron (neyðarhamur)');
         
-        // Check if repair was successful
-        const repaired = isElectronAPIAvailable();
-        
-        if (repaired) {
-          setApiAvailable(true);
-          setApiObject('window.electron (repaired)');
-          const api = getElectronAPI();
-          if (api) {
-            setApiMethods({
-              writeFile: typeof api.writeFile === 'function',
-              selectDirectory: typeof api.selectDirectory === 'function',
-              fileExists: typeof api.fileExists === 'function',
-              _testConnection: typeof api._testConnection === 'function'
-            });
-          }
-          setDebugInfo("✅ API successfully repaired by copying from backup");
-        } else {
-          setDebugInfo("❌ API repair attempt failed - backup API couldn't be used");
+        // Update API methods display
+        const api = getElectronAPI();
+        if (api) {
+          setApiMethods({
+            writeFile: typeof api.writeFile === 'function',
+            selectDirectory: typeof api.selectDirectory === 'function',
+            fileExists: typeof api.fileExists === 'function',
+            _testConnection: typeof api._testConnection === 'function'
+          });
         }
-      } else if (window.electron) {
-        setDebugInfo("ℹ️ No repair needed - API already exists at window.electron");
+        
+        setDebugInfo("✅ API successfully recovered in neyðarhamur mode");
       } else {
-        setDebugInfo("❌ Cannot repair API - no backup API available");
+        setDebugInfo("❌ API repair attempt failed - no valid backup API found");
       }
     } catch (error) {
       setDebugInfo(`Error repairing API: ${(error as Error).message}`);
@@ -150,7 +149,7 @@ export function DebugInfo() {
         <code>window.electron = window.electronBackupAPI</code> - Restore from backup
       </div>
       
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <Button 
           size="sm" 
           variant="outline" 
@@ -165,10 +164,20 @@ export function DebugInfo() {
           size="sm" 
           variant="outline" 
           className="text-xs flex-1"
-          onClick={attemptRepair}
+          onClick={attemptEnhancedRepair}
         >
           <Bug className="h-3 w-3 mr-1" />
           Repair API
+        </Button>
+        
+        <Button 
+          size="sm" 
+          variant="default" 
+          className="text-xs w-full bg-yellow-600 hover:bg-yellow-700 mt-1"
+          onClick={attemptEnhancedRepair}
+        >
+          <WrenchIcon className="h-3 w-3 mr-1" />
+          Virkja neyðarham (Emergency Mode)
         </Button>
       </div>
       

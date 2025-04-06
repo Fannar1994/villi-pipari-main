@@ -8,7 +8,7 @@ import {
   getCurrentDateString,
 } from './pdfUtils';
 import { toast } from '@/hooks/use-toast';
-import { getElectronAPI, isElectronAPIAvailable } from '@/lib/electron/detector';
+import { getElectronAPI, isElectronAPIAvailable, forceApiRecovery } from '@/lib/electron/detector';
 
 /**
  * Generates PDF files from timesheet entries
@@ -33,19 +33,12 @@ export async function generatePdfFiles(
     if (!isElectronAPIAvailable()) {
       console.error("No viable Electron API available for file operations");
       
-      // Try to auto-recover API
-      console.log("Attempting API auto-recovery...");
-      
-      // Check for backup API and restore it if available
-      if ((window as any).electronBackupAPI) {
-        console.log("Found backup API, copying to window.electron");
-        window.electron = (window as any).electronBackupAPI;
-      }
+      // Try to auto-recover API with our enhanced recovery method
+      console.log("Attempting enhanced API auto-recovery...");
+      const recoverySuccessful = forceApiRecovery();
       
       // Check again after recovery attempt
-      const api = getElectronAPI();
-      
-      if (!api) {
+      if (!recoverySuccessful || !isElectronAPIAvailable()) {
         const errorMsg = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Smelltu á "Debug" flipann og "Repair API" hnappinn, eða endurræstu forritið.';
         
         toast({
@@ -56,7 +49,11 @@ export async function generatePdfFiles(
         
         throw new Error(errorMsg);
       } else {
-        console.log("API recovery successful!");
+        console.log("Enhanced API recovery successful!");
+        toast({
+          title: "Tókst",
+          description: "API hefur verið endurheimt í neyðarham",
+        });
       }
     }
     

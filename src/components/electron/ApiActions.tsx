@@ -1,9 +1,10 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileOutput } from 'lucide-react';
+import { FileOutput, WrenchIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { testPdfGeneration } from '@/lib/electron/pdfTester';
+import { forceApiRecovery } from '@/lib/electron/detector';
 
 interface ApiActionsProps {
   apiStatus: {
@@ -54,36 +55,29 @@ export function ApiActions({ apiStatus, testOutputPath, setTestOutputPath }: Api
     }
   };
 
-  // Force reinitialize API
-  const forceReinitialize = () => {
+  // Enhanced API recovery
+  const enhancedApiRecovery = () => {
     try {
-      // Execute JavaScript in the window context to try to reinitialize
-      const script = `
-        console.log("Attempting to force API reinitialization");
-        // Check if we have backup API
-        if (window.electronBackupAPI) {
-          console.log("Found backup API, copying to window.electron");
-          window.electron = window.electronBackupAPI;
-          return "Restored API from backup";
-        } else {
-          console.log("No backup API found");
-          return "No backup API available";
-        }
-      `;
+      // Use our new enhanced recovery function
+      const recoverySuccessful = forceApiRecovery();
       
-      // Execute the script directly
-      const result = eval(script);
-      
-      // Show result
-      toast({
-        title: 'Reinitialization Attempt',
-        description: result,
-      });
+      if (recoverySuccessful) {
+        toast({
+          title: 'Tókst',
+          description: 'API endurheimt í neyðarham tókst!',
+        });
+      } else {
+        toast({
+          title: 'Villa',
+          description: 'API endurheimt tókst ekki. Reyndu að endurræsa forritið.',
+          variant: 'destructive',
+        });
+      }
     } catch (error) {
-      console.error('Error during reinitialization:', error);
+      console.error('Error during API recovery:', error);
       toast({
-        title: 'Error',
-        description: `Reinitialization failed: ${(error as Error).message}`,
+        title: 'Villa',
+        description: `Villa við API endurheimt: ${(error as Error).message}`,
         variant: 'destructive',
       });
     }
@@ -114,11 +108,12 @@ export function ApiActions({ apiStatus, testOutputPath, setTestOutputPath }: Api
       
       <Button
         size="sm"
-        variant="destructive"
-        onClick={forceReinitialize}
-        className="w-full mt-4"
+        variant="default"
+        onClick={enhancedApiRecovery}
+        className="w-full mt-4 bg-yellow-600 hover:bg-yellow-700"
       >
-        Force Reinitialize API
+        <WrenchIcon className="mr-1 h-4 w-4" />
+        Virkja neyðarham (Emergency Mode)
       </Button>
 
       {testOutputPath && (
