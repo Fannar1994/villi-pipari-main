@@ -1,3 +1,4 @@
+
 /**
  * Core API detection utilities for Electron
  */
@@ -7,19 +8,26 @@ import { ElectronAPI, ConnectionTestResult } from './types';
  * Attempts to access the Electron API
  */
 export function getElectronAPI(): ElectronAPI | null {
-  // Check if window is available (we're in browser context)
+  // Check if window is available
   if (typeof window === 'undefined') {
     console.log('No window object available');
     return null;
   }
   
-  // Direct window.electron access
+  // Direct window.electron access - this is now the standard approach
   if (window.electron) {
     console.log('Found API at window.electron');
     return window.electron;
   }
   
-  console.error('No Electron API available at window.electron');
+  // Fallback to backup API if available
+  if ((window as any).electronBackupAPI) {
+    console.log('Found API at window.electronBackupAPI, restoring to window.electron');
+    window.electron = (window as any).electronBackupAPI;
+    return window.electron;
+  }
+  
+  console.error('No Electron API available');
   return null;
 }
 
@@ -89,19 +97,66 @@ export function testConnection(): ConnectionTestResult {
   }
 }
 
-// Keep simple stub for forceApiRecovery to maintain API compatibility
+/**
+ * Force API recovery from various backup sources
+ */
 export function forceApiRecovery(): boolean {
-  console.log('API recovery requested, but not needed in direct mode');
-  return isElectronAPIAvailable();
+  console.log('Attempting API recovery');
+  
+  // Skip if already available
+  if (isElectronAPIAvailable()) {
+    console.log('API already available, no recovery needed');
+    return true;
+  }
+  
+  // Try backup sources
+  try {
+    // Check for backup API
+    if ((window as any).electronBackupAPI) {
+      console.log('Found backup API, restoring to window.electron');
+      window.electron = (window as any).electronBackupAPI;
+      
+      if (isElectronAPIAvailable()) {
+        console.log('Recovery successful using backup API');
+        return true;
+      }
+    }
+    
+    // Check for global backup
+    if (typeof global !== 'undefined' && (global as any).electronBackupAPI) {
+      console.log('Found global backup API, restoring to window.electron');
+      window.electron = (global as any).electronBackupAPI;
+      
+      if (isElectronAPIAvailable()) {
+        console.log('Recovery successful using global backup API');
+        return true;
+      }
+    }
+    
+    console.error('All recovery attempts failed');
+    return false;
+  } catch (e) {
+    console.error('Error during API recovery:', e);
+    return false;
+  }
 }
 
-// Stub functions for emergency API backup
+// Stub functions to maintain API compatibility
 export function setEmergencyApiBackup(api: ElectronAPI): void {
-  console.log('Emergency API backup requested, but not implemented in direct mode');
-  // No implementation - just a stub to fix TypeScript errors
+  console.log('Emergency API backup set');
+  // Create backup on window
+  (window as any).electronBackupAPI = api;
+  
+  // Also try global scope if available
+  if (typeof global !== 'undefined') {
+    try {
+      (global as any).electronBackupAPI = api;
+    } catch (e) {
+      console.error('Failed to set global backup:', e);
+    }
+  }
 }
 
 export function getEmergencyApiBackup(): ElectronAPI | null {
-  console.log('Emergency API backup retrieval requested, but not implemented in direct mode');
-  return null; // No implementation - just a stub to fix TypeScript errors
+  return (window as any).electronBackupAPI || null;
 }

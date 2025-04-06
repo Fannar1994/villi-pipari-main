@@ -1,12 +1,14 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { enableEmergencyMode, isBackupApiAvailable } from '@/lib/electron/emergency-mode';
+import { getElectronAPI, isElectronAPIAvailable } from '@/lib/electron/detector-core';
 
 export interface ApiStatusType {
   available: boolean;
   details: string;
   methods: Record<string, boolean>;
-  backupAvailable?: boolean;
+  backupAvailable: boolean;
 }
 
 /**
@@ -25,7 +27,7 @@ export function useElectronAPI() {
   const checkApi = () => {
     setIsChecking(true);
     try {
-      console.log('📊 Direct Electron API check:');
+      console.log('📊 Electron API check:');
       
       // Check if electron is on window
       const hasElectron = typeof window !== 'undefined' && 'electron' in window;
@@ -41,45 +43,57 @@ export function useElectronAPI() {
       
       let details = '';
       
+      // Check if backup API is available
+      const backupAvailable = isBackupApiAvailable();
+      
       // Determine status message based on API availability
       if (!hasElectron) {
         details = 'Electron API not found on window object';
-        // Log available properties on window for debugging
-        try {
-          console.log('- Available window properties:', Object.keys(window).slice(0, 20).join(', ') + '...');
-        } catch (e) {
-          console.error('- Error listing window properties:', e);
+        
+        // If backup available, try to recover API
+        if (backupAvailable) {
+          console.log('- Attempting emergency recovery');
+          
+          const recovered = enableEmergencyMode();
+          if (recovered) {
+            details = 'API restored from backup';
+          } else {
+            details = 'API recovery failed';
+          }
         }
       } else {
         // Check individual methods
-        details = 'Electron API found on window.electron';
-        try {
-          console.log('- Available API methods:', Object.keys(window.electron));
-          methods.writeFile = typeof window.electron.writeFile === 'function';
-          methods.selectDirectory = typeof window.electron.selectDirectory === 'function';
-          methods.fileExists = typeof window.electron.fileExists === 'function';
-          methods._testConnection = typeof window.electron._testConnection === 'function';
-          
-          // Try the test connection method
-          if (methods._testConnection) {
-            try {
-              const result = window.electron._testConnection();
-              console.log('- Test connection result:', result);
-              details += ` (Test: ${result.available ? 'SUCCESS' : 'FAILED'})`;
-              if (result && 'preloadVersion' in result) {
-                details += ` [Preload v${result.preloadVersion}]`;
+        const api = getElectronAPI();
+        if (api) {
+          details = 'Electron API found on window.electron';
+          try {
+            console.log('- Available API methods:', Object.keys(api));
+            methods.writeFile = typeof api.writeFile === 'function';
+            methods.selectDirectory = typeof api.selectDirectory === 'function';
+            methods.fileExists = typeof api.fileExists === 'function';
+            methods._testConnection = typeof api._testConnection === 'function';
+            
+            // Try the test connection method
+            if (methods._testConnection) {
+              try {
+                const result = api._testConnection();
+                console.log('- Test connection result:', result);
+                details += ` (Test: ${result.available ? 'SUCCESS' : 'FAILED'})`;
+                if (result && 'preloadVersion' in result) {
+                  details += ` [Preload v${result.preloadVersion}]`;
+                }
+                
+                // Add timestamp to show this is a fresh result
+                details += ` at ${new Date().toLocaleTimeString()}`;
+              } catch (error) {
+                console.error('- Error in test connection:', error);
+                details += ' (Test method failed)';
               }
-              
-              // Add timestamp to show this is a fresh result
-              details += ` at ${new Date().toLocaleTimeString()}`;
-            } catch (error) {
-              console.error('- Error in test connection:', error);
-              details += ' (Test method failed)';
             }
+          } catch (error) {
+            console.error('- Error checking API methods:', error);
+            details += ` (Error: ${(error as Error).message})`;
           }
-        } catch (error) {
-          console.error('- Error checking API methods:', error);
-          details += ` (Error: ${(error as Error).message})`;
         }
       }
       
@@ -90,7 +104,7 @@ export function useElectronAPI() {
         available: hasElectron && allMethodsAvailable,
         details,
         methods,
-        backupAvailable: false // Set default value for the property
+        backupAvailable
       });
       
       // Show toast with result
@@ -119,7 +133,7 @@ export function useElectronAPI() {
         available: false,
         details: `Error: ${(error as Error).message}`,
         methods: {},
-        backupAvailable: false
+        backupAvailable: isBackupApiAvailable()
       });
       
       toast({

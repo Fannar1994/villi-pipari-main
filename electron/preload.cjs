@@ -5,9 +5,8 @@ const { exposeAPI } = require('./exposer.cjs');
 const { setupIpcHandlers } = require('./preloadIpc.cjs');
 
 console.log('🚀 Preload script starting...');
-console.log('Preload environment:', process.env.NODE_ENV || 'not set');
 
-// Make sure we have access to required APIs
+// Verify required APIs are available
 if (!contextBridge) {
   console.error('❌ CRITICAL: contextBridge is not available!');
 }
@@ -19,20 +18,19 @@ if (!ipcRenderer) {
 // Create the Electron API object
 const electronAPI = createElectronAPI(ipcRenderer);
 
-// Verify API was created correctly
+// Explicitly check API was created correctly
 if (!electronAPI) {
   console.error('❌ CRITICAL: electronAPI was not created correctly!');
 } else {
+  // Log API methods to help with debugging
   console.log('📦 Electron API created with methods:', Object.keys(electronAPI).join(', '));
   
-  // Verify all required methods exist
-  const requiredMethods = ['writeFile', 'selectDirectory', 'fileExists', '_testConnection'];
-  const missingMethods = requiredMethods.filter(method => typeof electronAPI[method] !== 'function');
-  
-  if (missingMethods.length > 0) {
-    console.error(`❌ CRITICAL: API is missing required methods: ${missingMethods.join(', ')}`);
-  } else {
-    console.log('✅ All required API methods are present');
+  // Make a global backup of the API that can be accessed even if contextBridge fails
+  try {
+    global.electronBackupAPI = electronAPI;
+    console.log('✅ Created global API backup');
+  } catch (e) {
+    console.error('❌ Failed to create global API backup:', e);
   }
 }
 
@@ -54,5 +52,19 @@ ipcRenderer.invoke = function(channel, ...args) {
   });
   return promise;
 };
+
+// Direct self-check before exiting preload
+setTimeout(() => {
+  try {
+    if (typeof window !== 'undefined') {
+      console.log('🔍 Final preload check - window.electron exists:', !!window.electron);
+      if (window.electron) {
+        console.log('🔍 Available methods:', Object.keys(window.electron).join(', '));
+      }
+    }
+  } catch (e) {
+    console.error('Self-check error:', e);
+  }
+}, 100);
 
 console.log('🏁 Preload script completed');
