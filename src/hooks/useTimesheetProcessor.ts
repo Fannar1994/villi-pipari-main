@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { parseTimesheetFile, generateInvoices, generatePdfFiles } from '@/lib/excelProcessor';
+import { checkElectronApi } from '@/lib/timesheet/pdfUtils';
 
 export type ProcessStatus = {
   status: 'idle' | 'processing' | 'success' | 'error';
@@ -36,6 +37,20 @@ export const useTimesheetProcessor = () => {
         title: 'Villa',
         description: 'Vinsamlegast veldu úttak möppu.',
         variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Check if Electron API is available before starting
+    if (!checkElectronApi()) {
+      toast({
+        title: 'Villa',
+        description: 'Electron API er ekki aðgengileg til að vista skrár.',
+        variant: 'destructive',
+      });
+      setProcessStatus({
+        status: 'error',
+        message: 'Electron API er ekki aðgengileg til að vista skrár.',
       });
       return;
     }
@@ -101,6 +116,20 @@ export const useTimesheetProcessor = () => {
       });
       return;
     }
+    
+    // Check if Electron API is available before starting
+    if (!checkElectronApi()) {
+      toast({
+        title: 'Villa',
+        description: 'Electron API er ekki aðgengileg til að vista skrár.',
+        variant: 'destructive',
+      });
+      setProcessStatus({
+        status: 'error',
+        message: 'Electron API er ekki aðgengileg til að vista skrár.',
+      });
+      return;
+    }
 
     try {
       setIsProcessing(true);
@@ -114,11 +143,6 @@ export const useTimesheetProcessor = () => {
       }
       
       console.log("Starting PDF generation with", timesheetEntries.length, "entries");
-      
-      // Check if Electron API is available
-      if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
-        throw new Error('Electron API er ekki aðgengileg til að vista skrár');
-      }
       
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
       console.log("PDF generation completed, count:", pdfCount);

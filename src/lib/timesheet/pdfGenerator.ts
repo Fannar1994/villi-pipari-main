@@ -1,9 +1,14 @@
 
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { TimesheetEntry } from '@/types/timesheet';
-import { formatDateIcelandic } from '../utils/dateUtils';
-import { createSummaryData } from './processor';
+import { createSummaryData } from './summaryCreator';
+import { groupEntriesByEmployeeAndLocation } from './grouping';
+import { 
+  checkElectronApi, 
+  savePdfFile, 
+  createSummaryPdf, 
+  createEmployeePdf, 
+  sanitizeFilename 
+} from './pdfUtils';
 
 /**
  * Generates PDF files from timesheet entries
@@ -18,92 +23,37 @@ export async function generatePdfFiles(
       throw new Error('No timesheet entries provided');
     }
 
+    // Ensure the Electron API is available
+    if (!checkElectronApi()) {
+      throw new Error('Electron API er ekki aðgengileg til að vista skrár.');
+    }
+
     // Ensure output directory ends without slash
     const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
     
     // Create a summary PDF
-    const summaryPdf = new jsPDF();
-    
-    // Add title
-    summaryPdf.setFontSize(16);
-    summaryPdf.setFont('helvetica', 'bold');
-    summaryPdf.text('Samantekt', 14, 15);
-    
-    // Get summary data
     const summaryData = createSummaryData(timesheetEntries);
-    
-    // Format summary data for the PDF table
-    const tableData = summaryData.map(entry => [
-      formatDateIcelandic(entry.date),
-      entry.employee,
-      entry.totalHours.toString(),
-      entry.location || '' // Include location information
-    ]);
-    
-    // Generate the table
-    autoTable(summaryPdf, {
-      head: [['Dagsetning', 'Starfsmaður', 'Heildar tímar', 'Staðsetning']],
-      body: tableData,
-      startY: 20,
-      theme: 'grid',
-      styles: {
-        fontSize: 10,
-        cellPadding: 3,
-      },
-      headStyles: {
-        fillColor: [41, 128, 185],
-        textColor: 255,
-        fontStyle: 'bold',
-      },
-    });
+    const summaryPdf = createSummaryPdf(summaryData);
     
     // Save the summary PDF
     const summaryFilename = `Summary_${new Date().toISOString().split('T')[0]}.pdf`;
     const summaryPath = `${normalizedDir}/${summaryFilename}`;
     
-    console.log("Saving summary PDF to:", summaryPath);
+    const summarySuccess = await savePdfFile(
+      summaryPdf, 
+      summaryPath, 
+      "summary PDF"
+    );
     
-    // Verify if Electron API is available and use it properly
-    if (typeof window !== 'undefined' && window.electron) {
-      try {
-        if (!window.electron.writeFile) {
-          console.error("Electron writeFile API is not available");
-          throw new Error("Electron writeFile API is not available");
-        }
-        
-        const pdfOutput = summaryPdf.output('arraybuffer');
-        const result = await window.electron.writeFile({
-          filePath: summaryPath,
-          data: new Uint8Array(pdfOutput)
-        });
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to save summary PDF');
-        }
-        
-        console.log("Successfully saved summary PDF!");
-      } catch (error) {
-        console.error("Error saving summary PDF:", error);
-        throw error;
-      }
-    } else {
-      console.error("Electron environment not detected for summary PDF");
-      throw new Error("Unable to save files - Electron environment not detected");
+    if (!summarySuccess) {
+      throw new Error('Failed to save summary PDF');
     }
     
     // Create individual invoice PDFs
     let pdfCount = 1; // Start with 1 for the summary PDF
 
-    // Group by BOTH employee AND location for individual PDFs
-    const employeeLocationGroups = new Map<string, TimesheetEntry[]>();
-    
-    timesheetEntries.forEach(entry => {
-      const key = `${entry.employee}-${entry.location}`;
-      if (!employeeLocationGroups.has(key)) {
-        employeeLocationGroups.set(key, []);
-      }
-      employeeLocationGroups.get(key)!.push(entry);
-    });
+    // Group by both employee and location for individual PDFs
+    const employeeLocationGroups = groupEntriesByEmployeeAndLocation(timesheetEntries);
     
     console.log(`Creating ${employeeLocationGroups.size} individual PDFs`);
     
@@ -121,83 +71,33 @@ export async function generatePdfFiles(
         continue;
       }
       
-      // Create a new PDF for this employee-location combination
-      const pdf = new jsPDF();
-      
-      // Add header
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Vinnuskýrsla: ${employee}`, 14, 15);
-      
-      // Add location information
-      pdf.setFontSize(12);
-      pdf.text(`Vinnustaður: ${location}`, 14, 25);
-      if (firstEntry.apartment) {
-        pdf.text(`Íbúð: ${firstEntry.apartment}`, 14, 32);
-      }
-      
-      // Format data for this employee's timesheet
-      const employeeData = entries.map(entry => [
-        formatDateIcelandic(entry.date),
-        entry.hours.toString(),
-        entry.workType || '',
-      ]);
-      
-      // Generate table
-      autoTable(pdf, {
-        head: [['Dagsetning', 'Tímar', 'Vinna']],
-        body: employeeData,
-        startY: 40,
-        theme: 'grid',
-        styles: {
-          fontSize: 10,
-        },
-        headStyles: {
-          fillColor: [41, 128, 185],
-          textColor: 255,
-          fontStyle: 'bold',
-        },
-      });
-      
-      // Calculate total hours
-      const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
-      
-      // Add total hours at the bottom
-      const finalY = (pdf as any).lastAutoTable.finalY || 100;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Heildar tímar: ${totalHours}`, 14, finalY + 10);
-      
-      // Save the PDF
-      const sanitizedEmployee = employee.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const sanitizedLocation = location.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const filename = `${sanitizedEmployee}_${sanitizedLocation}_${new Date().toISOString().split('T')[0]}.pdf`;
-      const filePath = `${normalizedDir}/${filename}`;
-      
-      console.log(`Saving PDF for ${employee} at ${location} to: ${filePath}`);
-      
-      // Save file using Electron API with proper error checking
-      if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
-        try {
-          const pdfOutput = pdf.output('arraybuffer');
-          const result = await window.electron.writeFile({
-            filePath: filePath,
-            data: new Uint8Array(pdfOutput)
-          });
-          
-          if (result.success) {
-            console.log(`Successfully saved PDF for ${employee} at ${location}`);
-            pdfCount++;
-          } else {
-            console.error(`Failed to save PDF for ${employee} at ${location}: ${result.error}`);
-          }
-        } catch (error) {
-          console.error(`Error saving PDF for ${employee} at ${location}:`, error);
-          // Continue with other PDFs rather than stopping the whole process
+      try {
+        // Create a PDF for this employee-location combination
+        const pdf = createEmployeePdf(
+          employee, 
+          location, 
+          firstEntry.apartment, 
+          entries
+        );
+        
+        // Save the PDF
+        const sanitizedEmployee = sanitizeFilename(employee);
+        const sanitizedLocation = sanitizeFilename(location);
+        const filename = `${sanitizedEmployee}_${sanitizedLocation}_${new Date().toISOString().split('T')[0]}.pdf`;
+        const filePath = `${normalizedDir}/${filename}`;
+        
+        const success = await savePdfFile(
+          pdf, 
+          filePath, 
+          `PDF for ${employee} at ${location}`
+        );
+        
+        if (success) {
+          pdfCount++;
         }
-      } else {
-        console.error("Electron writeFile API is not available for individual PDF");
-        throw new Error("Electron writeFile API is not available");
+      } catch (error) {
+        console.error(`Error processing PDF for ${employee} at ${location}:`, error);
+        // Continue with other PDFs rather than stopping the whole process
       }
     }
     
