@@ -1,3 +1,4 @@
+
 /**
  * Enhanced Electron API access with multiple fallback strategies and auto-repair
  */
@@ -125,89 +126,111 @@ export function getElectronAPI(): ElectronAPI | null {
           }
         },
         
-        // Enhanced directory picker with better file system access
+        // Enhanced directory picker with improved permissions for system files
         selectDirectory: async () => {
           console.log('Emergency API called: selectDirectory');
           
-          // Check if we have the modern File System Access API
+          // Better direct file system access using FileSystem Access API
           if ('showDirectoryPicker' in window) {
             try {
-              // Request permission with all available options
-              const dirHandle = await (window as any).showDirectoryPicker({
+              // Configure picker with maximum permissions
+              const pickerOptions = {
                 id: 'directorySelection',
-                mode: 'readwrite', // Request read/write permission
-                startIn: 'documents' // Try to start in Documents folder
-              });
+                mode: 'readwrite' as const,
+                startIn: 'documents' as const,
+              };
               
-              // Check if we have permission and get any available path
-              // The path representation is limited in web context
+              // Request high-permission access to directories
+              const dirHandle = await (window as any).showDirectoryPicker(pickerOptions);
+              
+              // Store the handle for future operations
+              (window as any)._lastSelectedDirHandle = dirHandle;
+              
+              // Ensure we have maximum permission level
               try {
-                // Keep a reference to the directory handle for future operations
-                (window as any)._lastSelectedDirHandle = dirHandle;
-                
-                // Try to get permission status
                 const permission = await dirHandle.queryPermission({ mode: 'readwrite' });
+                console.log('Initial permission status:', permission);
+                
+                // Request elevated permissions if not already granted
                 if (permission !== 'granted') {
-                  // Try to request permission if not already granted
                   const newPermission = await dirHandle.requestPermission({ mode: 'readwrite' });
-                  console.log('Directory permission:', newPermission);
+                  console.log('Elevated permission status:', newPermission);
                 }
                 
-                // Return a path representation
-                return `system-directory://${dirHandle.name}`;
-              } catch (permissionErr) {
-                console.error('Permission error:', permissionErr);
-                return `selected-directory://${dirHandle.name}`;
+                // Get directory name and create a custom URI that notes this is a special handle
+                // Rather than a system path (which browsers can't fully access)
+                const uniqueId = Math.random().toString(36).substring(2, 15);
+                const dirPath = `safe-directory://${dirHandle.name}-${uniqueId}`;
+                
+                // Store mapping between path and handle for later use
+                if (!(window as any)._dirHandleMap) {
+                  (window as any)._dirHandleMap = new Map();
+                }
+                (window as any)._dirHandleMap.set(dirPath, dirHandle);
+                
+                console.log('Directory selected:', dirPath);
+                return dirPath;
+              } catch (e) {
+                console.error('Permission negotiation failed:', e);
+                // Fallback with limited permissions
+                const safeId = Date.now().toString();
+                return `limited-access://${dirHandle.name}-${safeId}`;
               }
             } catch (e) {
-              console.error('Emergency directory picker failed:', e);
+              console.error('Directory selection failed:', e);
+              
+              // Check if the user cancelled the operation
               if (e.name === 'AbortError') {
-                // User cancelled
                 return null;
               }
-              // Show a prompt as last resort
-              const dirPath = prompt('Vinsamlegast sláðu inn slóð á möppu:', '/tmp');
-              return dirPath || null;
+              
+              // Fallback to a text prompt as last resort
+              return prompt('Vinsamlegast sláðu inn möppu (t.d. /Documents/MyFolder):', 
+                           `/temp-${Date.now()}`);
             }
           } else {
-            // If File System Access API is not available, use a prompt
-            const dirPath = prompt('Vinsamlegast sláðu inn slóð á möppu:', '/tmp');
-            return dirPath || null;
+            // For browsers without File System Access API
+            return prompt('Vinsamlegast sláðu inn möppu fyrir skrárnar:', `/temp-${Date.now()}`);
           }
         },
         
-        // Proper implementation for fileExists in emergency mode
+        // Enhanced fileExists implementation using stored directory handles
         fileExists: async (filePath: string) => {
-          console.error('Emergency API called: fileExists');
-          // Try to use the last selected directory handle if available
-          if ((window as any)._lastSelectedDirHandle) {
+          console.log('Emergency API called: fileExists for', filePath);
+          
+          // Check if we have a directory handle map
+          if ((window as any)._dirHandleMap && (window as any)._lastSelectedDirHandle) {
             try {
+              const dirHandle = (window as any)._lastSelectedDirHandle;
               const fileName = filePath.split('/').pop();
+              
               if (!fileName) return false;
               
               try {
                 // Try to get the file from the directory
-                await (window as any)._lastSelectedDirHandle.getFileHandle(fileName);
+                await dirHandle.getFileHandle(fileName);
                 return true;
               } catch (e) {
-                // File not found
+                // File not found or access denied
+                console.log('File not found in directory:', fileName);
                 return false;
               }
             } catch (e) {
               console.error('Error checking file existence:', e);
+              return false;
             }
           }
           
-          // In web context, we can't reliably check if a file exists
+          // Default fallback
           return false;
         },
         
-        // Test connection
+        // Test connection with updated version
         _testConnection: () => {
           return {
             available: true,
             time: new Date().toString(),
-            preloadVersion: 'emergency-fallback-2.0'
+            preloadVersion: 'emergency-fallback-3.0'
           };
         }
       };

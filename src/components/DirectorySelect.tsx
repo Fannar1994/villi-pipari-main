@@ -85,13 +85,27 @@ export function DirectorySelect({
           if (result) {
             onChange(result);
             
-            // Show a special notification for emergency mode
+            // Show special notifications based on the type of path returned
             if (apiMode === 'emergency') {
-              toast({
-                title: "Neyðarhamur",
-                description: "Forritið keyrir í neyðarham. Sumir eiginleikar gætu verið takmarkaðir.",
-                variant: "destructive", // Changed from 'warning' to 'destructive'
-              });
+              // Check if we got a secure path from the new implementation
+              if (result.startsWith('safe-directory://')) {
+                toast({
+                  title: "Mappa valin í neyðarham",
+                  description: "Skrárnar verða vistaðar gegnum öruggari vafraviðmót.",
+                });
+              } else if (result.startsWith('limited-access://')) {
+                toast({
+                  title: "Takmarkaður aðgangur",
+                  description: "Skrárnar verða vistaðar með takmörkuðum heimildum.",
+                  variant: "destructive",
+                });
+              } else {
+                toast({
+                  title: "Neyðarhamur",
+                  description: "Forritið keyrir í neyðarham. Sumir eiginleikar gætu verið takmarkaðir.",
+                  variant: "destructive", 
+                });
+              }
             }
             
             console.log('Directory selected successfully:', result);
@@ -148,16 +162,31 @@ export function DirectorySelect({
     }
   };
 
+  // Format the display value to be more user-friendly
+  const getDisplayValue = () => {
+    if (!value) return '';
+    
+    // For safe directory URIs, show a more user-friendly value
+    if (value.startsWith('safe-directory://')) {
+      return value.replace('safe-directory://', '📁 ');
+    } else if (value.startsWith('limited-access://')) {
+      return value.replace('limited-access://', '⚠️ ');
+    } else {
+      return value;
+    }
+  };
+
   return (
     <div className="space-y-2">
       <Label htmlFor={`dir-${label}`}>{label}</Label>
       <div className="flex gap-2">
         <Input
-          value={value}
+          value={getDisplayValue()}
           readOnly
           placeholder="Engin mappa valin"
           className="flex-1 bg-secondary"
           id={`dir-${label}`}
+          title={value} // Show full path on hover
         />
         <Button
           type="button"
