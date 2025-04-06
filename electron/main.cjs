@@ -1,17 +1,15 @@
 
 // ✅ electron/main.cjs
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const url = require('url');
-const { handleDirectorySelection, handleFileWrite, handleFileExists } = require('./handlers.cjs');
+const isDev = process.env.NODE_ENV === 'development';
 const http = require('http');
 
-const isDev = process.env.NODE_ENV === 'development';
+let mainWindow;
 const VITE_PORT = process.env.VITE_PORT || 8080;
 const MAX_RETRIES = 30;
-
-let mainWindow;
 let retryCount = 0;
 
 // Log application paths for debugging
@@ -22,19 +20,22 @@ console.log('Executable path:', app.getPath('exe'));
 console.log('Current working directory:', process.cwd());
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  const { BrowserWindow } = require('electron');
+  const win = new BrowserWindow({
     width: 900,
     height: 700,
-    backgroundColor: '#2d2d2d',
+    backgroundColor: '#2d2d2d',  // Dark grey background
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: false // Disabled to allow local file access
+      webSecurity: false // Disable web security in the packaged app to allow local file access
     },
     icon: path.join(__dirname, '../public/favicon.ico'),
     show: false
   });
+
+  mainWindow = win;
 
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
@@ -49,7 +50,6 @@ function createWindow() {
   // Add error handling for webContents
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
     console.error('Failed to load:', errorCode, errorDescription);
-    const { dialog } = require('electron');
     dialog.showErrorBox('Loading Failed', `Error ${errorCode}: ${errorDescription}`);
   });
 }
@@ -81,7 +81,6 @@ async function loadDev() {
     console.log(`Retry ${retryCount}/${MAX_RETRIES} connecting to ${devUrl}`);
     setTimeout(loadDev, 1000);
   } else {
-    const { dialog } = require('electron');
     dialog.showErrorBox('Dev Server Error', `Could not reach ${devUrl}`);
     app.quit();
   }
@@ -91,10 +90,10 @@ function loadProd() {
   // Use relative paths to find the dist folder
   let indexPath = '';
   const possiblePaths = [
-    path.join(__dirname, '../dist/index.html'),
-    path.join(__dirname, '../../dist/index.html'),
-    path.join(process.resourcesPath, 'dist/index.html'),
-    path.join(app.getAppPath(), 'dist/index.html')
+    path.join(__dirname, '../dist/index.html'),          // Standard path
+    path.join(__dirname, '../../dist/index.html'),       // Nested in asar
+    path.join(process.resourcesPath, 'dist/index.html'), // In resources folder
+    path.join(app.getAppPath(), 'dist/index.html')       // From app path
   ];
   
   for (const testPath of possiblePaths) {
@@ -115,12 +114,10 @@ function loadProd() {
     console.log('Loading URL:', fileUrl);
     mainWindow.loadURL(fileUrl).catch(err => {
       console.error('Error loading URL:', err);
-      const { dialog } = require('electron');
       dialog.showErrorBox('Loading Error', `Failed to load the app: ${err.message}`);
     });
   } else {
     console.error('Could not find index.html in any of the checked locations');
-    const { dialog } = require('electron');
     dialog.showErrorBox('Build Missing', 'Could not find the application files. The application may not be built correctly.');
     app.quit();
   }
@@ -149,11 +146,35 @@ app.whenReady().then(() => {
 // Handle any startup errors
 app.on('render-process-gone', (event, webContents, details) => {
   console.error('Render process gone:', details.reason);
-  const { dialog } = require('electron');
   dialog.showErrorBox('Application Error', `The application encountered an error: ${details.reason}`);
 });
 
-// Set up IPC handlers
-ipcMain.handle('select-directory', (event) => handleDirectorySelection(event, mainWindow));
-ipcMain.handle('write-file', handleFileWrite);
-ipcMain.handle('file-exists', handleFileExists);
+// IPC handlers
+ipcMain.handle('select-directory', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+  return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.handle('write-file', async (event, { filePath, data }) => {
+  try {
+    // The filePath should already be the complete path
+    const fullPath = filePath;
+    
+    const dir = path.dirname(fullPath);
+    
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    await fs.promises.writeFile(fullPath, data);
+    return { success: true, path: fullPath };
+  } catch (error) {
+    console.error('Error writing file:', error);
+    if (error.code === 'EBUSY') {
+      return { success: false, error: 'Vinsamlegast lokið skjalinu' };
+    }
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file-exists', async (_, filePath) => fs.existsSync(filePath));
