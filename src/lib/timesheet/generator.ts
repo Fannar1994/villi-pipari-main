@@ -64,14 +64,30 @@ export async function generateInvoices(
     console.log("Grouped entries:", Object.keys(groupedEntries).length);
     let invoiceCount = 0;
 
+    // Track used sheet names to avoid duplicates
+    const usedSheetNames = new Set<string>();
+
     for (const [key, entries] of Object.entries(groupedEntries)) {
       if (entries.length > 0) {
         // Use the location (hvar) and apartment (íbúð) fields from the first entry
         const firstEntry = entries[0];
-        const safeSheetName = createSafeSheetName(
+        let safeSheetName = createSafeSheetName(
           firstEntry.location,  // This is from the 'hvar' column
           firstEntry.apartment  // This is from the 'íbúð' column
         );
+        
+        // Check if the sheet name is already used, if so, append a counter
+        let counter = 1;
+        let originalName = safeSheetName;
+        while (usedSheetNames.has(safeSheetName)) {
+          // Truncate if needed to ensure name with counter doesn't exceed Excel's 31 character limit
+          const truncatedName = originalName.substring(0, 27 - counter.toString().length);
+          safeSheetName = `${truncatedName} (${counter})`;
+          counter++;
+        }
+        
+        // Add the sheet name to our tracking set
+        usedSheetNames.add(safeSheetName);
         
         console.log(`Creating sheet for: ${safeSheetName}`);
         const worksheetData = createInvoiceData(entries);

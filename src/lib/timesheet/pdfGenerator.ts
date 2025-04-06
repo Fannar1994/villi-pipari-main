@@ -120,20 +120,20 @@ export async function generatePdfFiles(
         
         // Save the PDF
         if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
-          const baseName = `${locationName}_${apartmentName}`.replace(/[^a-z0-9]/gi, '_');
+          // Create a safer filename base by replacing invalid characters with underscores
+          const baseName = `${locationName}_${apartmentName}`.replace(/[^a-z0-9áðéíóúýþæöÁÐÉÍÓÚÝÞÆÖ]/gi, '_');
           
-          // Create a unique filename by adding a counter suffix if the name exists
-          let safeName = baseName;
+          // Always add a counter suffix for consistency and uniqueness
+          let uniqueSuffix = 1;
           if (usedFilenames.has(baseName)) {
-            const count = usedFilenames.get(baseName)! + 1;
-            usedFilenames.set(baseName, count);
-            safeName = `${baseName}_${count}`;
-          } else {
-            usedFilenames.set(baseName, 1);
+            uniqueSuffix = usedFilenames.get(baseName)! + 1;
           }
+          usedFilenames.set(baseName, uniqueSuffix);
+          
+          const safeFileName = uniqueSuffix > 1 ? `${baseName}_${uniqueSuffix}` : baseName;
           
           const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
-          const pdfPath = `${normalizedDir}/${safeName}_${currentDate}.pdf`;
+          const pdfPath = `${normalizedDir}/${safeFileName}_${currentDate}.pdf`;
           
           const pdfBlob = pdf.output('arraybuffer');
           await window.electron.writeFile({
