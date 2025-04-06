@@ -64,19 +64,8 @@ export const ExcelTab = () => {
       setIsProcessing(true);
       setProcessStatus("Vinnur að PDF skjölum...");
 
-      // Parse the timesheet file to get entries
-      const timesheetEntries = await parseTimesheetFile(excelFile);
-
-      if (!timesheetEntries || timesheetEntries.length === 0) {
-        throw new Error("Engar færslur fundust í skjalinu.");
-      }
-
-      setProcessStatus(
-        `Búa til PDF skjöl fyrir ${timesheetEntries.length} færslur...`
-      );
-
-      // Generate PDF files from the entries
-      const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
+      // Generate PDF files directly from Excel file without parsing
+      const pdfCount = await generatePdfFiles(excelFile, outputDir);
 
       toast({
         title: "Árangur!",
