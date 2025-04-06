@@ -26,11 +26,22 @@ export function prepareEntriesForPdfGeneration(
 export function isElectronFileApiAvailable(): boolean {
   console.log('Checking for Electron API availability');
   
-  // Log what Window.electron contains to help debugging
-  if (typeof window !== 'undefined' && 'electron' in window) {
-    console.log('Electron object found:', Object.keys(window.electron || {}));
-  } else {
-    console.log('Electron object not found in window');
+  // More detailed logging of the window object
+  console.log('Window type:', typeof window);
+  
+  if (typeof window !== 'undefined') {
+    console.log('Has electron property:', 'electron' in window);
+    
+    if ('electron' in window) {
+      const electronKeys = Object.keys(window.electron || {});
+      console.log('Electron object keys:', electronKeys);
+      console.log('writeFile type:', typeof window.electron?.writeFile);
+      
+      // Test if methods exist but are undefined
+      if (electronKeys.includes('writeFile') && typeof window.electron.writeFile !== 'function') {
+        console.log('Warning: writeFile exists but is not a function');
+      }
+    }
   }
   
   const isAvailable = typeof window !== 'undefined' && 
@@ -70,7 +81,13 @@ export async function savePdfToFile(
   }
   
   try {
-    console.log("Calling window.electron.writeFile with:", { filePath });
+    console.log("Calling window.electron.writeFile with data length:", pdfData.length);
+    // Double check that the method exists right before calling it
+    if (typeof window.electron?.writeFile !== 'function') {
+      console.error("writeFile method is not a function at call time");
+      return false;
+    }
+    
     const result = await window.electron.writeFile({
       filePath: filePath,
       data: pdfData

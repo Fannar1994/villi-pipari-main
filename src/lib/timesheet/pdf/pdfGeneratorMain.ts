@@ -23,7 +23,16 @@ export async function generatePdfFiles(
     
     // Check if we're running in Electron environment
     if (typeof window === 'undefined') {
+      console.error('PDF generation requires browser environment');
       throw new Error('PDF generation requires browser environment');
+    }
+    
+    // More verbose check for Electron API
+    if ('electron' in window) {
+      console.log("Electron object is available in window");
+    } else {
+      console.error("Electron object is NOT available in window");
+      throw new Error('Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni');
     }
     
     // Check if Electron API is available
