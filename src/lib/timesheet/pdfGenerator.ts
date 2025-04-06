@@ -52,7 +52,7 @@ export async function generatePdfFiles(
     // Generate the table
     autoTable(summaryPdf, {
       head: [['Dagsetning', 'Starfsmaður', 'Staðsetning', 'Tímar']],
-      body: tableData.map(row => row.map(cell => cell.toString())),
+      body: tableData.map((row: any[]) => row.map((cell: any) => cell.toString())),
       startY: 20,
       theme: 'grid',
       styles: {
@@ -72,7 +72,7 @@ export async function generatePdfFiles(
     
     try {
       const summaryPdfBlob = summaryPdf.output('arraybuffer');
-      const summaryResult = await window.electron.writeFile({
+      const summaryResult = await window.electron?.writeFile({
         filePath: summaryPath,
         data: new Uint8Array(summaryPdfBlob)
       });
@@ -83,7 +83,7 @@ export async function generatePdfFiles(
       
       console.log(`Summary PDF successfully saved to: ${summaryPath}`);
       pdfCount++;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save summary PDF:', error);
       throw new Error(`Villa við að vista samantekt PDF: ${error instanceof Error ? error.message : 'Óþekkt villa'}`);
     }
@@ -175,27 +175,30 @@ export async function generatePdfFiles(
         console.log(`Attempting to save PDF to: ${pdfPath}`);
         
         // Create a promise that resolves only when the file is successfully written
-        const filePromise = window.electron.writeFile({
+        const filePromise = window.electron?.writeFile({
           filePath: pdfPath,
           data: new Uint8Array(pdfBlob)
-        }).then((result) => {
+        }).then((result: any) => {
           if (!result || result.error) {
             throw new Error(result?.error || 'Unknown error writing file');
           }
           console.log(`PDF successfully saved to: ${pdfPath}`);
           return true;
-        }).catch(error => {
+        }).catch((error: any) => {
           console.error(`Failed to save PDF ${safeFileName}:`, error);
           throw new Error(`Villa við að vista skrá ${safeFileName}: ${error instanceof Error ? error.message : 'Óþekkt villa'}`);
         });
         
-        fileWritePromises.push(filePromise.then(() => {
-          pdfCount++;
-        }));
-      } catch (error) {
+        if (filePromise) {
+          fileWritePromises.push(filePromise.then(() => {
+            pdfCount++;
+          }));
+        } else {
+          console.error(`Could not create file write promise for ${pdfPath}`);
+        }
+      } catch (error: any) {
         console.error(`Error creating PDF for ${locationName}:`, error);
         // Continue with other PDFs rather than failing completely
-        fileWritePromises.push(Promise.resolve());
       }
     }
     
@@ -203,8 +206,12 @@ export async function generatePdfFiles(
     console.log(`Waiting for ${fileWritePromises.length} PDF write operations to complete...`);
     
     try {
-      await Promise.all(fileWritePromises);
-    } catch (error) {
+      if (fileWritePromises.length > 0) {
+        await Promise.all(fileWritePromises);
+      } else {
+        console.warn("No PDF write promises were created");
+      }
+    } catch (error: any) {
       console.error('Error in PDF write operations:', error);
       throw new Error(`Villa við að vista PDF skjöl: ${error instanceof Error ? error.message : 'Óþekkt villa'}`);
     }
@@ -216,7 +223,7 @@ export async function generatePdfFiles(
     console.log(`Successfully generated ${pdfCount} PDF files`);
     return pdfCount;
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating PDFs:', error);
     throw new Error(error instanceof Error ? error.message : 'Villa við að búa til PDF skjöl');
   }

@@ -58,7 +58,7 @@ export const ExcelTab = () => {
       
       setProcessStatus(`${pdfCount} PDF skjöl hafa verið búin til í ${outputDir}`);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating PDFs:', error);
       setProcessStatus('Villa kom upp við að búa til PDF skjöl.');
       toast({
