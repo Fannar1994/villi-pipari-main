@@ -1,11 +1,9 @@
 
-// Simple API availability check
+// Ultra-simplified API check
 export function startApiMonitor(): void {
-  const api = window.electron;
-  
-  if (api) {
-    console.log('API detected');
+  if (window.electron) {
+    console.log('API available');
   } else {
-    console.log('API not detected');
+    console.log('API not available');
   }
 }

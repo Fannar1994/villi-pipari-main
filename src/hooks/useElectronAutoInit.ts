@@ -6,11 +6,11 @@ export function useElectronAutoInit() {
   const [apiAvailable, setApiAvailable] = useState<boolean>(false);
 
   useEffect(() => {
-    // Very simple API check
-    const api = window.electron;
-    setApiAvailable(!!api);
+    // Ultra simple check
+    const available = !!window.electron;
+    setApiAvailable(available);
     
-    if (!api) {
+    if (!available) {
       toast({
         title: "Restart needed",
         description: "Please restart the application",

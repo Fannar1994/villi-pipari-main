@@ -1,20 +1,16 @@
 
 /**
- * Electron file system operations module - ULTRA SIMPLIFIED
+ * Ultra-simplified file system operations
  */
+
 import { toast } from '@/hooks/use-toast';
 
-/**
- * Ultra-simple file writing function - No wrappers, just direct access
- */
+// Simple write file function
 export async function writeFile(filePath: string, data: Uint8Array): Promise<boolean> {
-  console.log(`Writing file to ${filePath}, data length: ${data.length}`);
-  
   if (!window.electron) {
-    console.error('Cannot write file: Electron API not available');
     toast({
-      title: 'Villa',
-      description: 'Skráarkerfi ekki aðgengilegt. Reyndu að endurræsa forritið.',
+      title: 'Error',
+      description: 'API not available. Restart the application.',
       variant: 'destructive',
     });
     return false;
@@ -22,54 +18,40 @@ export async function writeFile(filePath: string, data: Uint8Array): Promise<boo
   
   try {
     const result = await window.electron.writeFile({ filePath, data });
-    console.log('Write file result:', result);
     return result.success === true;
   } catch (e) {
-    console.error('Error writing file:', e);
+    console.error('Write error:', e);
     return false;
   }
 }
 
-/**
- * Ultra-simple directory selection function - No wrappers, just direct access
- */
+// Simple directory selection function
 export async function selectDirectory(): Promise<string | null> {
-  console.log('selectDirectory called - ULTRA SIMPLIFIED');
-  
   if (!window.electron) {
-    console.error('Cannot select directory: Electron API not available');
     toast({
-      title: 'Villa',
-      description: 'Skráarkerfi ekki aðgengilegt. Reyndu að endurræsa forritið.',
+      title: 'Error',
+      description: 'API not available. Restart the application.',
       variant: 'destructive',
     });
     return null;
   }
   
   try {
-    // Direct call - no extra wrappers or complexity
-    const result = await window.electron.selectDirectory();
-    console.log('Directory selection result:', result);
-    return result;
+    return await window.electron.selectDirectory();
   } catch (e) {
-    console.error('Error selecting directory:', e);
+    console.error('Directory selection error:', e);
     return null;
   }
 }
 
-/**
- * Ultra-simple file existence check - No wrappers, just direct access
- */
+// Simple file existence check
 export async function fileExists(filePath: string): Promise<boolean> {
-  if (!window.electron) {
-    console.error('Cannot check file existence: Electron API not available');
-    return false;
-  }
+  if (!window.electron) return false;
   
   try {
     return await window.electron.fileExists(filePath);
   } catch (e) {
-    console.error('Error checking if file exists:', e);
+    console.error('File exists error:', e);
     return false;
   }
 }
