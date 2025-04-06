@@ -1,6 +1,6 @@
 
 import { TimesheetEntry, SummaryEntry } from '@/types/timesheet';
-import { isIcelandicHoliday } from '../utils/dateUtils';
+import { isIcelandicHoliday, formatDateIcelandic } from '../utils/dateUtils';
 
 /**
  * Creates summary data for all timesheet entries, grouped by employee and date
@@ -46,6 +46,7 @@ export function createSummaryData(entries: TimesheetEntry[]): SummaryEntry[] {
 /**
  * Creates formatted summary sheet data with styling information
  * Uses Excel formulas for automatic calculation of totals
+ * Now only shows totals at the bottom, not in individual rows
  */
 export function createSummarySheetData(entries: TimesheetEntry[]): {
   data: (string | number | { f: string })[][];
@@ -58,7 +59,7 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   const data: (string | number | { f: string })[][] = [
     ['Samantekt'], // Title
     [], // Empty row
-    ['Dagsetning', 'Starfsmaður', 'Heildar tímar', 'Staðsetning'], // Headers with location
+    ['Dagsetning', 'Starfsmaður', 'Tímar', 'Staðsetning'], // Headers with location
   ];
   
   // Styling information for cells
@@ -70,7 +71,7 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
     { s: { c: 0, r: 0 }, e: { c: 3, r: 0 } }
   ];
   
-  // Add data rows
+  // Add data rows - without any calculations in the rows, just raw data
   summaryEntries.forEach((entry, index) => {
     const rowIndex = index + 3; // Start after headers
     
@@ -81,27 +82,22 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
       entry.location || '' // Include location information
     ];
     
-    // Mark overtime (over 8 hours) in red
-    if (entry.totalHours > 8) {
-      styles[`C${rowIndex + 1}`] = { font: { color: 'FF0000' } }; // Red font for hours
-    }
-    
     // Mark holidays in red
     if (entry.isHoliday) {
       styles[`A${rowIndex + 1}`] = { font: { color: 'FF0000' } }; // Red font for date
     }
   });
   
-  // Calculate totals for each employee and add them to the summary
+  // Add a separator row
+  const separatorRowIndex = data.length;
+  data.push(['', '', '', '']);
+  
+  // Calculate totals for each employee and add them at the bottom
   const employeeTotals = new Map<string, number>();
   summaryEntries.forEach(entry => {
     const currentTotal = employeeTotals.get(entry.employee) || 0;
     employeeTotals.set(entry.employee, currentTotal + entry.totalHours);
   });
-  
-  // Add a separator row
-  const separatorRowIndex = data.length;
-  data.push(['', '', '', '']);
   
   // Add employee subtotals using formulas
   let employeeRowStart = separatorRowIndex + 1;
