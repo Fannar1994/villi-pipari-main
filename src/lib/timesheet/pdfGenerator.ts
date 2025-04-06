@@ -1,9 +1,11 @@
+
 import { TimesheetEntry } from '@/types/timesheet';
-import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatDateIcelandic } from '../utils/dateUtils';
-import { createSummarySheetData, createInvoiceData, groupEntriesByLocation } from './processor';
+import { createInvoiceData } from './invoiceUtils';
+import { createSummarySheetData } from './summaryUtils';
+import { groupEntriesByLocation } from './groupUtils';
 
 /**
  * Generates PDF files from timesheet entries
@@ -29,12 +31,20 @@ export async function generatePdfFiles(
     summaryPdf.text('Samantekt', 14, 15);
     
     // Format summary data for the PDF table
-    const tableData = summaryData.slice(2); // Skip the title and empty row
+    const tableData = summaryData.slice(2).map(row => 
+      row.map(cell => {
+        // Convert formula objects to strings
+        if (cell && typeof cell === 'object' && 'f' in cell) {
+          return '';  // Formula cells don't have meaningful values in PDF
+        }
+        return cell ? cell.toString() : '';
+      })
+    );
     
     // Generate the table
     autoTable(summaryPdf, {
       head: [['Dagsetning', 'Starfsmaður', 'Staðsetning', 'Tímar']],
-      body: tableData.map(row => row.map(cell => cell.toString())),
+      body: tableData,
       startY: 20,
       theme: 'grid',
       styles: {
@@ -60,45 +70,49 @@ export async function generatePdfFiles(
       });
       
       pdfCount++;
+      console.log("Summary PDF saved:", summaryPath);
+    } else {
+      console.warn("Electron API not available, couldn't save summary PDF");
     }
     
     // Create individual invoice PDFs
     // Use a Map to track used filenames to avoid duplicates
     const usedFilenames = new Map<string, number>();
     
+    console.log(`Processing ${Object.keys(groupedEntries).length} location groups for PDFs`);
+    
     for (const [key, entries] of Object.entries(groupedEntries)) {
       if (entries.length > 0) {
+        console.log(`Creating PDF for location: ${key} with ${entries.length} entries`);
         const firstEntry = entries[0];
-        const locationName = firstEntry.location;
+        const locationName = firstEntry.location || '';
         const apartmentName = firstEntry.apartment || '';
+        
+        // Skip if location is empty
+        if (!locationName.trim()) {
+          console.log("Skipping entry with empty location");
+          continue;
+        }
         
         // Create new PDF document
         const pdf = new jsPDF();
         
-        // Add header
+        // Add header - match Excel layout
         pdf.setFont('helvetica', 'bold');
         pdf.text('Fylgiskjal reiknings', 14, 15);
         
-        // Get invoice data
-        const invoiceData = createInvoiceData(entries);
-        
-        // Add location information
-        pdf.setFontSize(10);
-        pdf.text(`Vinnustaður: ${locationName}`, 14, 80);
-        pdf.text(`Íbúð: ${apartmentName}`, 14, 85);
-        if (firstEntry.other) {
-          pdf.text(`Annað: ${firstEntry.other}`, 14, 90);
-        }
-        
         // Format data for the table - sort entries by date first
-        const headers = ['Dagsetning', 'Tímar', 'Vinnuliður', 'Starfsmaður'];
         const sortedEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+        const headers = ['Dagsetning:', 'Tímar:', 'Vinnuliður:', 'Starfsmaður:'];
         const rows = sortedEntries.slice(0, 7).map(entry => [
           formatDateIcelandic(entry.date),
-          entry.hours.toString(),
-          entry.workType,
-          entry.employee
+          entry.hours.toString().replace('.', ','),  // Format with comma decimal separator
+          entry.workType || '',
+          entry.employee || ''
         ]);
+        
+        // Calculate total hours
+        const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
         
         // Generate the table
         autoTable(pdf, {
@@ -117,6 +131,24 @@ export async function generatePdfFiles(
           },
         });
         
+        // Add location information section - match Excel layout
+        pdf.setFontSize(10);
+        pdf.text('Vinnustaður:', 14, 80);
+        pdf.text(locationName, 50, 80);
+        
+        pdf.text('Íbúð:', 14, 85);
+        pdf.text(apartmentName, 50, 85);
+        
+        if (firstEntry.other) {
+          pdf.text('Annað:', 14, 90);
+          pdf.text(firstEntry.other || '', 50, 90);
+        }
+        
+        // Add total hours
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Samtals tímar:', 14, 100);
+        pdf.text(totalHours.toString().replace('.', ','), 50, 100);
+        
         // Save the PDF
         if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
           // Create a safer filename base by replacing invalid characters with underscores
@@ -134,6 +166,8 @@ export async function generatePdfFiles(
           const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
           const pdfPath = `${normalizedDir}/${safeFileName}_${currentDate}.pdf`;
           
+          console.log("Trying to save PDF to:", pdfPath);
+          
           const pdfBlob = pdf.output('arraybuffer');
           await window.electron.writeFile({
             filePath: pdfPath,
@@ -141,14 +175,18 @@ export async function generatePdfFiles(
           });
           
           pdfCount++;
+          console.log("Invoice PDF saved:", pdfPath);
+        } else {
+          console.warn("Electron API not available, couldn't save invoice PDF");
         }
       }
     }
     
+    console.log(`Total PDFs created: ${pdfCount}`);
     return pdfCount;
     
   } catch (error) {
     console.error('Error generating PDFs:', error);
-    throw new Error(error.message || 'Villa við að búa til PDF skjöl');
+    throw new Error(error instanceof Error ? error.message : 'Villa við að búa til PDF skjöl');
   }
 }

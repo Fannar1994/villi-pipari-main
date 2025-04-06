@@ -121,7 +121,6 @@ export async function generateInvoices(
       bookType: 'xlsx', 
       type: 'buffer', 
       bookSST: false, 
-      cellFormula: true  // Keep formulas 
     };
     
     // Write the workbook to a buffer with formulas preserved
@@ -172,12 +171,12 @@ export async function generateInvoices(
       }
     } catch (error) {
       console.error("Error while using Electron API:", error);
-      throw new Error('Villa við að vista skrá: ' + (error.message || 'Óþekkt villa'));
+      throw new Error('Villa við að vista skrá: ' + (error instanceof Error ? error.message : 'Óþekkt villa'));
     }
 
     return invoiceCount;
   } catch (error) {
     console.error('Error generating invoices:', error);
-    throw new Error(error.message || 'Villa við að búa til reikninga');
+    throw new Error(error instanceof Error ? error.message : 'Villa við að búa til reikninga');
   }
 }
