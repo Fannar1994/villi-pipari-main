@@ -1,10 +1,16 @@
 
 import { TimesheetEntry } from '@/types/timesheet';
 import { jsPDF } from 'jspdf';
-import autoTable, { TableOutput } from 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { formatDateIcelandic } from '../utils/dateUtils';
 import { formatNumber } from '../utils/formatters';
 import { groupEntriesByLocation } from './groupUtils';
+
+// Define TableOutput interface since it's not exported from jspdf-autotable
+interface TableOutput {
+  finalY?: number;
+  startY?: number;
+}
 
 /**
  * Generates PDF files from timesheet entries
@@ -69,7 +75,7 @@ export async function generatePdfFiles(
         textColor: [0, 0, 0],
         fontStyle: 'bold',
       },
-    }) as unknown as TableOutput;
+    }) as TableOutput;
     
     // Add total row - use the finalY from TableOutput with a fallback value
     summaryPdf.setFont('helvetica', 'bold');
@@ -156,7 +162,7 @@ export async function generatePdfFiles(
           textColor: [0, 0, 0],
           fontStyle: 'bold',
         },
-      }) as unknown as TableOutput;
+      }) as TableOutput;
       
       // Add location information section - match Excel layout
       const locationY = table?.finalY ? table.finalY + 15 : 80;
