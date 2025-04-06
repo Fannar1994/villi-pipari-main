@@ -8,8 +8,8 @@ import { isIcelandicHoliday, formatDateIcelandic } from '../utils/dateUtils';
  */
 export function groupEntriesByLocation(entries: TimesheetEntry[]): Record<string, TimesheetEntry[]> {
   return entries.reduce((groups, entry) => {
-    // Use location (hvar) and apartment (íbúð) fields for grouping
-    const key = `${entry.location}-${entry.apartment}`;
+    // Use only location (hvar) and apartment (íbúð) fields for grouping
+    const key = `${entry.location}-${entry.apartment || ''}`;
     if (!groups[key]) {
       groups[key] = [];
     }
@@ -43,8 +43,11 @@ export function createInvoiceData(entries: TimesheetEntry[]): (string | number)[
       ''
     ];
 
+    // Sort entries by date to show them in chronological order
+    const sortedEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+
     // Map entries starting from row 4 (index 3)
-    entries.forEach((entry, index) => {
+    sortedEntries.forEach((entry, index) => {
       if (index < 7) { // Limit to 7 entries per invoice
         const rowIndex = index + 3; // Start at row 4
         data[rowIndex] = [
