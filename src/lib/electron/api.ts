@@ -5,7 +5,13 @@
  */
 
 // Re-export all functionality from modules
-export { getElectronAPI, isElectronAPIAvailable, testConnection } from './detector';
+export { 
+  getElectronAPI, 
+  isElectronAPIAvailable, 
+  testConnection, 
+  forceApiRecovery,
+  activateEmergencyMode 
+} from './detector';
 export { writeFile, selectDirectory, fileExists } from './fileSystem';
 export type { 
   ElectronAPI,
