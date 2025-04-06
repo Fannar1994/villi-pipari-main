@@ -104,7 +104,9 @@ export const useTimesheetProcessor = () => {
 
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
+      console.log("Starting PDF generation with", timesheetEntries.length, "entries");
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
+      console.log("PDF generation completed, count:", pdfCount);
       
       setIsProcessing(false);
       setProcessStatus({
@@ -113,10 +115,18 @@ export const useTimesheetProcessor = () => {
         pdfCount,
       });
       
-      toast({
-        title: 'Árangur!',
-        description: `${pdfCount} PDF skjöl hafa verið búin til.`,
-      });
+      if (pdfCount > 0) {
+        toast({
+          title: 'Árangur!',
+          description: `${pdfCount} PDF skjöl hafa verið búin til.`,
+        });
+      } else {
+        toast({
+          title: 'Athugið',
+          description: 'Engin PDF skjöl voru búin til. Vinsamlegast athugið gögnin.',
+          variant: 'destructive',
+        });
+      }
       
     } catch (error) {
       console.error('Error generating PDFs:', error);

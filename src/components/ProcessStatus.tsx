@@ -8,6 +8,7 @@ interface ProcessStatusProps {
     status: 'idle' | 'processing' | 'success' | 'error';
     message: string;
     invoiceCount?: number;
+    pdfCount?: number;
   };
 }
 
@@ -35,6 +36,11 @@ export function ProcessStatus({ status }: ProcessStatusProps) {
           {status.invoiceCount !== undefined && (
             <p className="font-bold mt-1">
               Fjöldi reikninga: {status.invoiceCount}
+            </p>
+          )}
+          {status.pdfCount !== undefined && (
+            <p className="font-bold mt-1">
+              Fjöldi PDF skjala: {status.pdfCount}
             </p>
           )}
         </div>

@@ -52,16 +52,21 @@ export async function generatePdfFiles(
     
     // Save the summary PDF
     if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
-      const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
-      const summaryPath = `${normalizedDir}/Samantekt_${currentDate}.pdf`;
-      
-      const summaryPdfBlob = summaryPdf.output('arraybuffer');
-      await window.electron.writeFile({
-        filePath: summaryPath,
-        data: new Uint8Array(summaryPdfBlob)
-      });
-      
-      pdfCount++;
+      try {
+        const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
+        const summaryPath = `${normalizedDir}/Samantekt_${currentDate}.pdf`;
+        
+        const summaryPdfBlob = summaryPdf.output('arraybuffer');
+        await window.electron.writeFile({
+          filePath: summaryPath,
+          data: new Uint8Array(summaryPdfBlob)
+        });
+        
+        console.log("Summary PDF saved successfully:", summaryPath);
+        pdfCount++;
+      } catch (error) {
+        console.error("Error saving summary PDF:", error);
+      }
     }
     
     // Create individual invoice PDFs
@@ -80,9 +85,6 @@ export async function generatePdfFiles(
         // Add header
         pdf.setFont('helvetica', 'bold');
         pdf.text('Fylgiskjal reiknings', 14, 15);
-        
-        // Get invoice data
-        const invoiceData = createInvoiceData(entries);
         
         // Add location information
         pdf.setFontSize(10);
@@ -121,32 +123,38 @@ export async function generatePdfFiles(
         
         // Save the PDF
         if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
-          // Create a safer filename base by replacing invalid characters with underscores
-          const baseName = `${locationName}_${apartmentName}`.replace(/[^a-z0-9áðéíóúýþæöÁÐÉÍÓÚÝÞÆÖ]/gi, '_');
-          
-          // Always add a counter suffix for consistency and uniqueness
-          let uniqueSuffix = 1;
-          if (usedFilenames.has(baseName)) {
-            uniqueSuffix = usedFilenames.get(baseName)! + 1;
+          try {
+            // Create a safer filename base by replacing invalid characters with underscores
+            const baseName = `${locationName}_${apartmentName}`.replace(/[^a-z0-9áðéíóúýþæöÁÐÉÍÓÚÝÞÆÖ]/gi, '_');
+            
+            // Always add a counter suffix for consistency and uniqueness
+            let uniqueSuffix = 1;
+            if (usedFilenames.has(baseName)) {
+              uniqueSuffix = usedFilenames.get(baseName)! + 1;
+            }
+            usedFilenames.set(baseName, uniqueSuffix);
+            
+            const safeFileName = uniqueSuffix > 1 ? `${baseName}_${uniqueSuffix}` : baseName;
+            
+            const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
+            const pdfPath = `${normalizedDir}/${safeFileName}_${currentDate}.pdf`;
+            
+            const pdfBlob = pdf.output('arraybuffer');
+            await window.electron.writeFile({
+              filePath: pdfPath,
+              data: new Uint8Array(pdfBlob)
+            });
+            
+            console.log("Invoice PDF saved successfully:", pdfPath);
+            pdfCount++;
+          } catch (error) {
+            console.error("Error saving invoice PDF:", error);
           }
-          usedFilenames.set(baseName, uniqueSuffix);
-          
-          const safeFileName = uniqueSuffix > 1 ? `${baseName}_${uniqueSuffix}` : baseName;
-          
-          const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
-          const pdfPath = `${normalizedDir}/${safeFileName}_${currentDate}.pdf`;
-          
-          const pdfBlob = pdf.output('arraybuffer');
-          await window.electron.writeFile({
-            filePath: pdfPath,
-            data: new Uint8Array(pdfBlob)
-          });
-          
-          pdfCount++;
         }
       }
     }
     
+    console.log(`Total PDFs generated: ${pdfCount}`);
     return pdfCount;
     
   } catch (error) {
