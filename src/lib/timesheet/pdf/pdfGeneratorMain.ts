@@ -8,12 +8,12 @@ import {
   getCurrentDateString,
 } from './pdfUtils';
 import { toast } from '@/hooks/use-toast';
-import { isElectronAPIAvailable } from '@/lib/electron/api';
+import { getElectronAPI, isElectronAPIAvailable } from '@/lib/electron/api';
 
 /**
  * Generates PDF files from timesheet entries
  * Main function that orchestrates all PDF generation process
- * Uses our new centralized API access
+ * Uses our enhanced API access methods
  */
 export async function generatePdfFiles(
   timesheetEntries: TimesheetEntry[],
@@ -29,15 +29,26 @@ export async function generatePdfFiles(
       throw new Error('PDF generation requires browser environment');
     }
     
-    // Check if any viable API is available using our new helper
+    // Check API availability using our enhanced helper
     if (!isElectronAPIAvailable()) {
       console.error("No viable Electron API available for file operations");
-      toast({
-        title: "Villa",
-        description: "Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Endurræstu forritið.",
-        variant: "destructive",
-      });
-      throw new Error('Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Endurræstu forritið.');
+      
+      // Try to auto-recover API
+      console.log("Attempting API auto-recovery...");
+      const api = getElectronAPI(); // This attempts recovery
+      
+      // Check again after recovery attempt
+      if (!api) {
+        const errorMsg = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Endurræstu forritið.';
+        
+        toast({
+          title: "Villa",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        
+        throw new Error(errorMsg);
+      }
     }
     
     // Check if we have valid entries

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import { getElectronAPI, isElectronAPIAvailable } from '@/lib/electron/api';
 
 interface DirectorySelectProps {
   value: string;
@@ -23,12 +24,11 @@ export function DirectorySelect({
   const [isSelecting, setIsSelecting] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(false);
 
-  // Simple direct API check
+  // Enhanced API check using our improved methods
   useEffect(() => {
     const checkApi = () => {
-      const available = typeof window !== 'undefined' && 
-                       !!window.electron && 
-                       typeof window.electron.selectDirectory === 'function';
+      const available = isElectronAPIAvailable();
+      console.log('Directory selector - API available:', available);
       setApiAvailable(available);
     };
     
@@ -46,11 +46,13 @@ export function DirectorySelect({
     try {
       setIsSelecting(true);
       
-      // Direct API access
-      if (window.electron && typeof window.electron.selectDirectory === 'function') {
+      // Use our enhanced API getter
+      const api = getElectronAPI();
+      
+      if (api && typeof api.selectDirectory === 'function') {
         try {
           console.log('Calling selectDirectory...');
-          const result = await window.electron.selectDirectory();
+          const result = await api.selectDirectory();
           console.log('selectDirectory result:', result);
           
           if (result) {
@@ -89,6 +91,26 @@ export function DirectorySelect({
     }
   };
 
+  // Add a retry mechanism for API availability
+  const handleRetry = () => {
+    // Check API availability again
+    const available = isElectronAPIAvailable();
+    setApiAvailable(available);
+    
+    if (available) {
+      toast({
+        title: "Árangur",
+        description: "Samband við skráakerfi hefur verið endurheimt.",
+      });
+    } else {
+      toast({
+        title: "Villa",
+        description: "Ekki tókst að endurheimta samband við skráakerfi. Vinsamlegast endurræstu forritið.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-2">
       <Label htmlFor={`dir-${label}`}>{label}</Label>
@@ -103,17 +125,17 @@ export function DirectorySelect({
         <Button
           type="button"
           variant={apiAvailable ? "default" : "destructive"}
-          onClick={handleButtonClick}
+          onClick={apiAvailable ? handleButtonClick : handleRetry}
           disabled={disabled || isSelecting}
           className="whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90"
         >
           {icon}
-          {isSelecting ? 'Velur...' : apiAvailable ? 'Velja möppu' : 'API vantar'}
+          {isSelecting ? 'Velur...' : apiAvailable ? 'Velja möppu' : 'Endurreyna'}
         </Button>
       </div>
       {!apiAvailable && (
         <p className="text-xs text-destructive">
-          Electron API ekki tiltækt. Endurræstu forritið.
+          Electron API ekki tiltækt. Smelltu á "Endurreyna" eða endurræstu forritið.
         </p>
       )}
     </div>

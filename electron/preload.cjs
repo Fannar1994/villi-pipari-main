@@ -1,8 +1,9 @@
+
 const { contextBridge, ipcRenderer } = require('electron');
 
 console.log('🚀 Preload script starting...');
 
-// Simple direct API exposure - no fancy bells and whistles
+// Create a more robust Electron API object with better error handling
 const electronAPI = {
   writeFile: async (options) => {
     console.log('Preload: writeFile called with:', options.filePath);
@@ -32,44 +33,72 @@ const electronAPI = {
     }
   },
   _testConnection: () => {
-    return { available: true, time: new Date().toString() };
+    return { 
+      available: true, 
+      time: new Date().toString(),
+      preloadVersion: '2.0' // Version tracking helps with debugging
+    };
   }
 };
 
-// Try exposing the API - fail loudly if there's an issue
-try {
-  if (!contextBridge) {
-    console.error('❌ contextBridge is not defined - cannot expose API');
-    throw new Error('contextBridge unavailable');
-  }
-  
-  // Direct exposure - keep it simple
-  contextBridge.exposeInMainWorld('electron', electronAPI);
-  console.log('✅ Electron API exposed via contextBridge');
-  
-  // Also expose global for dev mode
-  if (process.env.NODE_ENV === 'development') {
-    window.electron = electronAPI;
-    console.log('✅ Electron API also set directly on window (dev only)');
-  }
-} catch (error) {
-  console.error('❌ Failed to expose API:', error);
-  // Last resort - set directly in dev mode
+// Implement a more robust API exposure strategy
+const exposeAPI = () => {
   try {
-    window.electron = electronAPI;
-    console.log('⚠️ Set API directly on window as fallback');
+    // Primary method: Use contextBridge when available
+    if (contextBridge && typeof contextBridge.exposeInMainWorld === 'function') {
+      contextBridge.exposeInMainWorld('electron', electronAPI);
+      console.log('✅ Electron API exposed via contextBridge');
+      return true;
+    } else {
+      console.warn('⚠️ contextBridge not available, falling back to direct assignment');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Failed to expose API via contextBridge:', error);
+    return false;
+  }
+};
+
+// First try the proper way
+const exposed = exposeAPI();
+
+// Backup methods for when contextBridge fails
+if (!exposed) {
+  try {
+    // Backup method 1: Direct window assignment (less secure, but works in some cases)
+    if (typeof window !== 'undefined') {
+      window.electron = electronAPI;
+      console.log('⚠️ Electron API exposed directly on window object');
+      
+      // Also expose as backup property
+      window.electronBackupAPI = electronAPI;
+      console.log('⚠️ Backup API also exposed on window.electronBackupAPI');
+    }
   } catch (e) {
-    console.error('💥 Complete failure to expose API:', e);
+    console.error('💥 All exposure methods failed:', e);
+  }
+  
+  // Backup method 2: Global assignment for Node context
+  try {
+    global.electronBackupAPI = electronAPI;
+    console.log('⚠️ Backup API exposed on global.electronBackupAPI');
+  } catch (e) {
+    console.error('💥 Global backup exposure failed:', e);
   }
 }
 
-// Direct debug handler
-ipcRenderer.on('main-world-check', () => {
-  console.log('✅ Received main-world-check from main process');
-  ipcRenderer.send('renderer-status', {
-    electronExists: typeof window.electron !== 'undefined',
-    methods: electronAPI ? Object.keys(electronAPI) : []
-  });
+// Debug handler to check if API is accessible
+ipcRenderer.on('api-check', (event, checkId) => {
+  console.log(`✅ API check received: ${checkId}`);
+  const status = {
+    electronExists: typeof window !== 'undefined' && !!window.electron,
+    backupExists: typeof window !== 'undefined' && !!window.electronBackupAPI,
+    methods: electronAPI ? Object.keys(electronAPI) : [],
+    checkId
+  };
+  
+  ipcRenderer.send('api-status', status);
+  console.log('API status sent:', status);
 });
 
 console.log('🏁 Preload script completed');

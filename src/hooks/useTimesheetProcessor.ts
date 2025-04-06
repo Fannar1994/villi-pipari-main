@@ -100,25 +100,30 @@ export const useTimesheetProcessor = () => {
       return;
     }
 
-    // Check API availability using our new centralized helper
-    const hasElectronApi = isElectronAPIAvailable();
-    console.log('Electron API available:', hasElectronApi);
-    
-    if (!hasElectronApi) {
-      const errorMsg = 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Endurræstu forritið.';
+    // Enhanced API availability check with improved error messaging
+    if (!isElectronAPIAvailable()) {
+      console.log('Attempting API recovery before failing...');
       
-      toast({
-        title: 'Villa',
-        description: errorMsg,
-        variant: 'destructive',
-      });
+      // Try to recover API as last resort
+      const api = getElectronAPI();
       
-      setProcessStatus({
-        status: 'error',
-        message: errorMsg,
-      });
-      
-      return;
+      // If still not available after recovery attempt
+      if (!api || typeof api.writeFile !== 'function') {
+        const errorMsg = 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Endurræstu forritið.';
+        
+        toast({
+          title: 'Villa',
+          description: errorMsg,
+          variant: 'destructive',
+        });
+        
+        setProcessStatus({
+          status: 'error',
+          message: errorMsg,
+        });
+        
+        return;
+      }
     }
 
     try {

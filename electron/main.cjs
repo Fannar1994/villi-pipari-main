@@ -95,12 +95,12 @@ function setupIPCHandlers() {
     console.log('✅ Registered test-ipc handler');
   }
   
-  // Listen for renderer status messages
-  if (!channels.includes('renderer-status')) {
-    ipcMain.on('renderer-status', (event, status) => {
-      console.log('📡 Renderer status received:', status);
+  // Listen for API status messages
+  if (!channels.includes('api-status')) {
+    ipcMain.on('api-status', (event, status) => {
+      console.log('📡 API status received:', status);
     });
-    console.log('✅ Registered renderer-status listener');
+    console.log('✅ Registered api-status listener');
   }
 }
 
@@ -156,20 +156,54 @@ function createWindow() {
       console.log('🛠️ DevTools opened');
     }
     
-    // Check API injection after a short delay
-    setTimeout(() => {
-      console.log('Sending main-world-check to renderer');
-      mainWindow.webContents.send('main-world-check');
+    // Perform periodic API checks
+    let checkCount = 0;
+    const apiCheckInterval = setInterval(() => {
+      if (!mainWindow) {
+        clearInterval(apiCheckInterval);
+        return;
+      }
       
-      // Also verify API injection using executeJavaScript
-      mainWindow.webContents.executeJavaScript(`
-        console.log("🔍 Checking Electron API from main process:");
-        console.log("window.electron exists:", typeof window.electron !== "undefined");
-        console.log("window.electronBackupAPI exists:", typeof window.electronBackupAPI !== "undefined");
-        if (window.electron) {
-          console.log("Primary API methods:", Object.keys(window.electron).join(", "));
-        }
-      `).catch(err => console.error("Error executing verification script:", err));
+      checkCount++;
+      const checkId = `check-${checkCount}`;
+      console.log(`Sending API check #${checkCount} to renderer`);
+      
+      try {
+        mainWindow.webContents.send('api-check', checkId);
+      } catch (e) {
+        console.error('Error sending API check:', e);
+      }
+      
+      // Stop checking after 5 attempts
+      if (checkCount >= 5) {
+        clearInterval(apiCheckInterval);
+      }
+    }, 2000);
+    
+    // Also verify API injection using executeJavaScript
+    setTimeout(() => {
+      try {
+        mainWindow.webContents.executeJavaScript(`
+          console.log("🔍 Checking Electron API from main process:");
+          console.log("window.electron exists:", typeof window.electron !== "undefined");
+          console.log("window.electronBackupAPI exists:", typeof window.electronBackupAPI !== "undefined");
+          if (window.electron) {
+            console.log("Primary API methods:", Object.keys(window.electron).join(", "));
+            if (window.electron._testConnection) {
+              console.log("Test connection result:", window.electron._testConnection());
+            }
+          }
+          
+          // Try auto-repair if needed
+          if (!window.electron && window.electronBackupAPI) {
+            console.log("Auto-repairing API...");
+            window.electron = window.electronBackupAPI;
+            console.log("Repair result:", !!window.electron);
+          }
+        `).catch(err => console.error("Error executing verification script:", err));
+      } catch (e) {
+        console.error("Error running API verification:", e);
+      }
     }, 1000);
   });
 
