@@ -1,117 +1,54 @@
 
 /**
- * Centralized access to the Electron API
- * This file provides reliable access to the Electron API regardless of how it's exposed
+ * Simple, direct Electron API access
  */
 
-// Types for our electron API
+// Types for the electron API
 interface ElectronAPI {
   writeFile: (options: { filePath: string; data: Uint8Array }) => Promise<{ success: boolean; error?: string }>;
   selectDirectory: () => Promise<string | null>;
   fileExists: (filePath: string) => Promise<boolean>;
-  _testConnection?: () => { available: boolean; time: string; preloadVersion?: string };
+  _testConnection?: () => { available: boolean; time: string };
 }
 
 /**
- * Gets the best available Electron API using multiple strategies
+ * Direct access to the Electron API - simplified approach
  */
 export function getElectronAPI(): ElectronAPI | null {
-  // Skip if not in browser context
   if (typeof window === 'undefined') return null;
   
-  console.log('Attempting to access Electron API...');
-  
-  // Try primary API first
-  if (window.electron && typeof window.electron.writeFile === 'function') {
-    console.log('Using primary electron API');
+  // Direct window.electron access
+  if (window.electron) {
     return window.electron;
   }
   
-  // Try backup API
-  if (window.electronBackupAPI && typeof window.electronBackupAPI.writeFile === 'function') {
-    console.log('Using backup electron API');
-    
-    // Auto-restore primary API if possible
-    try {
-      window.electron = window.electronBackupAPI;
-      console.log('Restored primary API from backup');
-    } catch (e) {
-      console.error('Failed to restore primary API:', e);
-    }
-    
-    return window.electronBackupAPI;
-  }
-  
-  // Try global backup (might work in development)
-  try {
-    if (typeof global !== 'undefined' && global.__ELECTRON_API__) {
-      console.log('Using global backup API');
-      
-      // Restore to window while we're at it
-      if (typeof window !== 'undefined') {
-        try {
-          window.electron = global.__ELECTRON_API__;
-          window.electronBackupAPI = global.__ELECTRON_API__;
-          console.log('Restored window APIs from global');
-        } catch (e) {
-          console.error('Error restoring APIs to window:', e);
-        }
-      }
-      
-      return global.__ELECTRON_API__;
-    }
-  } catch (e) {
-    console.error('Error accessing global backup:', e);
-  }
-  
-  // Last ditch effort - try eval-based restoration
-  try {
-    const script = `
-      if (window.electronBackupAPI && typeof window.electronBackupAPI.writeFile === 'function') {
-        window.electron = window.electronBackupAPI;
-        window.electron;
-      } else if (window.__ELECTRON_API__) {
-        window.electron = window.__ELECTRON_API__;
-        window.electron;
-      } else {
-        null;
-      }
-    `;
-    
-    const result = eval(script);
-    if (result && typeof result.writeFile === 'function') {
-      console.log('Restored API using eval');
-      return result;
-    }
-  } catch (e) {
-    console.error('Eval-based restoration failed:', e);
-  }
-  
-  console.warn('No Electron API available');
   return null;
 }
 
 /**
- * Checks if the Electron API is available
+ * Simple check if Electron API is available
  */
 export function isElectronAPIAvailable(): boolean {
-  const api = getElectronAPI();
-  return !!api;
+  if (typeof window === 'undefined') return false;
+  
+  // Direct check
+  if (window.electron && typeof window.electron.writeFile === 'function') {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
- * Writes data to a file using the Electron API
+ * Simple file writing function
  */
 export async function writeFile(filePath: string, data: Uint8Array): Promise<boolean> {
-  const api = getElectronAPI();
-  
-  if (!api) {
-    console.error('Cannot write file: Electron API unavailable');
+  if (typeof window === 'undefined' || !window.electron) {
     return false;
   }
   
   try {
-    const result = await api.writeFile({ filePath, data });
+    const result = await window.electron.writeFile({ filePath, data });
     return result.success === true;
   } catch (e) {
     console.error('Error writing file:', e);
@@ -120,18 +57,15 @@ export async function writeFile(filePath: string, data: Uint8Array): Promise<boo
 }
 
 /**
- * Opens a directory selection dialog
+ * Simple directory selection function
  */
 export async function selectDirectory(): Promise<string | null> {
-  const api = getElectronAPI();
-  
-  if (!api) {
-    console.error('Cannot select directory: Electron API unavailable');
+  if (typeof window === 'undefined' || !window.electron) {
     return null;
   }
   
   try {
-    return await api.selectDirectory();
+    return await window.electron.selectDirectory();
   } catch (e) {
     console.error('Error selecting directory:', e);
     return null;
@@ -139,18 +73,15 @@ export async function selectDirectory(): Promise<string | null> {
 }
 
 /**
- * Checks if a file exists
+ * Simple file existence check
  */
 export async function fileExists(filePath: string): Promise<boolean> {
-  const api = getElectronAPI();
-  
-  if (!api) {
-    console.error('Cannot check file: Electron API unavailable');
+  if (typeof window === 'undefined' || !window.electron) {
     return false;
   }
   
   try {
-    return await api.fileExists(filePath);
+    return await window.electron.fileExists(filePath);
   } catch (e) {
     console.error('Error checking file existence:', e);
     return false;
@@ -158,32 +89,12 @@ export async function fileExists(filePath: string): Promise<boolean> {
 }
 
 /**
- * Tests the connection to the Electron API
+ * Simple connection test
  */
 export function testConnection(): { available: boolean; details: string } {
-  const api = getElectronAPI();
-  
-  if (!api) {
+  if (typeof window === 'undefined' || !window.electron) {
     return { available: false, details: 'API not available' };
   }
   
-  try {
-    if (typeof api._testConnection === 'function') {
-      const result = api._testConnection();
-      return { 
-        available: true, 
-        details: `Connected to preload v${result.preloadVersion || 'unknown'} at ${result.time}` 
-      };
-    }
-    
-    return { 
-      available: true, 
-      details: 'API available but test function missing' 
-    };
-  } catch (e) {
-    return { 
-      available: false, 
-      details: `Error testing connection: ${e}` 
-    };
-  }
+  return { available: true, details: 'API available' };
 }

@@ -1,7 +1,6 @@
 
 import { TimesheetEntry } from '@/types/timesheet';
 import { groupEntriesByLocation } from '../groupUtils';
-import { getElectronAPI, isElectronAPIAvailable } from '../../electron/api';
 
 /**
  * Validates if PDF generation prerequisites are met
@@ -22,28 +21,13 @@ export function prepareEntriesForPdfGeneration(
 }
 
 /**
- * Check connection to Electron API with detailed diagnostics
- */
-export async function checkElectronConnection(): Promise<boolean> {
-  console.log('Running detailed Electron API check');
-  
-  // Use our centralized API checker
-  return isElectronAPIAvailable();
-}
-
-/**
- * Checks if Electron file API is available
- * Using our new centralized API helper
+ * Returns whether Electron API is available
+ * Direct window.electron check
  */
 export function isElectronFileApiAvailable(): boolean {
-  return isElectronAPIAvailable();
-}
-
-/**
- * Returns the best available API (primary or backup)
- */
-export function getBestAvailableApi() {
-  return getElectronAPI();
+  return typeof window !== 'undefined' && 
+         !!window.electron && 
+         typeof window.electron.writeFile === 'function';
 }
 
 /**
@@ -61,53 +45,31 @@ export function getCurrentDateString(): string {
 }
 
 /**
- * Save PDF data to a file using our centralized Electron API helper
+ * Save PDF data to a file using the direct Electron API
+ * Simplified approach with focused error handling
  */
 export async function savePdfToFile(
   pdfData: Uint8Array,
   filePath: string
 ): Promise<boolean> {
-  console.log("Attempting to save PDF to:", filePath);
+  console.log("Saving PDF to:", filePath, "data length:", pdfData.length);
   
-  // Get the API
-  const api = getElectronAPI();
-  
-  if (!api) {
+  // Direct check for API availability
+  if (typeof window === 'undefined' || !window.electron) {
     console.error("Electron API unavailable for saving PDF");
     return false;
   }
   
-  // Try multiple times to save the file
-  const maxRetries = 3;
-  let lastError = null;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`Attempt ${attempt}/${maxRetries}: Calling API.writeFile with data length:`, pdfData.length);
-      
-      const result = await api.writeFile({
-        filePath: filePath,
-        data: pdfData
-      });
-      
-      console.log(`Attempt ${attempt} result:`, result);
-      if (result && result.success === true) {
-        return true;
-      }
-      
-      lastError = result?.error || "Unknown error";
-    } catch (error) {
-      console.error(`Attempt ${attempt} error:`, error);
-      lastError = error;
-    }
+  try {
+    const result = await window.electron.writeFile({
+      filePath: filePath,
+      data: pdfData
+    });
     
-    // Wait before retry
-    if (attempt < maxRetries) {
-      console.log(`Waiting before retry ${attempt + 1}...`);
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
+    console.log("PDF save result:", result);
+    return result && result.success === true;
+  } catch (error) {
+    console.error("Error saving PDF:", error);
+    return false;
   }
-  
-  console.error(`All ${maxRetries} attempts failed. Last error:`, lastError);
-  return false;
 }

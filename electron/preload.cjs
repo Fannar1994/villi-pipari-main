@@ -1,19 +1,11 @@
-
 const { contextBridge, ipcRenderer } = require('electron');
 
-// Clear debug identification
-console.log('🚀 Electron preload script v5.0 starting...');
+console.log('🚀 Preload script starting...');
 
-// Ensure we have the required APIs
-if (!contextBridge || !ipcRenderer) {
-  console.error('❌ CRITICAL: Required Electron APIs missing');
-  throw new Error('Required Electron APIs missing');
-}
-
-// Create the API object
+// Simple direct API exposure - no fancy bells and whistles
 const electronAPI = {
   writeFile: async (options) => {
-    console.log('Preload: writeFile called');
+    console.log('Preload: writeFile called with:', options.filePath);
     try {
       return await ipcRenderer.invoke('write-file', options);
     } catch (error) {
@@ -40,78 +32,44 @@ const electronAPI = {
     }
   },
   _testConnection: () => {
-    return { 
-      available: true, 
-      time: new Date().toString(),
-      preloadVersion: '5.0' 
-    };
+    return { available: true, time: new Date().toString() };
   }
 };
 
-// Global storage for API recovery
-global.storedElectronAPI = electronAPI;
-
-// Define function to expose API
-function exposeAPI() {
-  try {
-    // Expose via contextBridge
-    contextBridge.exposeInMainWorld('electron', electronAPI);
-    contextBridge.exposeInMainWorld('electronBackupAPI', electronAPI);
-    console.log('✅ Electron API exposed via contextBridge');
-    
-    // Also set directly on window as a fallback (only works in dev mode)
-    try {
-      if (process.env.NODE_ENV === 'development') {
-        window.electron = electronAPI;
-        window.electronBackupAPI = electronAPI;
-        console.log('✅ Electron API also set directly on window (dev only)');
-      }
-    } catch (err) {
-      console.warn('⚠️ Could not set API directly on window:', err);
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Failed to expose API:', error);
-    return false;
+// Try exposing the API - fail loudly if there's an issue
+try {
+  if (!contextBridge) {
+    console.error('❌ contextBridge is not defined - cannot expose API');
+    throw new Error('contextBridge unavailable');
   }
-}
-
-// Try to expose immediately
-exposeAPI();
-
-// Guarantee API exposure with multiple attempts
-for (let delay of [100, 300, 1000]) {
-  setTimeout(() => {
-    try {
-      console.log(`🔄 Retry API exposure after ${delay}ms`);
-      exposeAPI();
-    } catch (e) {
-      console.error(`❌ ${delay}ms retry failed:`, e);
-    }
-  }, delay);
-}
-
-// Add event listeners to help debug IPC issues
-ipcRenderer.on('main-world-check', () => {
-  console.log('✅ IPC message received from main process');
   
-  // Send back status info
-  try {
-    const status = {
-      electronExists: typeof window.electron !== 'undefined',
-      backupExists: typeof window.electronBackupAPI !== 'undefined',
-      methods: Object.keys(electronAPI)
-    };
-    
-    ipcRenderer.send('renderer-status', status);
-    console.log('✅ Status info sent back to main process', status);
-  } catch (e) {
-    console.error('❌ Error sending status back to main:', e);
+  // Direct exposure - keep it simple
+  contextBridge.exposeInMainWorld('electron', electronAPI);
+  console.log('✅ Electron API exposed via contextBridge');
+  
+  // Also expose global for dev mode
+  if (process.env.NODE_ENV === 'development') {
+    window.electron = electronAPI;
+    console.log('✅ Electron API also set directly on window (dev only)');
   }
+} catch (error) {
+  console.error('❌ Failed to expose API:', error);
+  // Last resort - set directly in dev mode
+  try {
+    window.electron = electronAPI;
+    console.log('⚠️ Set API directly on window as fallback');
+  } catch (e) {
+    console.error('💥 Complete failure to expose API:', e);
+  }
+}
+
+// Direct debug handler
+ipcRenderer.on('main-world-check', () => {
+  console.log('✅ Received main-world-check from main process');
+  ipcRenderer.send('renderer-status', {
+    electronExists: typeof window.electron !== 'undefined',
+    methods: electronAPI ? Object.keys(electronAPI) : []
+  });
 });
 
-// Special direct access for extreme fallback
-global.__ELECTRON_API__ = electronAPI;
-
-console.log('🏁 Electron preload script v5.0 completed');
+console.log('🏁 Preload script completed');
