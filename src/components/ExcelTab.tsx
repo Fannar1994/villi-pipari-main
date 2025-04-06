@@ -20,7 +20,7 @@ export const ExcelTab = () => {
     if (!excelFile) {
       toast({
         title: 'Villa',
-        description: 'Vinsamlegast veldu Excel skrá.',
+        description: 'Vinsamlegast veldu PDF skrá.',
         variant: 'destructive',
       });
       return;
@@ -57,7 +57,7 @@ export const ExcelTab = () => {
       setProcessStatus('Villa kom upp við að búa til PDF skjöl.');
       toast({
         title: 'Villa',
-        description: error.message || 'Villa við að búa til PDF skjöl.',
+        description: error instanceof Error ? error.message : 'Villa við að búa til PDF skjöl.',
         variant: 'destructive',
       });
     } finally {
@@ -71,7 +71,7 @@ export const ExcelTab = () => {
         <FileUpload
           value={excelFile}
           onChange={setExcelFile}
-          label="Excel skrá"
+          label="PDF skrá"
           accept=".xlsx,.xls"
           icon={<FileSpreadsheet className="mr-2 h-4 w-4 text-primary" />}
           disabled={isProcessing}
