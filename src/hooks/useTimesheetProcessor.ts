@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { parseTimesheetFile, generateInvoices, generatePdfFiles } from '@/lib/excelProcessor';
-import { isElectronAPIAvailable, getElectronAPI } from '@/lib/electron/api';
 
 export type ProcessStatus = {
   status: 'idle' | 'processing' | 'success' | 'error';
@@ -44,7 +43,8 @@ export const useTimesheetProcessor = () => {
     try {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að reikningagerð...' });
-
+      
+      // DIRECT approach that mirrors the Excel function which works
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
       const invoiceCount = await generateInvoices(timesheetEntries, templateFile, outputDir);
@@ -100,30 +100,20 @@ export const useTimesheetProcessor = () => {
       return;
     }
 
-    // Enhanced API availability check with improved error messaging
-    if (!isElectronAPIAvailable()) {
-      console.log('Attempting API recovery before failing...');
+    // DIRECT API check - simplified to match Excel function approach
+    if (!window.electron || typeof window.electron.writeFile !== 'function') {
+      toast({
+        title: 'Villa',
+        description: 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Endurræstu forritið.',
+        variant: 'destructive',
+      });
       
-      // Try to recover API as last resort
-      const api = getElectronAPI();
+      setProcessStatus({
+        status: 'error',
+        message: 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Endurræstu forritið.',
+      });
       
-      // If still not available after recovery attempt
-      if (!api || typeof api.writeFile !== 'function') {
-        const errorMsg = 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Endurræstu forritið.';
-        
-        toast({
-          title: 'Villa',
-          description: errorMsg,
-          variant: 'destructive',
-        });
-        
-        setProcessStatus({
-          status: 'error',
-          message: errorMsg,
-        });
-        
-        return;
-      }
+      return;
     }
 
     try {

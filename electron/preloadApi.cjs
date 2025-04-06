@@ -1,6 +1,7 @@
 
 /**
  * Defines the electron API that will be exposed to the renderer process
+ * SIMPLIFIED VERSION FOR MAXIMUM RELIABILITY
  */
 
 /**
@@ -9,7 +10,7 @@
  * @returns {Object} The API object to be exposed
  */
 function createElectronAPI(ipcRenderer) {
-  console.log('Creating Electron API object');
+  console.log('Creating Electron API object - SIMPLIFIED VERSION');
   
   return {
     writeFile: async (options) => {
@@ -23,14 +24,24 @@ function createElectronAPI(ipcRenderer) {
     },
     
     selectDirectory: async () => {
-      console.log('Preload: selectDirectory called');
+      console.log('Preload: selectDirectory called - DIRECT IMPLEMENTATION');
+      
+      // Simple, direct implementation with improved logging
       try {
-        console.log('Invoking select-directory IPC call...');
+        console.log('DIRECT: Invoking select-directory IPC call...');
         const result = await ipcRenderer.invoke('select-directory');
-        console.log('Preload: selectDirectory result:', result);
-        return result || null; // Always return null if result is falsy
+        console.log('DIRECT: selectDirectory result:', result);
+        
+        // Always return null if the result is falsy
+        if (!result) {
+          console.log('DIRECT: selectDirectory returning null (no result)');
+          return null;
+        }
+        
+        console.log('DIRECT: selectDirectory returning path:', result);
+        return result;
       } catch (error) {
-        console.error('Preload: selectDirectory error:', error);
+        console.error('DIRECT: selectDirectory error:', error);
         return null;
       }
     },
@@ -49,7 +60,7 @@ function createElectronAPI(ipcRenderer) {
       return { 
         available: true, 
         time: new Date().toString(),
-        preloadVersion: '5.2' // Updated version for the simplified API
+        preloadVersion: '5.3' // Direct implementation version
       };
     }
   };

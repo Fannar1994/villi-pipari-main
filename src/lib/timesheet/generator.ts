@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import { TimesheetEntry } from '@/types/timesheet';
 import { createSafeSheetName } from '../utils/formatters';
@@ -5,6 +6,7 @@ import { groupEntriesByLocation, createInvoiceData, createSummarySheetData } fro
 
 /**
  * Generates Excel invoices from timesheet entries
+ * DIRECT IMPLEMENTATION FOR MAXIMUM RELIABILITY
  */
 export async function generateInvoices(
   timesheetEntries: TimesheetEntry[],
@@ -126,14 +128,15 @@ export async function generateInvoices(
     // Write the workbook to a buffer with formulas preserved
     const wbout = XLSX.write(outputWorkbook, wopts);
 
-    // SIMPLIFIED FILE SAVING - direct approach for maximum reliability
+    // DIRECT IMPLEMENTATION FOR SAVING FILES
+    // Extremely simple approach with minimal wrappers
     const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
     const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
     const fullPath = `${normalizedDir}/${filename}`;
     
-    console.log("Saving file to:", fullPath);
+    console.log("DIRECT: Saving file to:", fullPath);
     
-    // Direct use of window.electron to avoid any potential wrapper issues
+    // DIRECT approach, exactly copying what worked in the Excel function
     if (window.electron && typeof window.electron.writeFile === 'function') {
       try {
         const result = await window.electron.writeFile({

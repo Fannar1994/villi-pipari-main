@@ -27,11 +27,13 @@ export function DirectorySelect({
       setIsSelecting(true);
       console.log('Directory selection requested');
       
-      // Direct access to Electron API for maximum reliability
+      // Directly access window.electron - simplest approach
       if (!window.electron) {
         throw new Error('Electron API not available');
       }
       
+      // Direct call with no wrappers
+      console.log('Calling window.electron.selectDirectory() directly');
       const result = await window.electron.selectDirectory();
       console.log('Directory selection result:', result);
       
