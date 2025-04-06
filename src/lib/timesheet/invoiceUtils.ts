@@ -5,11 +5,10 @@ import { formatNumber } from '../utils/formatters';
 
 /**
  * Creates invoice data structure from timesheet entries
- * Now adding a total formula at D10 to be referenced by the summary sheet
  */
-export function createInvoiceData(entries: TimesheetEntry[]): (string | number | { t: 'n', f: string })[][] {
+export function createInvoiceData(entries: TimesheetEntry[]): (string | number)[][] {
   // Initialize with 15 empty rows of 4 columns each
-  const data: (string | number | { t: 'n', f: string })[][] = Array(15).fill(null).map(() => Array(4).fill(''));
+  const data: (string | number)[][] = Array(15).fill(null).map(() => Array(4).fill(''));
   
   // Set the header in A1
   data[0] = ['Fylgiskjal reiknings', '', '', ''];
@@ -44,13 +43,6 @@ export function createInvoiceData(entries: TimesheetEntry[]): (string | number |
         ];
       }
     });
-    
-    // Add a total formula in cell D10 (index 9, 3) to sum all hours
-    // This will be referenced by the summary sheet
-    data[9][3] = { 
-      t: 'n',  // Type: numeric
-      f: 'SUM(B4:B10)' // Sum hours in column B from rows 4 to 10
-    };
   }
 
   return data;

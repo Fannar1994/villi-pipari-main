@@ -7,6 +7,8 @@ import { PageHeader } from '@/components/PageHeader';
 import { PageFooter } from '@/components/PageFooter';
 import { ProcessStatus } from '@/components/ProcessStatus';
 import { useTimesheetProcessor } from '@/hooks/useTimesheetProcessor';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ExcelTab } from '@/components/ExcelTab';
 
 const Index = () => {
   const [timesheetFile, setTimesheetFile] = useState<File | null>(null);
@@ -17,15 +19,10 @@ const Index = () => {
     isProcessing, 
     processStatus, 
     generateInvoicesFromTimesheet, 
-    generatePdfsFromTimesheet 
   } = useTimesheetProcessor();
 
   const handleGenerateInvoices = async () => {
     await generateInvoicesFromTimesheet(timesheetFile, templateFile, outputDir);
-  };
-
-  const handleGeneratePdfs = async () => {
-    await generatePdfsFromTimesheet(timesheetFile, outputDir);
   };
 
   return (
@@ -33,25 +30,37 @@ const Index = () => {
       <Card className="w-full max-w-md shadow-lg border-primary">
         <PageHeader />
         
-        <TimesheetForm
-          timesheetFile={timesheetFile}
-          setTimesheetFile={setTimesheetFile}
-          templateFile={templateFile}
-          setTemplateFile={setTemplateFile}
-          outputDir={outputDir}
-          setOutputDir={setOutputDir}
-          isProcessing={isProcessing}
-        />
-        
-        <div className="px-6 py-3">
-          <ProcessStatus status={processStatus} />
-        </div>
-        
-        <ActionButtons
-          onGenerateInvoices={handleGenerateInvoices}
-          onGeneratePdfs={handleGeneratePdfs}
-          isProcessing={isProcessing}
-        />
+        <Tabs defaultValue="excel" className="w-full">
+          <TabsList className="grid grid-cols-2 mb-2 mx-6">
+            <TabsTrigger value="excel">Excel Reikningagerð</TabsTrigger>
+            <TabsTrigger value="sheet">Vinnuskýrsla</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="excel">
+            <TimesheetForm
+              timesheetFile={timesheetFile}
+              setTimesheetFile={setTimesheetFile}
+              templateFile={templateFile}
+              setTemplateFile={setTemplateFile}
+              outputDir={outputDir}
+              setOutputDir={setOutputDir}
+              isProcessing={isProcessing}
+            />
+            
+            <div className="px-6 py-3">
+              <ProcessStatus status={processStatus} />
+            </div>
+            
+            <ActionButtons
+              onGenerateInvoices={handleGenerateInvoices}
+              isProcessing={isProcessing}
+            />
+          </TabsContent>
+          
+          <TabsContent value="sheet">
+            <ExcelTab />
+          </TabsContent>
+        </Tabs>
       </Card>
       
       <PageFooter />
