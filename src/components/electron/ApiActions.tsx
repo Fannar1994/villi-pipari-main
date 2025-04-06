@@ -16,7 +16,6 @@ interface ApiActionsProps {
 export function ApiActions({ apiStatus, testOutputPath, setTestOutputPath }: ApiActionsProps) {
   // Test directory selection
   const testSelectDirectory = async () => {
-    console.log('Testing directory selection from ApiActions');
     if (!window.electron) {
       toast({
         title: 'Error',
@@ -27,9 +26,7 @@ export function ApiActions({ apiStatus, testOutputPath, setTestOutputPath }: Api
     }
     
     try {
-      console.log('Calling selectDirectory...');
       const result = await window.electron.selectDirectory();
-      console.log('Directory selection result:', result);
       
       setTestOutputPath(result);
       toast({

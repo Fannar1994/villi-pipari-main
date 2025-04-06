@@ -1,6 +1,8 @@
+
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { parseTimesheetFile, generateInvoices, generatePdfFiles } from '@/lib/excelProcessor';
+import { parseTimesheetFile, generateInvoices } from '@/lib/excelProcessor';
+import { generatePdfFiles } from '@/lib/timesheet/pdf/pdfGenerator';
 
 export type ProcessStatus = {
   status: 'idle' | 'processing' | 'success' | 'error';
@@ -97,21 +99,6 @@ export const useTimesheetProcessor = () => {
       return;
     }
 
-    if (!window.electron || typeof window.electron.writeFile !== 'function') {
-      toast({
-        title: 'Villa',
-        description: 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Endurræstu forritið.',
-        variant: 'destructive',
-      });
-      
-      setProcessStatus({
-        status: 'error',
-        message: 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Endurræstu forritið.',
-      });
-      
-      return;
-    }
-
     try {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að PDF gerð...' });
@@ -119,10 +106,6 @@ export const useTimesheetProcessor = () => {
       console.log('Parsing timesheet file for PDF generation');
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       console.log(`Parsed ${timesheetEntries.length} entries from timesheet`);
-      
-      if (timesheetEntries.length === 0) {
-        throw new Error('Engar færslur fundust í vinnuskýrslu');
-      }
       
       console.log('Starting PDF generation process');
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
@@ -144,14 +127,9 @@ export const useTimesheetProcessor = () => {
       console.error('Error generating PDFs:', error);
       setIsProcessing(false);
       
-      let errorMessage = 'Ekki tókst að búa til PDF skjöl';
-      if (error instanceof Error) {
-        if (error.message.includes('skráarkerfisvirkni')) {
-          errorMessage = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Endurræstu forritið.';
-        } else if (error.message) {
-          errorMessage = `Villa kom upp: ${error.message}`;
-        }
-      }
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Ekki tókst að búa til PDF skjöl';
       
       setProcessStatus({
         status: 'error',

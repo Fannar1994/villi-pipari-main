@@ -14,13 +14,10 @@ export async function testPdfGeneration(outputPath: string | null): Promise<void
     return;
   }
 
-  // Use either the main API or backup API
-  const api = window.electron || (window as any).electronBackupAPI;
-  
-  if (!api || typeof api.writeFile !== 'function') {
+  if (!window.electron || typeof window.electron.writeFile !== 'function') {
     toast({
       title: 'Error',
-      description: 'writeFile method not available',
+      description: 'PDF generation API not available',
       variant: 'destructive',
     });
     return;
@@ -40,7 +37,6 @@ export async function testPdfGeneration(outputPath: string | null): Promise<void
     const pdf = new jsPDF();
     pdf.text('Test PDF created at ' + new Date().toString(), 10, 10);
     pdf.text('If you can read this, PDF generation works!', 10, 20);
-    pdf.text('Using API from: ' + (window.electron ? 'window.electron' : 'backup API'), 10, 30);
     
     // Convert to ArrayBuffer then Uint8Array
     const pdfBlob = pdf.output('arraybuffer');
@@ -50,9 +46,7 @@ export async function testPdfGeneration(outputPath: string | null): Promise<void
     const timestamp = Date.now();
     const filePath = `${outputPath}/test_pdf_${timestamp}.pdf`;
     
-    console.log(`Writing test PDF to: ${filePath} (${pdfData.length} bytes)`);
-    
-    const result = await api.writeFile({
+    const result = await window.electron.writeFile({
       filePath,
       data: pdfData
     });
