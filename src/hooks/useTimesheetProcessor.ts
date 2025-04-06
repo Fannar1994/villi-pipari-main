@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { parseTimesheetFile, generateInvoices, generatePdfFiles } from '@/lib/excelProcessor';
+import { checkElectronApi } from '@/lib/timesheet/pdfUtils';
 
 export type ProcessStatus = {
   status: 'idle' | 'processing' | 'success' | 'error';
@@ -41,7 +42,7 @@ export const useTimesheetProcessor = () => {
     }
     
     // Check if Electron API is available before starting
-    if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+    if (!checkElectronApi()) {
       toast({
         title: 'Villa',
         description: 'Electron API er ekki aðgengileg til að vista skrár.',
@@ -117,7 +118,7 @@ export const useTimesheetProcessor = () => {
     }
     
     // Check if Electron API is available before starting
-    if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+    if (!checkElectronApi()) {
       toast({
         title: 'Villa',
         description: 'Electron API er ekki aðgengileg til að vista skrár.',
