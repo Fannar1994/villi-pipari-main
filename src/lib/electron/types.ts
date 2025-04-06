@@ -13,9 +13,21 @@ export interface ElectronFileResult {
   error?: string;
 }
 
+// Add missing connection result types
+export interface ElectronConnectionResult {
+  available: boolean;
+  time: string;
+  preloadVersion?: string;
+}
+
+export interface ConnectionTestResult {
+  available: boolean;
+  details: string;
+}
+
 export interface ElectronAPI {
   writeFile: (options: ElectronFileOperation) => Promise<ElectronFileResult>;
   selectDirectory: () => Promise<string | null>;
   fileExists: (filePath: string) => Promise<boolean>;
-  _testConnection?: () => { available: boolean; time: string; };
+  _testConnection?: () => ElectronConnectionResult;
 }

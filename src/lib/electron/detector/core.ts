@@ -2,7 +2,7 @@
 /**
  * Ultra-simplified API detection
  */
-import { ElectronAPI } from '../types';
+import { ElectronAPI, ConnectionTestResult } from '../types';
 
 export function getElectronAPI(): ElectronAPI | null {
   return window.electron || null;
@@ -12,7 +12,7 @@ export function isElectronAPIAvailable(): boolean {
   return !!window.electron;
 }
 
-export function testConnection(): { available: boolean; details: string } {
+export function testConnection(): ConnectionTestResult {
   const api = window.electron;
   
   if (!api) {
