@@ -23,7 +23,7 @@ export interface ElectronAPI {
   writeFile: (options: ElectronFileOperation) => Promise<ElectronFileResult>;
   selectDirectory: () => Promise<string | null>;
   fileExists: (filePath: string) => Promise<boolean>;
-  _testConnection?: () => ElectronConnectionResult;
+  _testConnection: () => ElectronConnectionResult; // Changed from optional to required
 }
 
 export interface ConnectionTestResult {

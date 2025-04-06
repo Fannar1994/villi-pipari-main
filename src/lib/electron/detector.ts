@@ -1,3 +1,4 @@
+
 /**
  * API detection utilities for Electron
  */
@@ -377,7 +378,8 @@ export function isElectronAPIAvailable(): boolean {
   if (api &&
       typeof api.writeFile === 'function' &&
       typeof api.selectDirectory === 'function' &&
-      typeof api.fileExists === 'function') {
+      typeof api.fileExists === 'function' &&
+      typeof api._testConnection === 'function') {  // Added check for _testConnection
     return true;
   }
   
