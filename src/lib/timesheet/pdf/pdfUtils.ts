@@ -25,8 +25,8 @@ export function prepareEntriesForPdfGeneration(
  */
 export function isElectronFileApiAvailable(): boolean {
   return typeof window !== 'undefined' && 
-         window.electron !== undefined && 
-         window.electron.writeFile !== undefined;
+         'electron' in window && 
+         typeof window.electron?.writeFile === 'function';
 }
 
 /**
@@ -41,4 +41,32 @@ export function normalizeOutputDirectory(outputDirectory: string): string {
  */
 export function getCurrentDateString(): string {
   return new Date().toISOString().split('T')[0];
+}
+
+/**
+ * Save PDF data to a file using Electron's file writing API
+ */
+export async function savePdfToFile(
+  pdfData: Uint8Array,
+  filePath: string
+): Promise<boolean> {
+  console.log("Attempting to save PDF to:", filePath);
+  
+  if (!isElectronFileApiAvailable()) {
+    console.warn("Electron API not available for saving PDF");
+    return false;
+  }
+  
+  try {
+    const result = await window.electron.writeFile({
+      filePath: filePath,
+      data: pdfData
+    });
+    
+    console.log("PDF save result:", result);
+    return result && result.success === true;
+  } catch (error) {
+    console.error("Error saving PDF file:", error);
+    return false;
+  }
 }

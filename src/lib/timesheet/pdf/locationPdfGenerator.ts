@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatDateIcelandic } from '../../utils/dateUtils';
 import { formatNumber } from '../../utils/formatters';
+import { normalizeOutputDirectory, savePdfToFile } from './pdfUtils';
 
 // Define TableOutput interface since it's not exported from jspdf-autotable
 interface TableOutput {
@@ -35,6 +36,8 @@ export async function generateLocationPdf(
       console.log("Skipping entry with empty location");
       return false;
     }
+    
+    console.log(`Creating PDF for location: ${locationName}, apartment: ${apartmentName}`);
     
     // Sort entries by date
     const sortedEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
@@ -102,40 +105,30 @@ export async function generateLocationPdf(
     pdf.text('Samtals tímar:', 14, locationY + 20);
     pdf.text(formatNumber(totalHours), 50, locationY + 20);
     
-    // Save the PDF
-    if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
-      try {
-        // Create a safer filename
-        const baseName = `${locationName}_${apartmentName}`.replace(/[^a-z0-9áðéíóúýþæöÁÐÉÍÓÚÝÞÆÖ]/gi, '_');
-        
-        // Add counter for uniqueness
-        let uniqueSuffix = 1;
-        if (usedFilenames.has(baseName)) {
-          uniqueSuffix = usedFilenames.get(baseName)! + 1;
-        }
-        usedFilenames.set(baseName, uniqueSuffix);
-        
-        const safeFileName = uniqueSuffix > 1 ? `${baseName}_${uniqueSuffix}` : baseName;
-        
-        const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
-        const pdfPath = `${normalizedDir}/${safeFileName}_${currentDate}.pdf`;
-        
-        console.log("Trying to save location PDF to:", pdfPath);
-        
-        const pdfBlob = pdf.output('arraybuffer');
-        await window.electron.writeFile({
-          filePath: pdfPath,
-          data: new Uint8Array(pdfBlob)
-        });
-        
-        console.log(`PDF saved successfully: ${pdfPath}`);
-        return true;
-      } catch (error) {
-        console.error("Error saving location PDF:", error);
-        return false;
-      }
+    // Create a safer filename
+    const baseName = `${locationName}_${apartmentName}`.replace(/[^a-z0-9áðéíóúýþæöÁÐÉÍÓÚÝÞÆÖ]/gi, '_');
+    
+    // Add counter for uniqueness
+    let uniqueSuffix = 1;
+    if (usedFilenames.has(baseName)) {
+      uniqueSuffix = usedFilenames.get(baseName)! + 1;
+    }
+    usedFilenames.set(baseName, uniqueSuffix);
+    
+    const safeFileName = uniqueSuffix > 1 ? `${baseName}_${uniqueSuffix}` : baseName;
+    
+    const normalizedDir = normalizeOutputDirectory(outputDirectory);
+    const pdfPath = `${normalizedDir}/${safeFileName}_${currentDate}.pdf`;
+    
+    // Save the PDF using our utility function
+    const pdfBlob = pdf.output('arraybuffer');
+    const saveResult = await savePdfToFile(new Uint8Array(pdfBlob), pdfPath);
+    
+    if (saveResult) {
+      console.log(`PDF saved successfully: ${pdfPath}`);
+      return true;
     } else {
-      console.warn("Electron API not available for location PDF");
+      console.error(`Failed to save PDF: ${pdfPath}`);
       return false;
     }
   } catch (error) {

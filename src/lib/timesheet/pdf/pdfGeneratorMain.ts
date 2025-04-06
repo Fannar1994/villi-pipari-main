@@ -5,7 +5,8 @@ import { generateLocationPdf } from './locationPdfGenerator';
 import { 
   validatePdfPrerequisites, 
   prepareEntriesForPdfGeneration,
-  getCurrentDateString
+  getCurrentDateString,
+  isElectronFileApiAvailable
 } from './pdfUtils';
 
 /**
@@ -18,6 +19,12 @@ export async function generatePdfFiles(
 ): Promise<number> {
   try {
     console.log("Starting PDF generation with", timesheetEntries.length, "entries");
+    
+    // Check if Electron API is available
+    if (!isElectronFileApiAvailable()) {
+      console.error("Electron file API is not available");
+      throw new Error('Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni');
+    }
     
     if (!validatePdfPrerequisites(timesheetEntries)) {
       throw new Error('Engar færslur fundust til að búa til PDF skjöl');
@@ -34,6 +41,9 @@ export async function generatePdfFiles(
     const summarySuccess = await generateSummaryPdf(timesheetEntries, outputDirectory, currentDate);
     if (summarySuccess) {
       pdfCount++;
+      console.log("Summary PDF generated successfully");
+    } else {
+      console.warn("Failed to generate summary PDF");
     }
     
     // Create individual invoice-style PDFs for each location
@@ -51,6 +61,9 @@ export async function generatePdfFiles(
       
       if (locationSuccess) {
         pdfCount++;
+        console.log(`Location PDF for ${key} generated successfully`);
+      } else {
+        console.warn(`Failed to generate location PDF for ${key}`);
       }
     }
     

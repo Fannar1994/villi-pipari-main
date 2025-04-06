@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatNumber } from '../../utils/formatters';
 import { groupEntriesByLocation } from '../groupUtils';
+import { normalizeOutputDirectory, savePdfToFile } from './pdfUtils';
 
 // Define TableOutput interface since it's not exported from jspdf-autotable
 interface TableOutput {
@@ -84,28 +85,23 @@ export async function generateSummaryPdf(
     summaryPdf.text('Samtals tímar:', 14, finalY + 10);
     summaryPdf.text(formatNumber(totalHoursAllLocations), 50, finalY + 10);
     
-    // Save summary PDF
-    if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
-      try {
-        const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
-        const summaryPath = `${normalizedDir}/Samantekt_${currentDate}.pdf`;
-        
-        console.log("Trying to save summary PDF to:", summaryPath);
-        
-        const summaryPdfBlob = summaryPdf.output('arraybuffer');
-        await window.electron.writeFile({
-          filePath: summaryPath,
-          data: new Uint8Array(summaryPdfBlob)
-        });
-        
-        console.log("Summary PDF saved successfully");
-        return true;
-      } catch (error) {
-        console.error("Error saving summary PDF:", error);
-        return false;
-      }
+    // Save summary PDF using our utility function
+    const normalizedDir = normalizeOutputDirectory(outputDirectory);
+    const summaryPath = `${normalizedDir}/Samantekt_${currentDate}.pdf`;
+    
+    console.log("Trying to save summary PDF to:", summaryPath);
+    
+    const summaryPdfBlob = summaryPdf.output('arraybuffer');
+    const saveResult = await savePdfToFile(
+      new Uint8Array(summaryPdfBlob),
+      summaryPath
+    );
+    
+    if (saveResult) {
+      console.log("Summary PDF saved successfully");
+      return true;
     } else {
-      console.warn("Electron API not available for summary PDF");
+      console.error("Failed to save summary PDF");
       return false;
     }
   } catch (error) {
