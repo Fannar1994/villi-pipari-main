@@ -32,13 +32,34 @@ export async function generatePdfFiles(
     summaryPdf.setFont('helvetica', 'bold');
     summaryPdf.text('Samantekt', 14, 15);
     
-    // Format summary data for the PDF table
-    const tableData = summaryData.slice(2); // Skip the title and empty row
+    // Format summary data for the PDF table with location information
+    // We'll create enhanced data that includes location information
+    const enhancedSummaryData = [];
     
-    // Generate the table
+    // Process each timesheet entry to create enhanced summary rows with location
+    for (const entry of timesheetEntries) {
+      enhancedSummaryData.push([
+        formatDateIcelandic(entry.date),
+        entry.employee,
+        entry.hours.toString(),
+        entry.location || ''
+      ]);
+    }
+    
+    // Sort the enhanced data by date, then employee
+    enhancedSummaryData.sort((a, b) => {
+      // Compare dates first
+      const dateComparison = a[0].localeCompare(b[0]);
+      if (dateComparison !== 0) return dateComparison;
+      
+      // Then compare employees
+      return a[1].localeCompare(b[1]);
+    });
+    
+    // Generate the summary table with location information
     autoTable(summaryPdf, {
-      head: [['Dagsetning', 'Starfsmaður', 'Heildar tímar']],
-      body: tableData.map(row => row.map(cell => cell.toString())),
+      head: [['Dagsetning', 'Starfsmaður', 'Tímar', 'Staðsetning']],
+      body: enhancedSummaryData,
       startY: 20,
       theme: 'grid',
       styles: {
@@ -70,6 +91,9 @@ export async function generatePdfFiles(
         console.error("Error saving summary PDF:", error);
         throw error; // Re-throw to ensure we capture the specific error
       }
+    } else {
+      console.error("Electron writeFile API is not available for summary PDF");
+      throw new Error("Electron writeFile API is not available");
     }
     
     // Create individual invoice PDFs

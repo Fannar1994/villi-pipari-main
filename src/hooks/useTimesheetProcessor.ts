@@ -106,6 +106,7 @@ export const useTimesheetProcessor = () => {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að PDF gerð...' });
 
+      console.log("Starting PDF generation process");
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
       if (timesheetEntries.length === 0) {
