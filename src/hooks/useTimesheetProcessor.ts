@@ -1,8 +1,7 @@
 
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { parseTimesheetFile, generateInvoices } from '@/lib/excelProcessor';
-import { generatePdfFiles } from '@/lib/timesheet/pdf/pdfGenerator';
+import { parseTimesheetFile, generateInvoices, generatePdfFiles } from '@/lib/excelProcessor';
 
 export type ProcessStatus = {
   status: 'idle' | 'processing' | 'success' | 'error';
@@ -44,7 +43,7 @@ export const useTimesheetProcessor = () => {
     try {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að reikningagerð...' });
-      
+
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
       const invoiceCount = await generateInvoices(timesheetEntries, templateFile, outputDir);
@@ -103,13 +102,9 @@ export const useTimesheetProcessor = () => {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að PDF gerð...' });
 
-      console.log('Parsing timesheet file for PDF generation');
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
-      console.log(`Parsed ${timesheetEntries.length} entries from timesheet`);
       
-      console.log('Starting PDF generation process');
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
-      console.log(`PDF generation completed with ${pdfCount} files created`);
       
       setIsProcessing(false);
       setProcessStatus({
@@ -126,19 +121,14 @@ export const useTimesheetProcessor = () => {
     } catch (error) {
       console.error('Error generating PDFs:', error);
       setIsProcessing(false);
-      
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'Ekki tókst að búa til PDF skjöl';
-      
       setProcessStatus({
         status: 'error',
-        message: errorMessage,
+        message: `Villa kom upp: ${error.message || 'Óþekkt villa'}`,
       });
       
       toast({
         title: 'Villa',
-        description: errorMessage,
+        description: 'Ekki tókst að búa til PDF skjöl.',
         variant: 'destructive',
       });
     }

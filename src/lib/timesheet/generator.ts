@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import { TimesheetEntry } from '@/types/timesheet';
 import { createSafeSheetName } from '../utils/formatters';
@@ -6,7 +5,6 @@ import { groupEntriesByLocation, createInvoiceData, createSummarySheetData } fro
 
 /**
  * Generates Excel invoices from timesheet entries
- * DIRECT IMPLEMENTATION FOR MAXIMUM RELIABILITY
  */
 export async function generateInvoices(
   timesheetEntries: TimesheetEntry[],
@@ -123,52 +121,63 @@ export async function generateInvoices(
       bookType: 'xlsx', 
       type: 'buffer', 
       bookSST: false, 
+      cellFormula: true  // Keep formulas 
     };
     
     // Write the workbook to a buffer with formulas preserved
     const wbout = XLSX.write(outputWorkbook, wopts);
 
-    // DIRECT IMPLEMENTATION FOR SAVING FILES
-    // Extremely simple approach with minimal wrappers
-    const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
-    const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
-    const fullPath = `${normalizedDir}/${filename}`;
-    
-    console.log("DIRECT: Saving file to:", fullPath);
-    
-    // DIRECT approach, exactly copying what worked in the Excel function
-    if (window.electron && typeof window.electron.writeFile === 'function') {
-      try {
-        const result = await window.electron.writeFile({
-          filePath: fullPath,
-          data: new Uint8Array(wbout)
-        });
-
-        if (!result.success) {
-          throw new Error(result.error || 'Villa kom upp við að vista skjalið');
-        }
-      } catch (error) {
-        console.error("Error while using Electron API:", error);
-        throw new Error('Villa við að vista skrá: ' + (error instanceof Error ? error.message : 'Óþekkt villa'));
-      }
-    } else {
-      // Fallback for browser demo
+    // Check if we're in an Electron environment with the required API
+    if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+      console.log("Running in browser environment or electron API not available, skipping file write");
+      // For browser demo, offer file download
       if (typeof document !== 'undefined') {
         const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename;
+        a.download = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }
+      return invoiceCount;
+    }
+
+    // Create a valid filename with the current date
+    const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    // Log the output directory for debugging
+    console.log("Output directory:", outputDirectory);
+    
+    // Normalize the output directory to prevent path issues
+    // Remove any trailing slashes for consistency
+    const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
+    
+    // Create the full file path
+    const fullPath = `${normalizedDir}/${filename}`;
+    
+    console.log("Saving file to:", fullPath);
+    
+    try {
+      // Use the window.electron API for file operations with the full path
+      const result = await window.electron.writeFile({
+        filePath: fullPath,
+        data: new Uint8Array(wbout)
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Villa kom upp við að vista skjalið');
+      }
+    } catch (error) {
+      console.error("Error while using Electron API:", error);
+      throw new Error('Villa við að vista skrá: ' + (error.message || 'Óþekkt villa'));
     }
 
     return invoiceCount;
   } catch (error) {
     console.error('Error generating invoices:', error);
-    throw new Error(error instanceof Error ? error.message : 'Villa við að búa til reikninga');
+    throw new Error(error.message || 'Villa við að búa til reikninga');
   }
 }

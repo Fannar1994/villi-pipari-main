@@ -1,40 +1,40 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileOutput, FileText } from 'lucide-react';
+import { FileCheck, FileOutput } from 'lucide-react';
+import { CardFooter } from '@/components/ui/card';
 
 interface ActionButtonsProps {
-  onGenerateInvoices: () => void;
-  onGeneratePdfs: (() => void) | null;
+  onGenerateInvoices: () => Promise<void>;
+  onGeneratePdfs: () => Promise<void>;
   isProcessing: boolean;
 }
 
-export function ActionButtons({
+export const ActionButtons: React.FC<ActionButtonsProps> = ({
   onGenerateInvoices,
   onGeneratePdfs,
   isProcessing
-}: ActionButtonsProps) {
+}) => {
   return (
-    <div className="p-6 pt-0 flex flex-col gap-4">
-      <Button 
-        onClick={onGenerateInvoices}
-        disabled={isProcessing}
-        className="w-full"
-      >
-        <FileText className="mr-2 h-5 w-5" />
-        Búa til reikninga
-      </Button>
-      
-      {onGeneratePdfs && (
+    <CardFooter className="border-t border-primary bg-card flex flex-col gap-2">
+      <div className="flex w-full gap-2">
         <Button 
-          onClick={onGeneratePdfs}
+          onClick={onGenerateInvoices} 
+          className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
           disabled={isProcessing}
-          className="w-full"
         >
-          <FileOutput className="mr-2 h-5 w-5" />
-          Búa til PDF skjöl
+          <FileCheck className="mr-2 h-4 w-4" />
+          {isProcessing ? 'Vinnur...' : 'Búa til reikninga'}
         </Button>
-      )}
-    </div>
+        <Button 
+          onClick={onGeneratePdfs} 
+          className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90"
+          disabled={isProcessing}
+        >
+          <FileOutput className="mr-2 h-4 w-4" />
+          {isProcessing ? 'Vinnur...' : 'Búa til PDF skjöl'}
+        </Button>
+      </div>
+    </CardFooter>
   );
-}
+};

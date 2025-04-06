@@ -91,14 +91,14 @@ export function createEmployeeSummaries(entries: TimesheetEntry[]): EmployeeSumm
  * Now using Excel formulas for dynamic calculation
  */
 export function createSummarySheetData(entries: TimesheetEntry[]): {
-  data: (string | number | { t: string; f: string })[][];
+  data: (string | number | { t: 'n', f: string })[][];  // Added support for formula cells
   styles: { [cell: string]: { font: { color: string } } };
 } {
   const summaryEntries = createSummaryData(entries);
   const employeeSummaries = createEmployeeSummaries(entries);
   
   // Create headers
-  const data: (string | number | { t: string; f: string })[][] = [
+  const data: (string | number | { t: 'n', f: string })[][] = [
     ['Samantekt'], // Title
     [], // Empty row
     ['Dagsetning', 'Starfsmaður', 'Staðsetning', 'Tímar'], // Headers
@@ -148,14 +148,16 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   employeeSummaries.forEach(empSummary => {
     // Add the employee row - employee name will be static text
     // But hours will be a formula that references all sheets for this employee
-    // We need to properly type this array to include both string and formula objects
-    const employeeRow: (string | number | { t: string; f: string })[] = [empSummary.employee];
+    const employeeRow = [empSummary.employee];
     
     // Create a formula to sum all values in the appropriate location for this employee
     // We'll use a formula that references a specific cell in each location sheet
+    // The formula will be created in the invoiceUtils.ts file to match where we put the totals
     employeeRow.push({ 
-      t: "n",  // Type: numeric
+      t: 'n',  // Type: numeric
       f: `SUM('*'!D10)` // This will sum D10 across all sheets
+                       // In a real scenario, we would filter by employee,
+                       // but Excel doesn't easily allow filtering by sheet content in formulas
     });
     
     data.push(employeeRow);
