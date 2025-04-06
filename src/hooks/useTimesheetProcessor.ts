@@ -46,6 +46,10 @@ export const useTimesheetProcessor = () => {
 
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
+      if (timesheetEntries.length === 0) {
+        throw new Error('Engar færslur fundust í vinnuskýrslu');
+      }
+      
       const invoiceCount = await generateInvoices(timesheetEntries, templateFile, outputDir);
       
       setIsProcessing(false);
@@ -65,7 +69,7 @@ export const useTimesheetProcessor = () => {
       setIsProcessing(false);
       setProcessStatus({
         status: 'error',
-        message: `Villa kom upp: ${error.message || 'Óþekkt villa'}`,
+        message: error instanceof Error ? error.message : 'Óþekkt villa kom upp',
       });
       
       toast({
@@ -104,6 +108,10 @@ export const useTimesheetProcessor = () => {
 
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
+      if (timesheetEntries.length === 0) {
+        throw new Error('Engar færslur fundust í vinnuskýrslu');
+      }
+      
       console.log("Starting PDF generation with", timesheetEntries.length, "entries");
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
       console.log("PDF generation completed, count:", pdfCount);
@@ -115,25 +123,17 @@ export const useTimesheetProcessor = () => {
         pdfCount,
       });
       
-      if (pdfCount > 0) {
-        toast({
-          title: 'Árangur!',
-          description: `${pdfCount} PDF skjöl hafa verið búin til.`,
-        });
-      } else {
-        toast({
-          title: 'Athugið',
-          description: 'Engin PDF skjöl voru búin til. Vinsamlegast athugið gögnin.',
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'Árangur!',
+        description: `${pdfCount} PDF skjöl hafa verið búin til.`,
+      });
       
     } catch (error) {
       console.error('Error generating PDFs:', error);
       setIsProcessing(false);
       setProcessStatus({
         status: 'error',
-        message: `Villa kom upp: ${error.message || 'Óþekkt villa'}`,
+        message: error instanceof Error ? error.message : 'Óþekkt villa kom upp',
       });
       
       toast({

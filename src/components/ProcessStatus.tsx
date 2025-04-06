@@ -49,7 +49,7 @@ export function ProcessStatus({ status }: ProcessStatusProps) {
       {status.status === 'error' && (
         <div className="text-center text-red-600 flex flex-col items-center">
           <AlertCircle className="h-8 w-8 mb-2" />
-          <p>{status.message}</p>
+          <p className="whitespace-pre-wrap">{status.message}</p>
         </div>
       )}
     </div>

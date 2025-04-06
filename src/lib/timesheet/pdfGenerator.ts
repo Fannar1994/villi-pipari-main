@@ -15,6 +15,8 @@ export async function generatePdfFiles(
   outputDirectory: string
 ): Promise<number> {
   try {
+    console.log("Starting PDF generation with", timesheetEntries.length, "entries");
+    
     // Create summary data
     const { data: summaryData } = createSummarySheetData(timesheetEntries);
     
@@ -66,6 +68,7 @@ export async function generatePdfFiles(
         pdfCount++;
       } catch (error) {
         console.error("Error saving summary PDF:", error);
+        throw error; // Re-throw to ensure we capture the specific error
       }
     }
     
@@ -75,6 +78,7 @@ export async function generatePdfFiles(
     
     for (const [key, entries] of Object.entries(groupedEntries)) {
       if (entries.length > 0) {
+        console.log(`Processing group ${key} with ${entries.length} entries`);
         const firstEntry = entries[0];
         const locationName = firstEntry.location;
         const apartmentName = firstEntry.apartment || '';
@@ -97,7 +101,7 @@ export async function generatePdfFiles(
         // Format data for the table - sort entries by date first
         const headers = ['Dagsetning', 'Tímar', 'Vinnuliður', 'Starfsmaður'];
         const sortedEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-        const rows = sortedEntries.slice(0, 7).map(entry => [
+        const rows = sortedEntries.map(entry => [
           formatDateIcelandic(entry.date),
           entry.hours.toString(),
           entry.workType,
@@ -149,9 +153,18 @@ export async function generatePdfFiles(
             pdfCount++;
           } catch (error) {
             console.error("Error saving invoice PDF:", error);
+            throw error; // Re-throw to ensure we capture the specific error
           }
+        } else {
+          console.error("Electron writeFile API is not available");
+          throw new Error("Electron writeFile API is not available");
         }
       }
+    }
+    
+    if (pdfCount === 0) {
+      console.error("No PDFs were generated. Check if there are valid timesheet entries.");
+      throw new Error("Engin gögn fundust til að búa til PDF skjöl");
     }
     
     console.log(`Total PDFs generated: ${pdfCount}`);
@@ -159,6 +172,6 @@ export async function generatePdfFiles(
     
   } catch (error) {
     console.error('Error generating PDFs:', error);
-    throw new Error(error.message || 'Villa við að búa til PDF skjöl');
+    throw error instanceof Error ? error : new Error(String(error) || 'Villa við að búa til PDF skjöl');
   }
 }
