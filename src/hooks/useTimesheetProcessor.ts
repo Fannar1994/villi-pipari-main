@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { parseTimesheetFile, generateInvoices, generatePdfFiles } from '@/lib/excelProcessor';
@@ -44,7 +43,6 @@ export const useTimesheetProcessor = () => {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að reikningagerð...' });
       
-      // DIRECT approach that mirrors the Excel function which works
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
       
       const invoiceCount = await generateInvoices(timesheetEntries, templateFile, outputDir);
@@ -81,7 +79,6 @@ export const useTimesheetProcessor = () => {
     timesheetFile: File | null,
     outputDir: string
   ) => {
-    // Validate inputs
     if (!timesheetFile) {
       toast({
         title: 'Villa',
@@ -100,7 +97,6 @@ export const useTimesheetProcessor = () => {
       return;
     }
 
-    // DIRECT API check - simplified to match Excel function approach
     if (!window.electron || typeof window.electron.writeFile !== 'function') {
       toast({
         title: 'Villa',
@@ -148,7 +144,6 @@ export const useTimesheetProcessor = () => {
       console.error('Error generating PDFs:', error);
       setIsProcessing(false);
       
-      // Provide more specific error messages
       let errorMessage = 'Ekki tókst að búa til PDF skjöl';
       if (error instanceof Error) {
         if (error.message.includes('skráarkerfisvirkni')) {

@@ -4,7 +4,7 @@
  * Main API export module
  */
 
-// Re-export only needed functionality from modules
+// Re-export functionality from modules
 export { 
   getElectronAPI, 
   isElectronAPIAvailable, 

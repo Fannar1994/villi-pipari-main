@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { EnvironmentInfo, getEnvironmentInfo } from '@/lib/electron/environmentInfo';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Check, X, Bug, RefreshCw } from 'lucide-react';
-import { forceApiRecovery } from '@/lib/electron/detector-core';
+import { forceApiRecovery } from '@/lib/electron/detector';
 
 export function DebugInfo() {
   const envInfo: EnvironmentInfo = getEnvironmentInfo();

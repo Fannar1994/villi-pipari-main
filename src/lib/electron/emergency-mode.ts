@@ -5,12 +5,9 @@
  */
 
 import { ElectronAPI } from './types';
-import { 
-  getElectronAPI, 
-  setEmergencyApiBackup, 
-  getEmergencyApiBackup, 
-  forceApiRecovery
-} from './detector-core';
+import { getElectronAPI } from './detector/core';
+import { forceApiRecovery, getEmergencyApiBackup } from './detector/recovery';
+import { findElectronAPIAggressively } from './detector/aggressive';
 
 /**
  * Enable emergency mode - tries all available methods to restore API access
@@ -44,6 +41,14 @@ export function enableEmergencyMode(): boolean {
   if ((window as any).electronBackupAPI) {
     console.log('Using window.electronBackupAPI');
     window.electron = (window as any).electronBackupAPI;
+    return true;
+  }
+  
+  // Ultra-aggressive search as a final resort
+  const aggressiveApi = findElectronAPIAggressively();
+  if (aggressiveApi) {
+    console.log('API found using aggressive search');
+    window.electron = aggressiveApi;
     return true;
   }
   

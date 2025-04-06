@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { enableEmergencyMode, isBackupApiAvailable } from '@/lib/electron/emergency-mode';
-import { getElectronAPI, isElectronAPIAvailable } from '@/lib/electron/detector-core';
+import { getElectronAPI, isElectronAPIAvailable } from '@/lib/electron/detector';
 
 export interface ApiStatusType {
   available: boolean;

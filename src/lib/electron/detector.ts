@@ -1,16 +1,20 @@
 
 /**
  * Electron API detection and recovery module
- * This is now a central export file that re-exports from the smaller modules
+ * This is the main entry point that re-exports functionality from specialized modules
  */
 
-// Export only core functionality - no emergency mode
+// Export core functionality from separate modules
 export { 
-  getElectronAPI, 
+  getElectronAPI,
   isElectronAPIAvailable, 
-  testConnection,
+  testConnection 
+} from './detector/core';
+
+export { 
   forceApiRecovery,
-  // Add these exports to fix TypeScript errors
   setEmergencyApiBackup,
-  getEmergencyApiBackup
-} from './detector-core';
+  getEmergencyApiBackup 
+} from './detector/recovery';
+
+export { createGlobalEmergencyAPI } from './detector/emergency';
