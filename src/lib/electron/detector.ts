@@ -16,26 +16,42 @@ export function getElectronAPI(): ElectronAPI | null {
   
   console.log('Accessing Electron API...');
   
-  // Standard API access - primary location with proper context isolation
+  // Try the primary API access path
   if (window.electron) {
     console.log('✓ Electron API found at window.electron');
-    try {
-      // Verify that writeFile method exists
-      if (typeof window.electron.writeFile === 'function') {
-        console.log('✓ writeFile method found, API appears valid');
-        return window.electron;
-      } else {
-        console.error('✗ writeFile method missing from window.electron');
-      }
-    } catch (e) {
-      console.error('Error accessing API methods:', e);
+    
+    // First check for minimum required methods
+    if (typeof window.electron.writeFile === 'function' && 
+        typeof window.electron.selectDirectory === 'function') {
+      console.log('✓ Required methods found on window.electron');
+      return window.electron;
+    } else {
+      console.error('✗ Required methods missing from window.electron');
     }
   } else {
     console.error('✗ window.electron not found');
+    
+    // Try backup API location (this is a fallback for some environments)
+    if ((window as any).electronBackupAPI) {
+      console.log('! Using backup API location');
+      const backupAPI = (window as any).electronBackupAPI;
+      
+      if (typeof backupAPI.writeFile === 'function' && 
+          typeof backupAPI.selectDirectory === 'function') {
+        console.log('✓ Required methods found on backup API');
+        
+        // Copy backup API to the standard location for unified access
+        console.log('Restoring API from backup to standard location');
+        window.electron = backupAPI;
+        return window.electron;
+      } else {
+        console.error('✗ Required methods missing from backup API');
+      }
+    }
   }
   
   // No valid API found
-  console.error('❌ No Electron API available');
+  console.error('❌ No Electron API available after all attempts');
   return null;
 }
 

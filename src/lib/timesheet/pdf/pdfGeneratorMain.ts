@@ -8,7 +8,7 @@ import {
   getCurrentDateString,
 } from './pdfUtils';
 import { toast } from '@/hooks/use-toast';
-import { getElectronAPI, isElectronAPIAvailable } from '@/lib/electron/api';
+import { getElectronAPI, isElectronAPIAvailable } from '@/lib/electron/detector';
 
 /**
  * Generates PDF files from timesheet entries
@@ -35,11 +35,18 @@ export async function generatePdfFiles(
       
       // Try to auto-recover API
       console.log("Attempting API auto-recovery...");
-      const api = getElectronAPI(); // This attempts recovery
+      
+      // Check for backup API and restore it if available
+      if ((window as any).electronBackupAPI) {
+        console.log("Found backup API, copying to window.electron");
+        window.electron = (window as any).electronBackupAPI;
+      }
       
       // Check again after recovery attempt
+      const api = getElectronAPI();
+      
       if (!api) {
-        const errorMsg = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Endurræstu forritið.';
+        const errorMsg = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Smelltu á "Debug" flipann og "Repair API" hnappinn, eða endurræstu forritið.';
         
         toast({
           title: "Villa",
@@ -48,7 +55,15 @@ export async function generatePdfFiles(
         });
         
         throw new Error(errorMsg);
+      } else {
+        console.log("API recovery successful!");
       }
+    }
+    
+    // Double-check we have the writeFile method
+    const api = getElectronAPI();
+    if (!api || typeof api.writeFile !== 'function') {
+      throw new Error('Ekki er hægt að búa til PDF - vantar aðgang að skráarkerfi. Vinsamlegast farðu í Debug flipann og smelltu á "Repair API" hnappinn.');
     }
     
     // Check if we have valid entries
