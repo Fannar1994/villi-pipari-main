@@ -25,6 +25,9 @@ export function createInvoiceData(entries: TimesheetEntry[]): (string | number)[
   // Initialize with 15 empty rows of 4 columns each
   const data: (string | number)[][] = Array(15).fill(null).map(() => Array(4).fill(''));
   
+  // Set the header in A1
+  data[0] = ['Fylgiskjal reiknings', '', '', ''];
+  
   // Set headers in row 3 (index 2)
   data[2] = ['Dagsetning:', 'Tímar:', 'Vinnuliður:', 'Starfsmaður:'];
   
