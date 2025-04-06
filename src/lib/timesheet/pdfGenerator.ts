@@ -24,20 +24,23 @@ export async function generatePdfFiles(
       throw new Error('No timesheet entries provided');
     }
 
-    // Ensure the Electron API is available
+    // Ensure the Electron API is available before proceeding
     if (!checkElectronApi()) {
+      console.error('Electron API check failed');
       throw new Error('Electron API er ekki aðgengileg til að vista skrár.');
     }
 
-    // Ensure output directory ends without slash
+    // Normalize directory path - remove trailing slashes
     const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
+    console.log('Normalized output directory:', normalizedDir);
     
     // Create a summary PDF
     const summaryData = createSummaryData(timesheetEntries);
     const summaryPdf = createSummaryPdf(summaryData);
     
-    // Save the summary PDF
-    const summaryFilename = `Summary_${new Date().toISOString().split('T')[0]}.pdf`;
+    // Generate a safe filename with date
+    const dateString = new Date().toISOString().split('T')[0];
+    const summaryFilename = `Summary_${dateString}.pdf`;
     const summaryPath = path.join(normalizedDir, summaryFilename);
     
     console.log("Attempting to save summary PDF to:", summaryPath);
@@ -85,7 +88,7 @@ export async function generatePdfFiles(
         // Save the PDF
         const sanitizedEmployee = sanitizeFilename(employee);
         const sanitizedLocation = sanitizeFilename(location);
-        const filename = `${sanitizedEmployee}_${sanitizedLocation}_${new Date().toISOString().split('T')[0]}.pdf`;
+        const filename = `${sanitizedEmployee}_${sanitizedLocation}_${dateString}.pdf`;
         const filePath = path.join(normalizedDir, filename);
         
         console.log(`Saving PDF for ${employee} at ${location} to:`, filePath);

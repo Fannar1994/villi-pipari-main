@@ -15,6 +15,12 @@ export async function generateInvoices(
   outputDirectory: string
 ): Promise<number> {
   try {
+    console.log('Starting invoice generation with', timesheetEntries.length, 'entries');
+    
+    if (!timesheetEntries || timesheetEntries.length === 0) {
+      throw new Error('No timesheet entries provided');
+    }
+    
     // Create a new workbook or use the template if provided
     let outputWorkbook;
     
@@ -121,22 +127,10 @@ export async function generateInvoices(
     // Write the workbook to a buffer
     const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer', bookSST: false });
 
-    // Check if we're in an Electron environment with the required API
+    // Ensure the Electron API is available before proceeding
     if (!checkElectronApi()) {
-      console.log("Running in browser environment or electron API not available, skipping file write");
-      // For browser demo, offer file download
-      if (typeof document !== 'undefined') {
-        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-      return invoiceCount;
+      console.error('Electron API check failed');
+      throw new Error('Electron API er ekki aðgengileg til að vista skrár.');
     }
 
     // Create a valid filename with the current date
@@ -157,6 +151,7 @@ export async function generateInvoices(
       });
 
       if (!result.success) {
+        console.error('Excel file save error:', result);
         throw new Error(result.error || 'Villa kom upp við að vista skjalið');
       }
       

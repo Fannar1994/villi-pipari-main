@@ -1,7 +1,7 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-// Expose Electron API to the renderer process
+// Expose protected and consistent Electron API to the renderer process
 contextBridge.exposeInMainWorld('electron', {
   writeFile: async (options) => {
     try {
@@ -12,14 +12,14 @@ contextBridge.exposeInMainWorld('electron', {
         return { success: false, error: 'Invalid file options' };
       }
       
-      // Handle both Buffer and Uint8Array
+      // Create a proper Buffer from any array-like data
       let data = options.data;
-      if (data instanceof Uint8Array) {
-        console.log('Data is Uint8Array, length:', data.length);
-        // Ensure we pass it as a raw buffer
+      if (data instanceof Uint8Array || Array.isArray(data)) {
+        console.log('Converting data to Buffer, length:', data.length);
         data = Buffer.from(data);
       }
       
+      // Make the IPC call with properly formatted data
       const result = await ipcRenderer.invoke('write-file', {
         filePath: options.filePath,
         data: data
@@ -32,7 +32,8 @@ contextBridge.exposeInMainWorld('electron', {
       return { 
         success: false, 
         error: error.toString(),
-        details: error.message || 'Unknown error in writeFile' 
+        details: error.message || 'Unknown error in writeFile',
+        stack: error.stack || 'No stack available'
       };
     }
   },
@@ -51,11 +52,13 @@ contextBridge.exposeInMainWorld('electron', {
   
   fileExists: async (filePath) => {
     try {
-      return await ipcRenderer.invoke('file-exists', filePath);
+      console.log('Checking if file exists:', filePath);
+      const result = await ipcRenderer.invoke('file-exists', filePath);
+      console.log('File exists result:', result);
+      return result;
     } catch (error) {
       console.error('Error in fileExists bridge:', error);
       return false;
     }
   }
 });
-

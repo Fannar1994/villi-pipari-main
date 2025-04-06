@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { TimesheetEntry } from '@/types/timesheet';
@@ -5,17 +6,31 @@ import { formatDateIcelandic } from '../utils/dateUtils';
 import path from 'path';
 
 /**
- * Check if the Electron API is available
+ * Check if the Electron API is available and all required methods exist
  */
 export function checkElectronApi(): boolean {
-  return typeof window !== 'undefined' && 
-    window.electron && 
-    typeof window.electron.writeFile === 'function' &&
-    typeof window.electron.selectDirectory === 'function';
+  const hasElectronApi = typeof window !== 'undefined' && window.electron !== undefined;
+  
+  if (!hasElectronApi) {
+    console.error('Electron API not found in window object');
+    return false;
+  }
+  
+  const hasWriteFile = typeof window.electron?.writeFile === 'function';
+  const hasSelectDirectory = typeof window.electron?.selectDirectory === 'function';
+  
+  if (!hasWriteFile || !hasSelectDirectory) {
+    console.error(
+      'Electron API missing required methods:',
+      `writeFile: ${hasWriteFile}, selectDirectory: ${hasSelectDirectory}`
+    );
+  }
+  
+  return hasWriteFile && hasSelectDirectory;
 }
 
 /**
- * Saves a PDF file using Electron API
+ * Saves a PDF file using Electron API with improved error handling
  */
 export async function savePdfFile(
   pdf: jsPDF, 
@@ -25,24 +40,26 @@ export async function savePdfFile(
   try {
     if (!checkElectronApi()) {
       console.error('Electron API er ekki aðgengileg til að vista skrár.');
-      return false;
+      throw new Error('Electron API er ekki aðgengileg');
     }
     
     console.log(`Saving ${description} to: ${filePath}`);
     
+    // Get PDF as ArrayBuffer and convert to Uint8Array
     const pdfOutput = pdf.output('arraybuffer');
-    
-    // Convert to Uint8Array for consistent handling
     const data = new Uint8Array(pdfOutput);
     
+    console.log(`PDF data prepared, size: ${data.length} bytes`);
+    
+    // Write the file using Electron's IPC bridge
     const result = await window.electron.writeFile({
       filePath: filePath,
       data: data
     });
     
     if (!result.success) {
-      console.error(`Failed to save ${description}:`, result.error);
-      return false;
+      console.error(`Failed to save ${description}:`, result);
+      throw new Error(result.error || `Failed to save ${description}`);
     }
     
     console.log(`Successfully saved ${description}!`);
