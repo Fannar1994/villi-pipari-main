@@ -1,7 +1,7 @@
 
 import { TimesheetEntry } from '@/types/timesheet';
 import { groupEntriesByLocation } from '../groupUtils';
-import { getElectronAPI } from '@/lib/electron/api';
+import { getElectronAPI } from '@/lib/electron/detector';
 
 /**
  * Validates if PDF generation prerequisites are met
