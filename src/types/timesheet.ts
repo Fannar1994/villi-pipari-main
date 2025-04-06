@@ -15,3 +15,17 @@ export interface SummaryEntry {
   totalHours: number;
   isHoliday: boolean;
 }
+
+// New interface to track hours by location
+export interface LocationHours {
+  location: string;
+  apartment: string;
+  hours: number;
+}
+
+// Enhanced employee summary with location breakdown
+export interface EmployeeSummary {
+  employee: string;
+  totalHours: number;
+  locationBreakdown: LocationHours[];
+}

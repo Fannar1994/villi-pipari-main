@@ -1,5 +1,5 @@
 
-import { TimesheetEntry, SummaryEntry } from '@/types/timesheet';
+import { TimesheetEntry, SummaryEntry, EmployeeSummary, LocationHours } from '@/types/timesheet';
 import { formatNumber } from '../utils/formatters';
 import { isIcelandicHoliday, formatDateIcelandic } from '../utils/dateUtils';
 
@@ -105,6 +105,53 @@ export function createSummaryData(entries: TimesheetEntry[]): SummaryEntry[] {
 }
 
 /**
+ * Creates employee summaries with location breakdown
+ */
+export function createEmployeeSummaries(entries: TimesheetEntry[]): EmployeeSummary[] {
+  // Group entries by employee first
+  const employeeMap = new Map<string, EmployeeSummary>();
+  
+  entries.forEach(entry => {
+    if (!entry.employee) return;
+    
+    // Initialize employee summary if it doesn't exist
+    if (!employeeMap.has(entry.employee)) {
+      employeeMap.set(entry.employee, {
+        employee: entry.employee,
+        totalHours: 0,
+        locationBreakdown: []
+      });
+    }
+    
+    const employeeSummary = employeeMap.get(entry.employee)!;
+    employeeSummary.totalHours += entry.hours;
+    
+    // Create a location key
+    const locationKey = `${entry.location || ''}-${entry.apartment || ''}`;
+    
+    // Find existing location entry or create new one
+    let locationEntry = employeeSummary.locationBreakdown.find(
+      lb => `${lb.location}-${lb.apartment}` === locationKey
+    );
+    
+    if (!locationEntry) {
+      locationEntry = {
+        location: entry.location || '',
+        apartment: entry.apartment || '',
+        hours: 0
+      };
+      employeeSummary.locationBreakdown.push(locationEntry);
+    }
+    
+    locationEntry.hours += entry.hours;
+  });
+  
+  // Sort by employee name
+  return Array.from(employeeMap.values())
+    .sort((a, b) => a.employee.localeCompare(b.employee));
+}
+
+/**
  * Creates formatted summary sheet data with styling information
  */
 export function createSummarySheetData(entries: TimesheetEntry[]): {
@@ -112,6 +159,7 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   styles: { [cell: string]: { font: { color: string } } };
 } {
   const summaryEntries = createSummaryData(entries);
+  const employeeSummaries = createEmployeeSummaries(entries);
   
   // Create headers
   const data: (string | number)[][] = [
@@ -142,6 +190,43 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
     if (entry.isHoliday) {
       styles[`A${rowIndex + 1}`] = { font: { color: 'FF0000' } }; // Red font for date
     }
+  });
+  
+  // Calculate the next row for employee summary section
+  const nextRowIndex = data.length + 2; // Add 2 more empty rows
+  
+  // Add two empty rows as separator
+  data.push([]);
+  data.push([]);
+  
+  // Add employee summary section headers
+  data.push(['Samantekt per starfsmann']);
+  data.push(['Starfsmaður', 'Heildar tímar', 'Staðsetning', 'Tímar']);
+  
+  // Add employee summaries
+  let currentRow = nextRowIndex + 2; // Start after the headers
+  
+  employeeSummaries.forEach(empSummary => {
+    // Add the employee row with total hours
+    data.push([empSummary.employee, formatNumber(empSummary.totalHours), '', '']);
+    currentRow++;
+    
+    // Add breakdown by location
+    empSummary.locationBreakdown.forEach((location, i) => {
+      // Skip empty locations
+      if (!location.location) return;
+      
+      const locationDisplay = location.apartment 
+        ? `${location.location}, ${location.apartment}`
+        : location.location;
+        
+      data.push(['', '', locationDisplay, formatNumber(location.hours)]);
+      currentRow++;
+    });
+    
+    // Add an empty row after each employee for better readability
+    data.push([]);
+    currentRow++;
   });
   
   return { data, styles };
