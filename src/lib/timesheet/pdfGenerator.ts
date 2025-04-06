@@ -55,7 +55,7 @@ export async function generatePdfFiles(
     });
     
     // Generate summary table
-    autoTable(summaryPdf, {
+    const summaryTable = autoTable(summaryPdf, {
       head: [['Staðsetning', 'Tímar']],
       body: summaryTableRows,
       startY: 20,
@@ -73,8 +73,9 @@ export async function generatePdfFiles(
     
     // Add total row
     summaryPdf.setFont('helvetica', 'bold');
-    summaryPdf.text('Samtals tímar:', 14, summaryPdf.lastAutoTable.finalY + 10);
-    summaryPdf.text(formatNumber(totalHoursAllLocations), 50, summaryPdf.lastAutoTable.finalY + 10);
+    const finalY = summaryTable.finalY || 40;
+    summaryPdf.text('Samtals tímar:', 14, finalY + 10);
+    summaryPdf.text(formatNumber(totalHoursAllLocations), 50, finalY + 10);
     
     // Save summary PDF
     if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
@@ -141,7 +142,7 @@ export async function generatePdfFiles(
       ]);
       
       // Generate the table - EXACTLY like the invoice format
-      autoTable(pdf, {
+      const table = autoTable(pdf, {
         head: [['Dagsetning:', 'Tímar:', 'Vinnuliður:', 'Starfsmaður:']],
         body: rows,
         startY: 30,
@@ -158,7 +159,7 @@ export async function generatePdfFiles(
       });
       
       // Add location information section - match Excel layout
-      const locationY = pdf.lastAutoTable.finalY + 15;
+      const locationY = table.finalY ? table.finalY + 15 : 80;
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       
