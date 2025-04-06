@@ -1,7 +1,7 @@
 
 import { TimesheetEntry } from '@/types/timesheet';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable, { TableOutput } from 'jspdf-autotable';
 import { formatDateIcelandic } from '../utils/dateUtils';
 import { formatNumber } from '../utils/formatters';
 import { groupEntriesByLocation } from './groupUtils';
@@ -54,7 +54,7 @@ export async function generatePdfFiles(
       }
     });
     
-    // Generate summary table
+    // Generate summary table - cast the return value to TableOutput
     const summaryTable = autoTable(summaryPdf, {
       head: [['Staðsetning', 'Tímar']],
       body: summaryTableRows,
@@ -69,11 +69,11 @@ export async function generatePdfFiles(
         textColor: [0, 0, 0],
         fontStyle: 'bold',
       },
-    });
+    }) as unknown as TableOutput;
     
-    // Add total row
+    // Add total row - use the finalY from TableOutput with a fallback value
     summaryPdf.setFont('helvetica', 'bold');
-    const finalY = summaryTable.finalY || 40;
+    const finalY = summaryTable?.finalY || 40;
     summaryPdf.text('Samtals tímar:', 14, finalY + 10);
     summaryPdf.text(formatNumber(totalHoursAllLocations), 50, finalY + 10);
     
@@ -141,7 +141,7 @@ export async function generatePdfFiles(
         entry.employee || ''
       ]);
       
-      // Generate the table - EXACTLY like the invoice format
+      // Generate the table - EXACTLY like the invoice format and cast return value to TableOutput
       const table = autoTable(pdf, {
         head: [['Dagsetning:', 'Tímar:', 'Vinnuliður:', 'Starfsmaður:']],
         body: rows,
@@ -156,10 +156,10 @@ export async function generatePdfFiles(
           textColor: [0, 0, 0],
           fontStyle: 'bold',
         },
-      });
+      }) as unknown as TableOutput;
       
       // Add location information section - match Excel layout
-      const locationY = table.finalY ? table.finalY + 15 : 80;
+      const locationY = table?.finalY ? table.finalY + 15 : 80;
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       
