@@ -28,9 +28,37 @@ export async function generatePdfFiles(
       throw new Error('PDF generation requires browser environment');
     }
     
+    console.log("Window object exists:", !!window);
+    console.log("Window electron property exists:", 'electron' in window);
+    
+    // Try to access the Electron API directly to check if it's defined
+    const electronApiDefined = typeof window.electron !== 'undefined';
+    console.log("Electron API defined:", electronApiDefined);
+    
+    if (electronApiDefined) {
+      // List available methods on the electron object
+      console.log("Available electron API methods:", Object.keys(window.electron || {}));
+      
+      // Check specific methods
+      console.log("writeFile method exists:", typeof window.electron?.writeFile === 'function');
+      console.log("selectDirectory method exists:", typeof window.electron?.selectDirectory === 'function');
+      console.log("fileExists method exists:", typeof window.electron?.fileExists === 'function');
+    }
+    
     // Perform detailed API check
     const isAPIConnected = await checkElectronConnection();
     console.log("Detailed API check result:", isAPIConnected);
+    
+    // Test if we can actually call one of the methods
+    if (electronApiDefined && typeof window.electron.selectDirectory === 'function') {
+      try {
+        console.log("Attempting to call selectDirectory to test API");
+        const testDir = await window.electron.selectDirectory();
+        console.log("selectDirectory test result:", testDir);
+      } catch (e) {
+        console.error("Error calling selectDirectory:", e);
+      }
+    }
     
     // More verbose check for Electron API
     if ('electron' in window) {

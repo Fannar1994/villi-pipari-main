@@ -37,7 +37,19 @@ function createWindow() {
 
   mainWindow = win;
 
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  // Log that we're creating the window with the correct preload script
+  console.log('Creating window with preload script:', path.join(__dirname, 'preload.cjs'));
+  console.log('Preload script exists:', fs.existsSync(path.join(__dirname, 'preload.cjs')));
+
+  mainWindow.once('ready-to-show', () => {
+    console.log('Window ready to show');
+    mainWindow.show();
+    
+    // Open dev tools in both development and production for debugging
+    mainWindow.webContents.openDevTools();
+    
+    console.log('Window shown, dev tools opened');
+  });
 
   if (isDev) {
     loadDev();
@@ -51,6 +63,16 @@ function createWindow() {
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
     console.error('Failed to load:', errorCode, errorDescription);
     dialog.showErrorBox('Loading Failed', `Error ${errorCode}: ${errorDescription}`);
+  });
+  
+  // Add debug info for preload script
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Main: Page finished loading');
+    console.log('Main: Checking if preload script was executed...');
+  });
+  
+  mainWindow.webContents.on('console-message', (event, level, message) => {
+    console.log('Renderer console:', message);
   });
 }
 
@@ -134,6 +156,11 @@ app.on('window-all-closed', () => {
 });
 
 app.whenReady().then(() => {
+  console.log('App is ready, setting up IPC handlers before creating window');
+  
+  // Debug to ensure IPC handlers are set up correctly
+  setupIPCHandlers();
+  
   createWindow();
 
   app.on('activate', () => {
@@ -149,32 +176,76 @@ app.on('render-process-gone', (event, webContents, details) => {
   dialog.showErrorBox('Application Error', `The application encountered an error: ${details.reason}`);
 });
 
-// IPC handlers
-ipcMain.handle('select-directory', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
-  return result.canceled ? null : result.filePaths[0];
-});
+// Set up IPC handlers in a separate function for clarity
+function setupIPCHandlers() {
+  // Check if handlers are already registered to avoid duplicate handlers
+  const channels = ipcMain.eventNames();
+  console.log('Currently registered IPC channels:', channels);
 
-ipcMain.handle('write-file', async (event, { filePath, data }) => {
-  try {
-    // The filePath should already be the complete path
-    const fullPath = filePath;
-    
-    const dir = path.dirname(fullPath);
-    
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    
-    await fs.promises.writeFile(fullPath, data);
-    return { success: true, path: fullPath };
-  } catch (error) {
-    console.error('Error writing file:', error);
-    if (error.code === 'EBUSY') {
-      return { success: false, error: 'Vinsamlegast lokið skjalinu' };
-    }
-    return { success: false, error: error.message };
+  if (!channels.includes('select-directory')) {
+    ipcMain.handle('select-directory', async (event) => {
+      console.log('Main: select-directory called');
+      try {
+        const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+        console.log('Main: dialog result:', result);
+        return result.canceled ? null : result.filePaths[0];
+      } catch (error) {
+        console.error('Main: Error in select-directory:', error);
+        return null;
+      }
+    });
+    console.log('Main: Registered select-directory handler');
   }
-});
 
-ipcMain.handle('file-exists', async (_, filePath) => fs.existsSync(filePath));
+  if (!channels.includes('write-file')) {
+    ipcMain.handle('write-file', async (event, { filePath, data }) => {
+      console.log('Main: write-file called, filePath:', filePath, 'data length:', data?.length);
+      try {
+        // The filePath should already be the complete path
+        const fullPath = filePath;
+        
+        const dir = path.dirname(fullPath);
+        console.log('Main: Creating directory if needed:', dir);
+        
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        
+        await fs.promises.writeFile(fullPath, data);
+        console.log('Main: File written successfully:', fullPath);
+        return { success: true, path: fullPath };
+      } catch (error) {
+        console.error('Main: Error writing file:', error);
+        if (error.code === 'EBUSY') {
+          return { success: false, error: 'Vinsamlegast lokið skjalinu' };
+        }
+        return { success: false, error: error.message };
+      }
+    });
+    console.log('Main: Registered write-file handler');
+  }
+
+  if (!channels.includes('file-exists')) {
+    ipcMain.handle('file-exists', async (_, filePath) => {
+      console.log('Main: file-exists called, filePath:', filePath);
+      try {
+        const exists = fs.existsSync(filePath);
+        console.log('Main: file exists result:', exists);
+        return exists;
+      } catch (error) {
+        console.error('Main: Error checking if file exists:', error);
+        return false;
+      }
+    });
+    console.log('Main: Registered file-exists handler');
+  }
+  
+  // Add a test handler
+  if (!channels.includes('test-ipc')) {
+    ipcMain.handle('test-ipc', async () => {
+      console.log('Main: test-ipc called');
+      return { success: true, time: new Date().toString() };
+    });
+    console.log('Main: Registered test-ipc handler');
+  }
+}
