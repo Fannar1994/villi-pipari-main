@@ -34,7 +34,8 @@ export function getElectronAPI(): ElectronAPI | null {
     
     // First check for minimum required methods
     if (typeof window.electron.writeFile === 'function' && 
-        typeof window.electron.selectDirectory === 'function') {
+        typeof window.electron.selectDirectory === 'function' &&
+        typeof window.electron._testConnection === 'function') {  // Added _testConnection check
       console.log('✓ Required methods found on window.electron');
       
       // Save this working API as our emergency backup
@@ -52,7 +53,8 @@ export function getElectronAPI(): ElectronAPI | null {
       const backupAPI = (window as any).electronBackupAPI;
       
       if (typeof backupAPI.writeFile === 'function' && 
-          typeof backupAPI.selectDirectory === 'function') {
+          typeof backupAPI.selectDirectory === 'function' &&
+          typeof backupAPI._testConnection === 'function') {  // Added _testConnection check
         console.log('✓ Required methods found on backup API');
         
         // Enhanced recovery: Copy backup API to the standard location for unified access
@@ -74,7 +76,8 @@ export function getElectronAPI(): ElectronAPI | null {
     const globalBackupAPI = (global as any).electronBackupAPI;
     
     if (typeof globalBackupAPI.writeFile === 'function' && 
-        typeof globalBackupAPI.selectDirectory === 'function') {
+        typeof globalBackupAPI.selectDirectory === 'function' &&
+        typeof globalBackupAPI._testConnection === 'function') {  // Added _testConnection check
       console.log('✓ Required methods found on global backup API');
       
       // Copy global backup to window
