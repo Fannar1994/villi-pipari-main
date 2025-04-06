@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FileOutput, WrenchIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { testPdfGeneration } from '@/lib/electron/pdfTester';
-import { forceApiRecovery } from '@/lib/electron/detector';
+import { forceApiRecovery, activateEmergencyMode } from '@/lib/electron/detector';
 
 interface ApiActionsProps {
   apiStatus: {
@@ -55,7 +55,7 @@ export function ApiActions({ apiStatus, testOutputPath, setTestOutputPath }: Api
     }
   };
 
-  // Enhanced API recovery
+  // Enhanced API recovery with the improved emergency mode activation
   const enhancedApiRecovery = () => {
     try {
       // Use our new enhanced recovery function
@@ -78,6 +78,33 @@ export function ApiActions({ apiStatus, testOutputPath, setTestOutputPath }: Api
       toast({
         title: 'Villa',
         description: `Villa við API endurheimt: ${(error as Error).message}`,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Direct emergency mode activation - bypasses standard recovery attempts
+  const directEmergencyMode = () => {
+    try {
+      const success = activateEmergencyMode();
+      
+      if (success) {
+        toast({
+          title: 'Neyðarhamur virkjaður',
+          description: 'Neyðarham API tenging virk - prófaðu að nota forritið aftur.',
+        });
+      } else {
+        toast({
+          title: 'Villa',
+          description: 'Ekki tókst að virkja neyðarham. Endurræstu forritið.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error activating emergency mode:', error);
+      toast({
+        title: 'Villa',
+        description: `Villa við að virkja neyðarham: ${(error as Error).message}`,
         variant: 'destructive',
       });
     }
@@ -109,11 +136,21 @@ export function ApiActions({ apiStatus, testOutputPath, setTestOutputPath }: Api
       <Button
         size="sm"
         variant="default"
-        onClick={enhancedApiRecovery}
-        className="w-full mt-4 bg-yellow-600 hover:bg-yellow-700"
+        onClick={directEmergencyMode}
+        className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-semibold"
       >
         <WrenchIcon className="mr-1 h-4 w-4" />
-        Virkja neyðarham (Emergency Mode)
+        VIRKJA NEYÐARHAM
+      </Button>
+      
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={enhancedApiRecovery}
+        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
+      >
+        <WrenchIcon className="mr-1 h-4 w-4" />
+        Gera við API
       </Button>
 
       {testOutputPath && (
