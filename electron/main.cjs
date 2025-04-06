@@ -1,4 +1,3 @@
-
 // ✅ electron/main.cjs
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
@@ -157,24 +156,45 @@ ipcMain.handle('select-directory', async () => {
 
 ipcMain.handle('write-file', async (event, { filePath, data }) => {
   try {
-    // The filePath should already be the complete path
-    const fullPath = filePath;
+    console.log('Write file request received for path:', filePath);
     
-    const dir = path.dirname(fullPath);
+    // Handle potential asar path issues
+    // When packaged, app.asar is read-only, so we need to ensure we're writing outside it
+    const dir = path.dirname(filePath);
     
+    console.log(`Ensuring directory exists: ${dir}`);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     
-    await fs.promises.writeFile(fullPath, data);
-    return { success: true, path: fullPath };
+    console.log(`Writing file: ${filePath}, data length: ${data.length}`);
+    
+    // Use writeFileSync for increased reliability with binary files
+    fs.writeFileSync(filePath, Buffer.from(data));
+    
+    console.log('File written successfully');
+    return { success: true, path: filePath };
   } catch (error) {
     console.error('Error writing file:', error);
+    let errorMsg = error.message || 'Unknown error';
+    
     if (error.code === 'EBUSY') {
-      return { success: false, error: 'Vinsamlegast lokið skjalinu' };
+      errorMsg = 'Vinsamlegast lokið skjalinu';
+    } else if (error.code === 'EPERM') {
+      errorMsg = 'Ekki nægjanleg réttindi til að vista skrá';
+    } else if (error.code === 'ENOENT') {
+      errorMsg = 'Slóðin fannst ekki';
     }
-    return { success: false, error: error.message };
+    
+    return { success: false, error: errorMsg, code: error.code };
   }
 });
 
-ipcMain.handle('file-exists', async (_, filePath) => fs.existsSync(filePath));
+ipcMain.handle('file-exists', async (_, filePath) => {
+  try {
+    return fs.existsSync(filePath);
+  } catch (error) {
+    console.error('Error checking if file exists:', error);
+    return false;
+  }
+});

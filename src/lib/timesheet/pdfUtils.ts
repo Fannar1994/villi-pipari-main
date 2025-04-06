@@ -3,6 +3,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { TimesheetEntry } from '@/types/timesheet';
 import { formatDateIcelandic } from '../utils/dateUtils';
+import path from 'path';
 
 /**
  * Check if the Electron API is available
@@ -13,7 +14,7 @@ export function checkElectronApi(): boolean {
     typeof window.electron.writeFile === 'function';
   
   if (!isElectronAvailable) {
-    console.error("Electron API is not available");
+    console.log("Electron API is not available");
   }
   
   return isElectronAvailable;
@@ -29,19 +30,25 @@ export async function savePdfFile(
 ): Promise<boolean> {
   try {
     if (!checkElectronApi()) {
-      throw new Error('Electron API er ekki aðgengileg til að vista skrár.');
+      console.error('Electron API er ekki aðgengileg til að vista skrár.');
+      return false;
     }
     
     console.log(`Saving ${description} to: ${filePath}`);
     
     const pdfOutput = pdf.output('arraybuffer');
+    
+    // Convert to Uint8Array for consistent handling
+    const data = new Uint8Array(pdfOutput);
+    
     const result = await window.electron.writeFile({
       filePath: filePath,
-      data: new Uint8Array(pdfOutput)
+      data: data
     });
     
     if (!result.success) {
-      throw new Error(result.error || `Failed to save ${description}`);
+      console.error(`Failed to save ${description}:`, result.error);
+      return false;
     }
     
     console.log(`Successfully saved ${description}!`);

@@ -4,6 +4,7 @@ import { TimesheetEntry } from '@/types/timesheet';
 import { createSafeSheetName } from '../utils/formatters';
 import { groupEntriesByLocation, createInvoiceData, createSummarySheetData } from './processor';
 import { checkElectronApi } from './pdfUtils';
+import path from 'path';
 
 /**
  * Generates Excel invoices from timesheet entries
@@ -123,7 +124,8 @@ export async function generateInvoices(
     const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer', bookSST: false });
 
     // Check if we're in an Electron environment with the required API
-    if (!checkElectronApi()) {
+    const isElectronAvailable = checkElectronApi();
+    if (!isElectronAvailable) {
       console.log("Running in browser environment or electron API not available, skipping file write");
       // For browser demo, offer file download
       if (typeof document !== 'undefined') {
@@ -150,13 +152,11 @@ export async function generateInvoices(
     // Remove any trailing slashes for consistency
     const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
     
-    // Create the full file path without using path.join (which isn't available in browser)
-    // Use forward slashes for cross-platform compatibility
-    const fullPath = `${normalizedDir}/${filename}`;
-    
-    console.log("Saving file to:", fullPath);
-    
     try {
+      // Use path.join to ensure proper path formatting regardless of OS
+      const fullPath = path.join(normalizedDir, filename);
+      console.log("Saving file to:", fullPath);
+      
       // Use the window.electron API for file operations with the full path
       const result = await window.electron.writeFile({
         filePath: fullPath,
@@ -166,9 +166,11 @@ export async function generateInvoices(
       if (!result.success) {
         throw new Error(result.error || 'Villa kom upp við að vista skjalið');
       }
+      
+      console.log("File successfully saved:", fullPath);
     } catch (error) {
       console.error("Error while using Electron API:", error);
-      throw new Error('Villa við að vista skrá: ' + (error.message || 'Óþekkt villa'));
+      throw new Error(`Villa við að vista skrá: ${error.message || 'Óþekkt villa'}`);
     }
 
     return invoiceCount;

@@ -9,6 +9,7 @@ import {
   createEmployeePdf, 
   sanitizeFilename 
 } from './pdfUtils';
+import path from 'path';
 
 /**
  * Generates PDF files from timesheet entries
@@ -37,7 +38,7 @@ export async function generatePdfFiles(
     
     // Save the summary PDF
     const summaryFilename = `Summary_${new Date().toISOString().split('T')[0]}.pdf`;
-    const summaryPath = `${normalizedDir}/${summaryFilename}`;
+    const summaryPath = path.join(normalizedDir, summaryFilename);
     
     const summarySuccess = await savePdfFile(
       summaryPdf, 
@@ -84,7 +85,7 @@ export async function generatePdfFiles(
         const sanitizedEmployee = sanitizeFilename(employee);
         const sanitizedLocation = sanitizeFilename(location);
         const filename = `${sanitizedEmployee}_${sanitizedLocation}_${new Date().toISOString().split('T')[0]}.pdf`;
-        const filePath = `${normalizedDir}/${filename}`;
+        const filePath = path.join(normalizedDir, filename);
         
         const success = await savePdfFile(
           pdf, 

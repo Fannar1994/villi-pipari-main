@@ -9,6 +9,7 @@ import {
   createSummarySheetData 
 } from './timesheet/processor';
 import { createSummaryData } from './timesheet/summaryCreator';
+import { checkElectronApi } from './timesheet/pdfUtils';
 
 export { 
   parseTimesheetFile, 
@@ -18,5 +19,6 @@ export {
   createInvoiceData,
   createSummarySheetData,
   createSummaryData,
-  groupEntriesByLocation
+  groupEntriesByLocation,
+  checkElectronApi
 };
