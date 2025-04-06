@@ -18,6 +18,7 @@ interface ApiActionsProps {
 export function ApiActions({ apiStatus, testOutputPath, setTestOutputPath }: ApiActionsProps) {
   // Test directory selection
   const testSelectDirectory = async () => {
+    console.log('Testing directory selection from ApiActions');
     if (!window.electron && !(window as any).electronBackupAPI) {
       toast({
         title: 'Error',
@@ -29,6 +30,7 @@ export function ApiActions({ apiStatus, testOutputPath, setTestOutputPath }: Api
     
     // Use either the main API or backup API
     const api = window.electron || (window as any).electronBackupAPI;
+    console.log('API object found:', api ? 'yes' : 'no');
     
     if (typeof api.selectDirectory !== 'function') {
       toast({
@@ -40,13 +42,17 @@ export function ApiActions({ apiStatus, testOutputPath, setTestOutputPath }: Api
     }
     
     try {
+      console.log('Calling selectDirectory...');
       const result = await api.selectDirectory();
+      console.log('Directory selection result:', result);
+      
       setTestOutputPath(result);
       toast({
         title: 'Directory Selected',
         description: `Path: ${result || 'none'}`,
       });
     } catch (error) {
+      console.error('Error during directory selection:', error);
       toast({
         title: 'Error',
         description: `Failed to select directory: ${(error as Error).message}`,

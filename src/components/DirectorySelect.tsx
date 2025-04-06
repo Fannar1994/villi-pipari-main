@@ -49,14 +49,18 @@ export function DirectorySelect({
       const api = getElectronAPI();
       
       if (api && typeof api.selectDirectory === 'function') {
+        console.log('Calling selectDirectory from DirectorySelect component...');
         try {
-          console.log('Calling selectDirectory...');
           const result = await api.selectDirectory();
-          console.log('selectDirectory result:', result);
+          console.log('selectDirectory result from component:', result);
           
           if (result) {
             onChange(result);
             console.log('Directory selected successfully:', result);
+            toast({
+              title: "Mappa valin",
+              description: `Mappa: ${result}`,
+            });
             return;
           } else {
             console.warn('No directory selected or dialog was cancelled');

@@ -24,7 +24,10 @@ function createElectronAPI(ipcRenderer) {
     selectDirectory: async () => {
       console.log('Preload: selectDirectory called');
       try {
-        return await ipcRenderer.invoke('select-directory');
+        console.log('Invoking select-directory IPC call...');
+        const result = await ipcRenderer.invoke('select-directory');
+        console.log('Preload: selectDirectory result:', result);
+        return result;
       } catch (error) {
         console.error('Preload: selectDirectory error:', error);
         return null;

@@ -55,6 +55,8 @@ function registerDirectorySelector(channels) {
       }
     });
     console.log('✅ Registered select-directory handler');
+  } else {
+    console.log('⏩ select-directory handler already registered');
   }
 }
 
@@ -83,6 +85,8 @@ function registerFileWriter(channels) {
       }
     });
     console.log('✅ Registered write-file handler');
+  } else {
+    console.log('⏩ write-file handler already registered');
   }
 }
 
@@ -104,6 +108,8 @@ function registerFileExistsChecker(channels) {
       }
     });
     console.log('✅ Registered file-exists handler');
+  } else {
+    console.log('⏩ file-exists handler already registered');
   }
 }
 
@@ -118,6 +124,8 @@ function registerTestHandler(channels) {
       return { success: true, time: new Date().toString(), mainVersion: '5.0' };
     });
     console.log('✅ Registered test-ipc handler');
+  } else {
+    console.log('⏩ test-ipc handler already registered');
   }
 }
 
@@ -131,6 +139,8 @@ function registerApiStatusListener(channels) {
       console.log('📡 API status received:', status);
     });
     console.log('✅ Registered api-status listener');
+  } else {
+    console.log('⏩ api-status listener already registered');
   }
 }
 

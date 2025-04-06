@@ -122,4 +122,17 @@ window.addEventListener('message', async (event) => {
   }
 });
 
+// Add debug logging for IPC calls
+const originalInvoke = ipcRenderer.invoke;
+ipcRenderer.invoke = function(channel, ...args) {
+  console.log(`🔍 Invoking IPC channel '${channel}' with args:`, args);
+  const promise = originalInvoke.call(this, channel, ...args);
+  promise.then(result => {
+    console.log(`📬 IPC '${channel}' result:`, result);
+  }).catch(err => {
+    console.error(`❌ IPC '${channel}' error:`, err);
+  });
+  return promise;
+};
+
 console.log('🏁 Preload script completed');
