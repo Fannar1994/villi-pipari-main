@@ -1,7 +1,7 @@
 
 /**
  * Handles API exposure to the renderer process
- * SIMPLIFIED VERSION - Direct window assignment with contextBridge fallback
+ * ULTRA RELIABLE VERSION - Multiple exposure methods with verification
  */
 const { contextBridge } = require('electron');
 
@@ -15,60 +15,53 @@ function exposeAPI(electronAPI) {
     return;
   }
   
-  console.log('📢 SIMPLIFIED: Exposing API with methods:', Object.keys(electronAPI).join(', '));
+  console.log('🔒 RELIABLE: Exposing API with methods:', Object.keys(electronAPI).join(', '));
   
+  // METHOD 1: Context Bridge (most secure)
   try {
-    // First try: Use contextBridge if available (recommended secure approach)
     if (contextBridge) {
-      console.log('🔒 Using contextBridge to expose API');
-      
-      // Expose as 'electron'
       contextBridge.exposeInMainWorld('electron', electronAPI);
-      
-      // Also expose as 'electronBackupAPI' for redundancy
-      contextBridge.exposeInMainWorld('electronBackupAPI', electronAPI);
-      
-      console.log('✅ API exposed via contextBridge');
-    } else {
-      console.warn('⚠️ contextBridge not available, using direct window assignment');
-    }
-    
-    // SECOND LAYER: Direct global assignment as fallback
-    // This ensures API is available even if contextBridge fails
-    try {
-      if (typeof global !== 'undefined') {
-        global.electronBackupAPI = electronAPI;
-        console.log('✅ Backup API set on global object');
-      }
-    } catch (e) {
-      console.error('❌ Failed to set global backup:', e);
-    }
-    
-    // THIRD LAYER: Direct window assignment as last resort
-    // This approach is not recommended for production but ensures availability
-    try {
-      if (typeof window !== 'undefined') {
-        console.log('🔓 Setting API directly on window as last resort');
-        window.electronEmergencyAPI = electronAPI;
-      }
-    } catch (e) {
-      console.error('❌ Failed to set window.electronEmergencyAPI:', e);
+      console.log('✅ [1/3] API exposed via contextBridge as window.electron');
     }
   } catch (e) {
-    console.error('❌ Error in API exposure:', e);
+    console.error('❌ contextBridge exposure failed:', e);
   }
   
-  // Verify exposure with setTimeout to ensure it happens after all other operations
+  // METHOD 2: Direct global.__electronAPI assignment
+  try {
+    global.__electronAPI = electronAPI;
+    console.log('✅ [2/3] API exposed via global.__electronAPI');
+  } catch (e) {
+    console.error('❌ global.__electronAPI assignment failed:', e);
+  }
+  
+  // METHOD 3: Ultra direct window access (last resort)
+  try {
+    if (typeof window !== 'undefined') {
+      process.once('loaded', () => {
+        window.electron = electronAPI;
+        console.log('✅ [3/3] API exposed via direct window.electron assignment');
+      });
+    }
+  } catch (e) {
+    console.error('❌ Direct window assignment failed:', e);
+  }
+  
+  // Verification step
   setTimeout(() => {
     try {
       if (contextBridge) {
-        contextBridge.exposeInMainWorld('_apiVerification', {
-          check: () => ({ exposed: true, timestamp: new Date().toISOString() })
+        contextBridge.exposeInMainWorld('__electronAPIAvailable', {
+          check: () => ({
+            available: true,
+            methods: Object.keys(electronAPI),
+            timestamp: new Date().toISOString()
+          })
         });
       }
-      console.log('🚀 API exposure process completed');
+      console.log('🚀 API exposure verification complete');
     } catch (e) {
-      console.error('❌ Final verification failed:', e);
+      console.error('❌ Verification failed:', e);
     }
   }, 100);
 }

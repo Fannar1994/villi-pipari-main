@@ -1,43 +1,75 @@
 /**
  * Core API detection utilities for Electron
- * SIMPLIFIED VERSION - Checks multiple possible API locations
+ * ULTRA RELIABLE VERSION - Aggressive API detection and recovery
  */
 import { ElectronAPI, ConnectionTestResult } from './types';
 
 /**
- * Attempts to access the Electron API from multiple possible locations
+ * Attempts to access the Electron API from ALL possible locations
  */
 export function getElectronAPI(): ElectronAPI | null {
-  console.log('🔍 Searching for Electron API...');
+  console.log('🔍 ULTRA AGGRESSIVE API search starting...');
   
-  if (typeof window === 'undefined') {
-    console.log('❌ No window object available');
-    return null;
+  // First try direct window.electron
+  if (typeof window !== 'undefined' && window.electron) {
+    console.log('✅ Primary API found at window.electron');
+    return window.electron;
   }
   
-  // Try all possible API locations in order of preference
+  // Try ALL possible API locations
   const possibleLocations = [
+    // Standard locations
     'electron',
     'electronBackupAPI',
     'electronEmergencyAPI',
-    '_electron'
+    '_electron',
+    // Global variables
+    '__electronAPI',
+    'electronAPI',
+    // Legacy and uncommon locations
+    '_electronIPC',
+    'nodeAPI',
+    'ipcAPI'
   ];
   
+  // Check window for all locations
   for (const location of possibleLocations) {
-    if ((window as any)[location]) {
+    if (window && (window as any)[location]) {
       console.log(`✅ Found API at window.${location}`);
       
-      // Always make window.electron available as the standard location
-      if (location !== 'electron') {
-        console.log(`🔄 Restoring API from ${location} to standard window.electron`);
-        window.electron = (window as any)[location];
-      }
-      
+      // Restore the standard location
+      window.electron = (window as any)[location];
+      console.log(`🔄 Restored API from ${location} to standard window.electron`);
       return window.electron;
     }
   }
   
-  console.error('❌ No Electron API available after checking all locations');
+  // Check global for all locations
+  if (typeof global !== 'undefined') {
+    for (const location of possibleLocations) {
+      if ((global as any)[location]) {
+        console.log(`✅ Found API at global.${location}`);
+        
+        // Restore the standard location
+        window.electron = (global as any)[location];
+        console.log(`🔄 Restored API from global.${location} to window.electron`);
+        return window.electron;
+      }
+    }
+  }
+  
+  // Check for __electronAPIAvailable verification object
+  if ((window as any).__electronAPIAvailable && 
+      typeof (window as any).__electronAPIAvailable.check === 'function') {
+    try {
+      const status = (window as any).__electronAPIAvailable.check();
+      console.log('📡 API verification status:', status);
+    } catch (e) {
+      console.error('❌ API verification check failed:', e);
+    }
+  }
+  
+  console.error('❌ API NOT FOUND after checking all possible locations');
   return null;
 }
 
@@ -123,7 +155,11 @@ export function forceApiRecovery(): boolean {
   const backupSources = [
     { name: 'electronBackupAPI', source: window },
     { name: 'electronEmergencyAPI', source: window },
-    { name: 'electronBackupAPI', source: typeof global !== 'undefined' ? global : null }
+    { name: '__electronAPI', source: window },
+    { name: 'electronAPI', source: window },
+    { name: 'electronBackupAPI', source: typeof global !== 'undefined' ? global : null },
+    { name: '__electronAPI', source: typeof global !== 'undefined' ? global : null },
+    { name: 'electronAPI', source: typeof global !== 'undefined' ? global : null }
   ];
   
   for (const { name, source } of backupSources) {
@@ -139,6 +175,25 @@ export function forceApiRecovery(): boolean {
     }
   }
   
+  // Last resort: try to make a new API directly
+  try {
+    if (typeof require === 'function') {
+      console.log('🔧 Trying direct require as last resort');
+      const { ipcRenderer } = require('electron');
+      if (ipcRenderer) {
+        const { createElectronAPI } = require('../../../electron/preloadApi.cjs');
+        const newApi = createElectronAPI(ipcRenderer);
+        if (newApi) {
+          window.electron = newApi;
+          console.log('✅ Created new API directly via require');
+          return isElectronAPIAvailable();
+        }
+      }
+    }
+  } catch (e) {
+    console.error('❌ Direct API creation failed:', e);
+  }
+  
   console.error('❌ All recovery attempts failed');
   return false;
 }
@@ -148,12 +203,14 @@ export function setEmergencyApiBackup(api: ElectronAPI): void {
   console.log('💾 Setting emergency API backup');
   (window as any).electronBackupAPI = api;
   (window as any).electronEmergencyAPI = api;
+  (window as any).__electronAPI = api;
 }
 
 export function getEmergencyApiBackup(): ElectronAPI | null {
   return (
     (window as any).electronBackupAPI || 
-    (window as any).electronEmergencyAPI || 
+    (window as any).electronEmergencyAPI ||
+    (window as any).__electronAPI ||
     null
   );
 }
