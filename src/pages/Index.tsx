@@ -10,11 +10,14 @@ import { useTimesheetProcessor } from '@/hooks/useTimesheetProcessor';
 import { useElectronAutoInit } from '@/hooks/useElectronAutoInit';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PdfTab } from '@/components/PdfTab';
 
 const Index = () => {
   const [timesheetFile, setTimesheetFile] = useState<File | null>(null);
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [outputDir, setOutputDir] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<string>('excel');
   
   // Simple API check
   const { apiAvailable } = useElectronAutoInit();
@@ -59,25 +62,38 @@ const Index = () => {
       <Card className="w-full max-w-md shadow-lg border-primary">
         <PageHeader />
         
-        <TimesheetForm
-          timesheetFile={timesheetFile}
-          setTimesheetFile={setTimesheetFile}
-          templateFile={templateFile}
-          setTemplateFile={setTemplateFile}
-          outputDir={outputDir}
-          setOutputDir={setOutputDir}
-          isProcessing={isProcessing}
-        />
-        
-        <div className="px-6 py-3">
-          <ProcessStatus status={processStatus} />
-        </div>
-        
-        <ActionButtons
-          onGenerateInvoices={handleGenerateInvoices}
-          onGeneratePdfs={handleGeneratePdfs}
-          isProcessing={isProcessing}
-        />
+        <Tabs defaultValue="excel" value={activeTab} onValueChange={setActiveTab} className="w-full px-6 pt-2">
+          <TabsList className="grid grid-cols-2 mb-4 w-full">
+            <TabsTrigger value="excel">Excel / Invoices</TabsTrigger>
+            <TabsTrigger value="pdf">PDF Tools</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="excel" className="mt-0">
+            <TimesheetForm
+              timesheetFile={timesheetFile}
+              setTimesheetFile={setTimesheetFile}
+              templateFile={templateFile}
+              setTemplateFile={setTemplateFile}
+              outputDir={outputDir}
+              setOutputDir={setOutputDir}
+              isProcessing={isProcessing}
+            />
+            
+            <div className="px-6 py-3">
+              <ProcessStatus status={processStatus} />
+            </div>
+            
+            <ActionButtons
+              onGenerateInvoices={handleGenerateInvoices}
+              onGeneratePdfs={null}
+              isProcessing={isProcessing}
+            />
+          </TabsContent>
+          
+          <TabsContent value="pdf" className="mt-0">
+            <PdfTab />
+          </TabsContent>
+        </Tabs>
       </Card>
       
       <PageFooter />
