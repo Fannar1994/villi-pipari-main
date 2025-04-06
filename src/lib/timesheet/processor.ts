@@ -1,4 +1,3 @@
-
 import { TimesheetEntry, SummaryEntry, EmployeeSummary, LocationHours } from '@/types/timesheet';
 import { formatNumber } from '../utils/formatters';
 import { isIcelandicHoliday, formatDateIcelandic } from '../utils/dateUtils';
@@ -69,38 +68,38 @@ export function createInvoiceData(entries: TimesheetEntry[]): (string | number)[
 }
 
 /**
- * Creates summary data for all timesheet entries, grouped by employee and date
+ * Creates detailed summary data for all timesheet entries, with location breakdown 
  */
 export function createSummaryData(entries: TimesheetEntry[]): SummaryEntry[] {
-  // Group entries by employee and date
-  const summaryMap = new Map<string, SummaryEntry>();
+  // Create a more detailed summary with location information
+  const summaryEntries: SummaryEntry[] = [];
   
+  // Group entries by date, employee, and location
   entries.forEach(entry => {
     if (!entry.date || !entry.employee) return;
     
-    const key = `${entry.date}-${entry.employee}`;
-    const existingEntry = summaryMap.get(key);
-    
-    if (existingEntry) {
-      existingEntry.totalHours += entry.hours;
-    } else {
-      summaryMap.set(key, {
-        date: entry.date,
-        employee: entry.employee,
-        totalHours: entry.hours,
-        isHoliday: isIcelandicHoliday(entry.date)
-      });
-    }
+    summaryEntries.push({
+      date: entry.date,
+      employee: entry.employee,
+      location: entry.location || '',
+      apartment: entry.apartment || '',
+      hours: entry.hours,
+      isHoliday: isIcelandicHoliday(entry.date)
+    });
   });
   
-  // Convert map to array and sort by date and employee
-  return Array.from(summaryMap.values()).sort((a, b) => {
+  // Sort by date, then employee, then location
+  return summaryEntries.sort((a, b) => {
     // Sort by date first
     const dateComparison = a.date.localeCompare(b.date);
     if (dateComparison !== 0) return dateComparison;
     
     // Then by employee
-    return a.employee.localeCompare(b.employee);
+    const employeeComparison = a.employee.localeCompare(b.employee);
+    if (employeeComparison !== 0) return employeeComparison;
+    
+    // Then by location
+    return (a.location + a.apartment).localeCompare(b.location + b.apartment);
   });
 }
 
@@ -165,31 +164,44 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   const data: (string | number)[][] = [
     ['Samantekt'], // Title
     [], // Empty row
-    ['Dagsetning', 'Starfsmaður', 'Heildar tímar'], // Headers
+    ['Dagsetning', 'Starfsmaður', 'Staðsetning', 'Tímar'], // Updated headers to include location
   ];
   
   // Styling information for cells
   const styles: { [cell: string]: { font: { color: string } } } = {};
   
+  // Track the current date and employee to add separators
+  let currentDate = '';
+  let currentEmployee = '';
+  
   // Add data rows
   summaryEntries.forEach((entry, index) => {
     const rowIndex = index + 3; // Start after headers
     
+    // Format location display
+    const locationDisplay = entry.apartment 
+      ? `${entry.location}, ${entry.apartment}`
+      : entry.location;
+    
+    // Only show date and employee when they change
+    const dateToShow = currentDate !== entry.date ? formatDateIcelandic(entry.date) : '';
+    const employeeToShow = currentDate !== entry.date || currentEmployee !== entry.employee ? entry.employee : '';
+    
     data[rowIndex] = [
-      formatDateIcelandic(entry.date),
-      entry.employee,
-      formatNumber(entry.totalHours)
+      dateToShow,
+      employeeToShow,
+      locationDisplay,
+      formatNumber(entry.hours)
     ];
     
-    // Mark overtime (over 8 hours) in red
-    if (entry.totalHours > 8) {
-      styles[`C${rowIndex + 1}`] = { font: { color: 'FF0000' } }; // Red font for hours
-    }
-    
     // Mark holidays in red
-    if (entry.isHoliday) {
+    if (entry.isHoliday && dateToShow) {
       styles[`A${rowIndex + 1}`] = { font: { color: 'FF0000' } }; // Red font for date
     }
+    
+    // Update tracking variables
+    currentDate = entry.date;
+    currentEmployee = entry.employee;
   });
   
   // Calculate the next row for employee summary section

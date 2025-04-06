@@ -12,7 +12,9 @@ export interface TimesheetEntry {
 export interface SummaryEntry {
   date: string;
   employee: string;
-  totalHours: number;
+  location: string;    // Added location information
+  apartment: string;   // Added apartment information
+  hours: number;       // Hours for this specific location
   isHoliday: boolean;
 }
 
