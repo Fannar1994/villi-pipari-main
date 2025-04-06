@@ -60,8 +60,10 @@ export async function generatePdfFiles(
       }
     });
     
-    // Generate summary table - use as unknown first then cast to TableOutput
-    let summaryTable: TableOutput = {};
+    // Create a variable to store table output data
+    let summaryTable: TableOutput = { finalY: 40 }; // Default fallback value
+    
+    // Generate summary table
     autoTable(summaryPdf, {
       head: [['Staðsetning', 'Tímar']],
       body: summaryTableRows,
@@ -82,9 +84,9 @@ export async function generatePdfFiles(
       }
     });
     
-    // Add total row - use the finalY from TableOutput with a fallback value
+    // Add total row - use the finalY from TableOutput
     summaryPdf.setFont('helvetica', 'bold');
-    const finalY = summaryTable?.finalY || 40;
+    const finalY = summaryTable.finalY || 40;
     summaryPdf.text('Samtals tímar:', 14, finalY + 10);
     summaryPdf.text(formatNumber(totalHoursAllLocations), 50, finalY + 10);
     
@@ -152,8 +154,10 @@ export async function generatePdfFiles(
         entry.employee || ''
       ]);
       
-      // Generate the table - create object for TableOutput and use didDrawPage
-      let table: TableOutput = {};
+      // Create a variable to store table output data
+      let table: TableOutput = { finalY: 80 }; // Default fallback value
+      
+      // Generate the table
       autoTable(pdf, {
         head: [['Dagsetning:', 'Tímar:', 'Vinnuliður:', 'Starfsmaður:']],
         body: rows,
@@ -175,7 +179,7 @@ export async function generatePdfFiles(
       });
       
       // Add location information section - match Excel layout
-      const locationY = table?.finalY ? table.finalY + 15 : 80;
+      const locationY = table.finalY ? table.finalY + 15 : 80;
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       
