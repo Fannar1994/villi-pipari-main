@@ -17,7 +17,7 @@ const Index = () => {
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [outputDir, setOutputDir] = useState<string>('');
   
-  // Auto-initialize Electron API - simplified approach
+  // Simple API check
   const { apiAvailable } = useElectronAutoInit();
   
   const { 
@@ -28,10 +28,12 @@ const Index = () => {
   } = useTimesheetProcessor();
 
   const handleGenerateInvoices = async () => {
+    if (!apiAvailable) return;
     await generateInvoicesFromTimesheet(timesheetFile, templateFile, outputDir);
   };
 
   const handleGeneratePdfs = async () => {
+    if (!apiAvailable) return;
     await generatePdfsFromTimesheet(timesheetFile, outputDir);
   };
 
@@ -47,7 +49,6 @@ const Index = () => {
       {!apiAvailable && (
         <div className="w-full max-w-md mb-2 p-3 bg-amber-100 border border-amber-300 rounded text-amber-800 text-center">
           <p className="font-medium mb-2">Electron API not available</p>
-          <p className="text-sm mb-2">The application may not function correctly</p>
           <Button 
             onClick={handleReload} 
             variant="outline" 
