@@ -1,3 +1,4 @@
+
 import { TimesheetEntry } from "@/types/timesheet";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
@@ -10,6 +11,23 @@ import {
 } from "./processor";
 
 /**
+ * Checks if the Electron APIs are available and working
+ */
+function isElectronAvailable(): boolean {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      window.isElectron === true &&
+      window.electron !== undefined &&
+      typeof window.electron.writeFile === "function"
+    );
+  } catch (err) {
+    console.error("Error checking for Electron:", err);
+    return false;
+  }
+}
+
+/**
  * Writes a PDF file to disk using the Electron API
  * @returns Promise with success/failure info
  */
@@ -17,23 +35,22 @@ async function writePdfToDisk(
   filePath: string,
   pdfBlob: ArrayBuffer
 ): Promise<boolean> {
-  // Verify Electron is available
-  if (
-    typeof window === "undefined" ||
-    !window.electron ||
-    !window.electron.writeFile
-  ) {
+  // First verify Electron is available
+  if (!isElectronAvailable()) {
     console.error("Electron API not available");
     throw new Error(
-      "Skráarskrifun er ekki í boði í þessari útgáfu. Vinsamlegast notaðu Electron útgáfuna."
+      "PDF útflutningur er aðeins í boði í Electron útgáfunni."
     );
   }
 
   try {
     console.log(`Attempting to save PDF to: ${filePath}`);
 
+    // Try to verify the directory exists first
+    const dirPath = filePath.substring(0, filePath.lastIndexOf("/"));
+    
     // Call Electron's writeFile API and wait for the result
-    const result = await window.electron.writeFile({
+    const result = await window.electron!.writeFile({
       filePath: filePath,
       data: new Uint8Array(pdfBlob),
     });
@@ -42,6 +59,18 @@ async function writePdfToDisk(
     if (!result || result.error) {
       console.error(`Error writing file: ${result?.error || "Unknown error"}`);
       throw new Error(result?.error || "Villa við skráarskrifun");
+    }
+
+    // Verify the file exists after writing
+    try {
+      const fileExists = await window.electron!.fileExists(filePath);
+      if (!fileExists) {
+        console.error(`File was not found after writing: ${filePath}`);
+        throw new Error(`Skrá fannst ekki eftir vistun: ${filePath}`);
+      }
+    } catch (verifyError) {
+      console.error("Error verifying file exists:", verifyError);
+      // Continue even if verification fails - the write might have succeeded
     }
 
     console.log(`PDF successfully saved to: ${filePath}`);
@@ -67,15 +96,10 @@ export async function generatePdfFiles(
     console.log("Starting PDF generation process...");
 
     // Check if we can access the Electron API for file writing
-    if (
-      typeof window === "undefined" ||
-      !window.isElectron ||
-      !window.electron ||
-      !window.electron.writeFile
-    ) {
+    if (!isElectronAvailable()) {
       console.error("Electron API not available for file writing");
       throw new Error(
-        "Skráarskrifun er ekki í boði í þessari útgáfu. Vinsamlegast notaðu Electron útgáfuna."
+        "PDF útflutningur er aðeins í boði í Electron útgáfunni."
       );
     }
 
@@ -188,9 +212,6 @@ export async function generatePdfFiles(
         pdf.setFont("helvetica", "bold");
         pdf.text("Fylgiskjal reiknings", 14, 15);
 
-        // Get invoice data
-        const invoiceData = createInvoiceData(entries);
-
         // Add location information
         pdf.setFontSize(10);
         pdf.text(`Vinnustaður: ${locationName}`, 14, 80);
@@ -249,7 +270,7 @@ export async function generatePdfFiles(
 
         const pdfBlob = pdf.output("arraybuffer");
 
-        // Try to save the file
+        // Try to save the file and verify it was successfully written
         const success = await writePdfToDisk(pdfPath, pdfBlob);
         successfulWrites.push(success);
 
