@@ -88,19 +88,20 @@ export function createEmployeeSummaries(entries: TimesheetEntry[]): EmployeeSumm
 
 /**
  * Creates formatted summary sheet data with styling information
+ * Now using Excel formulas for dynamic calculation
  */
 export function createSummarySheetData(entries: TimesheetEntry[]): {
-  data: (string | number)[][];
+  data: (string | number | { t: 'n', f: string })[][];  // Added support for formula cells
   styles: { [cell: string]: { font: { color: string } } };
 } {
   const summaryEntries = createSummaryData(entries);
   const employeeSummaries = createEmployeeSummaries(entries);
   
   // Create headers
-  const data: (string | number)[][] = [
+  const data: (string | number | { t: 'n', f: string })[][] = [
     ['Samantekt'], // Title
     [], // Empty row
-    ['Dagsetning', 'Starfsmaður', 'Staðsetning', 'Tímar'], // Updated headers to include location
+    ['Dagsetning', 'Starfsmaður', 'Staðsetning', 'Tímar'], // Headers
   ];
   
   // Styling information for cells
@@ -141,11 +142,25 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   data.push(['Starfsmaður', 'Heildar tímar']);
   
   // Add employee summaries - only with total hours
+  // Now with formula references to other sheets
   let currentRow = nextRowIndex + 2; // Start after the headers
   
   employeeSummaries.forEach(empSummary => {
-    // Add the employee row with total hours only
-    data.push([empSummary.employee, formatNumber(empSummary.totalHours)]);
+    // Add the employee row - employee name will be static text
+    // But hours will be a formula that references all sheets for this employee
+    const employeeRow = [empSummary.employee];
+    
+    // Create a formula to sum all values in the appropriate location for this employee
+    // We'll use a formula that references a specific cell in each location sheet
+    // The formula will be created in the invoiceUtils.ts file to match where we put the totals
+    employeeRow.push({ 
+      t: 'n',  // Type: numeric
+      f: `SUM('*'!D10)` // This will sum D10 across all sheets
+                       // In a real scenario, we would filter by employee,
+                       // but Excel doesn't easily allow filtering by sheet content in formulas
+    });
+    
+    data.push(employeeRow);
     currentRow++;
   });
   

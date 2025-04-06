@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import { TimesheetEntry } from '@/types/timesheet';
 import { createSafeSheetName } from '../utils/formatters';
@@ -27,6 +26,8 @@ export async function generateInvoices(
     
     // Add summary sheet
     const { data: summaryData, styles: summaryStyles } = createSummarySheetData(timesheetEntries);
+    
+    // When using formulas, we need to use sheet_add_aoa method with the formula objects
     const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
     
     // Apply styles to the summary worksheet
@@ -34,6 +35,7 @@ export async function generateInvoices(
       summaryWorksheet['!cols'] = [
         { wch: 12 }, // Date column width
         { wch: 20 }, // Employee column width
+        { wch: 30 }, // Location column width
         { wch: 12 }  // Hours column width
       ];
     }
@@ -59,8 +61,7 @@ export async function generateInvoices(
     
     XLSX.utils.book_append_sheet(outputWorkbook, summaryWorksheet, 'Samantekt');
     
-    // Group entries by location and apartment - this is the key function
-    // that ensures employees at the same location are grouped together
+    // Group entries by location and apartment
     const groupedEntries = groupEntriesByLocation(timesheetEntries);
     console.log("Grouped entries:", Object.keys(groupedEntries).length);
     let invoiceCount = 0;
@@ -92,6 +93,8 @@ export async function generateInvoices(
         
         console.log(`Creating sheet for: ${safeSheetName}`);
         const worksheetData = createInvoiceData(entries);
+        
+        // When using formulas, we need to use aoa_to_sheet instead of json_to_sheet
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
         
         // Set column widths for better formatting
@@ -112,8 +115,17 @@ export async function generateInvoices(
       throw new Error('Engar færslur fundust til að búa til reikninga');
     }
 
-    // Write the workbook to a buffer
-    const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer', bookSST: false });
+    // Configure the workbook to keep formulas when writing
+    // This is critical - without it Excel formulas won't work
+    const wopts: XLSX.WritingOptions = { 
+      bookType: 'xlsx', 
+      type: 'buffer', 
+      bookSST: false, 
+      cellFormula: true  // Keep formulas 
+    };
+    
+    // Write the workbook to a buffer with formulas preserved
+    const wbout = XLSX.write(outputWorkbook, wopts);
 
     // Check if we're in an Electron environment with the required API
     if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
@@ -143,8 +155,7 @@ export async function generateInvoices(
     // Remove any trailing slashes for consistency
     const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
     
-    // Create the full file path without using path.join (which isn't available in browser)
-    // Use forward slashes for cross-platform compatibility
+    // Create the full file path
     const fullPath = `${normalizedDir}/${filename}`;
     
     console.log("Saving file to:", fullPath);
