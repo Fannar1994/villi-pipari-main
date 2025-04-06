@@ -1,3 +1,4 @@
+
 // ✅ electron/main.cjs
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
@@ -150,13 +151,29 @@ app.on('render-process-gone', (event, webContents, details) => {
 
 // IPC handlers
 ipcMain.handle('select-directory', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
-  return result.canceled ? null : result.filePaths[0];
+  try {
+    console.log('select-directory called');
+    const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+    console.log('Directory selection result:', result);
+    return result.canceled ? null : result.filePaths[0];
+  } catch (error) {
+    console.error('Error in select-directory handler:', error);
+    return null;
+  }
 });
 
 ipcMain.handle('write-file', async (event, { filePath, data }) => {
   try {
     console.log('Write file request received for path:', filePath);
+    if (!filePath) {
+      console.error('No file path provided');
+      return { success: false, error: 'No file path provided' };
+    }
+    
+    if (!data) {
+      console.error('No data provided');
+      return { success: false, error: 'No data provided' };
+    }
     
     // Handle potential asar path issues
     // When packaged, app.asar is read-only, so we need to ensure we're writing outside it
@@ -167,12 +184,12 @@ ipcMain.handle('write-file', async (event, { filePath, data }) => {
       fs.mkdirSync(dir, { recursive: true });
     }
     
-    console.log(`Writing file: ${filePath}, data length: ${data.length}`);
+    console.log(`Writing file: ${filePath}, data length:`, data.length || 'unknown');
     
-    // Use writeFileSync for increased reliability with binary files
-    fs.writeFileSync(filePath, Buffer.from(data));
+    // For reliable binary data writing
+    fs.writeFileSync(filePath, Buffer.isBuffer(data) ? data : Buffer.from(data));
     
-    console.log('File written successfully');
+    console.log('File written successfully to:', filePath);
     return { success: true, path: filePath };
   } catch (error) {
     console.error('Error writing file:', error);

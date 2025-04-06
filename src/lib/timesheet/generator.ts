@@ -67,8 +67,7 @@ export async function generateInvoices(
     
     XLSX.utils.book_append_sheet(outputWorkbook, summaryWorksheet, 'Samantekt');
     
-    // Group entries by location and apartment - this is the key function
-    // that ensures employees at the same location are grouped together
+    // Group entries by location and apartment
     const groupedEntries = groupEntriesByLocation(timesheetEntries);
     console.log("Grouped entries:", Object.keys(groupedEntries).length);
     let invoiceCount = 0;
@@ -81,15 +80,14 @@ export async function generateInvoices(
         // Use the location (hvar) and apartment (íbúð) fields from the first entry
         const firstEntry = entries[0];
         let safeSheetName = createSafeSheetName(
-          firstEntry.location,  // This is from the 'hvar' column
-          firstEntry.apartment  // This is from the 'íbúð' column
+          firstEntry.location,
+          firstEntry.apartment
         );
         
         // Check if the sheet name is already used, if so, append a counter
         let counter = 1;
         let originalName = safeSheetName;
         while (usedSheetNames.has(safeSheetName)) {
-          // Truncate if needed to ensure name with counter doesn't exceed Excel's 31 character limit
           const truncatedName = originalName.substring(0, 27 - counter.toString().length);
           safeSheetName = `${truncatedName} (${counter})`;
           counter++;
@@ -124,8 +122,7 @@ export async function generateInvoices(
     const wbout = XLSX.write(outputWorkbook, { bookType: 'xlsx', type: 'buffer', bookSST: false });
 
     // Check if we're in an Electron environment with the required API
-    const isElectronAvailable = checkElectronApi();
-    if (!isElectronAvailable) {
+    if (!checkElectronApi()) {
       console.log("Running in browser environment or electron API not available, skipping file write");
       // For browser demo, offer file download
       if (typeof document !== 'undefined') {
@@ -145,19 +142,15 @@ export async function generateInvoices(
     // Create a valid filename with the current date
     const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
     
-    // Log the output directory for debugging
-    console.log("Output directory:", outputDirectory);
-    
     // Normalize the output directory to prevent path issues
-    // Remove any trailing slashes for consistency
     const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
     
     try {
       // Use path.join to ensure proper path formatting regardless of OS
       const fullPath = path.join(normalizedDir, filename);
-      console.log("Saving file to:", fullPath);
+      console.log("Saving Excel file to:", fullPath);
       
-      // Use the window.electron API for file operations with the full path
+      // Use the electron API for file operations with the full path
       const result = await window.electron.writeFile({
         filePath: fullPath,
         data: new Uint8Array(wbout)
@@ -167,15 +160,15 @@ export async function generateInvoices(
         throw new Error(result.error || 'Villa kom upp við að vista skjalið');
       }
       
-      console.log("File successfully saved:", fullPath);
+      console.log("Excel file successfully saved:", fullPath);
     } catch (error) {
       console.error("Error while using Electron API:", error);
-      throw new Error(`Villa við að vista skrá: ${error.message || 'Óþekkt villa'}`);
+      throw new Error(`Villa við að vista skrá: ${error instanceof Error ? error.message : 'Óþekkt villa'}`);
     }
 
     return invoiceCount;
   } catch (error) {
     console.error('Error generating invoices:', error);
-    throw new Error(error.message || 'Villa við að búa til reikninga');
+    throw new Error(error instanceof Error ? error.message : 'Villa við að búa til reikninga');
   }
 }

@@ -40,6 +40,7 @@ export async function generatePdfFiles(
     const summaryFilename = `Summary_${new Date().toISOString().split('T')[0]}.pdf`;
     const summaryPath = path.join(normalizedDir, summaryFilename);
     
+    console.log("Attempting to save summary PDF to:", summaryPath);
     const summarySuccess = await savePdfFile(
       summaryPdf, 
       summaryPath, 
@@ -87,6 +88,7 @@ export async function generatePdfFiles(
         const filename = `${sanitizedEmployee}_${sanitizedLocation}_${new Date().toISOString().split('T')[0]}.pdf`;
         const filePath = path.join(normalizedDir, filename);
         
+        console.log(`Saving PDF for ${employee} at ${location} to:`, filePath);
         const success = await savePdfFile(
           pdf, 
           filePath, 

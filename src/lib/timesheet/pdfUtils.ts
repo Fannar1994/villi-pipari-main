@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { TimesheetEntry } from '@/types/timesheet';
@@ -9,15 +8,10 @@ import path from 'path';
  * Check if the Electron API is available
  */
 export function checkElectronApi(): boolean {
-  const isElectronAvailable = typeof window !== 'undefined' && 
+  return typeof window !== 'undefined' && 
     window.electron && 
-    typeof window.electron.writeFile === 'function';
-  
-  if (!isElectronAvailable) {
-    console.log("Electron API is not available");
-  }
-  
-  return isElectronAvailable;
+    typeof window.electron.writeFile === 'function' &&
+    typeof window.electron.selectDirectory === 'function';
 }
 
 /**
