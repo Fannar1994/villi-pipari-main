@@ -1,11 +1,11 @@
 
 /**
- * Electron file system operations module - DIRECT IMPLEMENTATION
+ * Electron file system operations module - ULTRA SIMPLIFIED
  */
 import { toast } from '@/hooks/use-toast';
 
 /**
- * Simple file writing function - Direct access approach
+ * Ultra-simple file writing function - No wrappers, just direct access
  */
 export async function writeFile(filePath: string, data: Uint8Array): Promise<boolean> {
   console.log(`Writing file to ${filePath}, data length: ${data.length}`);
@@ -31,12 +31,11 @@ export async function writeFile(filePath: string, data: Uint8Array): Promise<boo
 }
 
 /**
- * Directory selection function - DIRECT IMPLEMENTATION
+ * Ultra-simple directory selection function - No wrappers, just direct access
  */
 export async function selectDirectory(): Promise<string | null> {
-  console.log('selectDirectory called - DIRECT IMPLEMENTATION');
+  console.log('selectDirectory called - ULTRA SIMPLIFIED');
   
-  // Extremely simple direct implementation
   if (!window.electron) {
     console.error('Cannot select directory: Electron API not available');
     toast({
@@ -48,9 +47,9 @@ export async function selectDirectory(): Promise<string | null> {
   }
   
   try {
-    console.log('Calling electron.selectDirectory() directly');
+    // Direct call - no extra wrappers or complexity
     const result = await window.electron.selectDirectory();
-    console.log('Directory selection direct result:', result);
+    console.log('Directory selection result:', result);
     return result;
   } catch (e) {
     console.error('Error selecting directory:', e);
@@ -59,7 +58,7 @@ export async function selectDirectory(): Promise<string | null> {
 }
 
 /**
- * File existence check - DIRECT IMPLEMENTATION
+ * Ultra-simple file existence check - No wrappers, just direct access
  */
 export async function fileExists(filePath: string): Promise<boolean> {
   if (!window.electron) {
