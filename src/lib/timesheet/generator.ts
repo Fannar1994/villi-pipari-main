@@ -126,52 +126,41 @@ export async function generateInvoices(
     // Write the workbook to a buffer with formulas preserved
     const wbout = XLSX.write(outputWorkbook, wopts);
 
-    // Check if we're in an Electron environment with the required API
-    if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
-      console.log("Running in browser environment or electron API not available, skipping file write");
-      // For browser demo, offer file download
+    // SIMPLIFIED FILE SAVING - direct approach for maximum reliability
+    const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
+    const fullPath = `${normalizedDir}/${filename}`;
+    
+    console.log("Saving file to:", fullPath);
+    
+    // Direct use of window.electron to avoid any potential wrapper issues
+    if (window.electron && typeof window.electron.writeFile === 'function') {
+      try {
+        const result = await window.electron.writeFile({
+          filePath: fullPath,
+          data: new Uint8Array(wbout)
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || 'Villa kom upp við að vista skjalið');
+        }
+      } catch (error) {
+        console.error("Error while using Electron API:", error);
+        throw new Error('Villa við að vista skrá: ' + (error instanceof Error ? error.message : 'Óþekkt villa'));
+      }
+    } else {
+      // Fallback for browser demo
       if (typeof document !== 'undefined') {
         const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }
-      return invoiceCount;
-    }
-
-    // Create a valid filename with the current date
-    const filename = `Invoices_${new Date().toISOString().split('T')[0]}.xlsx`;
-    
-    // Log the output directory for debugging
-    console.log("Output directory:", outputDirectory);
-    
-    // Normalize the output directory to prevent path issues
-    // Remove any trailing slashes for consistency
-    const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
-    
-    // Create the full file path
-    const fullPath = `${normalizedDir}/${filename}`;
-    
-    console.log("Saving file to:", fullPath);
-    
-    try {
-      // Use the window.electron API for file operations with the full path
-      const result = await window.electron.writeFile({
-        filePath: fullPath,
-        data: new Uint8Array(wbout)
-      });
-
-      if (!result.success) {
-        throw new Error(result.error || 'Villa kom upp við að vista skjalið');
-      }
-    } catch (error) {
-      console.error("Error while using Electron API:", error);
-      throw new Error('Villa við að vista skrá: ' + (error instanceof Error ? error.message : 'Óþekkt villa'));
     }
 
     return invoiceCount;

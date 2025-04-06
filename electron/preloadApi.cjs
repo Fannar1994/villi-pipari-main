@@ -21,42 +21,20 @@ function createElectronAPI(ipcRenderer) {
         return { success: false, error: error.toString() };
       }
     },
+    
     selectDirectory: async () => {
       console.log('Preload: selectDirectory called');
       try {
         console.log('Invoking select-directory IPC call...');
-        // Add timeout handling for robustness
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Directory selection timed out')), 30000);
-        });
-        
-        // Race the actual call with the timeout
-        const result = await Promise.race([
-          ipcRenderer.invoke('select-directory'),
-          timeoutPromise
-        ]);
-        
+        const result = await ipcRenderer.invoke('select-directory');
         console.log('Preload: selectDirectory result:', result);
-        
-        // Enhanced reliability - ensure we always return a string or null, never undefined
-        if (result === undefined || result === '') {
-          console.log('Empty or undefined path received, returning null');
-          return null;
-        }
-        
-        // Force conversion to string if we somehow got something else
-        if (result !== null && typeof result !== 'string') {
-          console.warn('Non-string result received, converting:', result);
-          return String(result);
-        }
-        
-        return result;
+        return result || null; // Always return null if result is falsy
       } catch (error) {
         console.error('Preload: selectDirectory error:', error);
-        // Make sure we have consistent error handling
         return null;
       }
     },
+    
     fileExists: async (filePath) => {
       console.log('Preload: fileExists called with:', filePath);
       try {
@@ -66,11 +44,12 @@ function createElectronAPI(ipcRenderer) {
         return false;
       }
     },
+    
     _testConnection: () => {
       return { 
         available: true, 
         time: new Date().toString(),
-        preloadVersion: '5.1' // Updated version for the enhanced API
+        preloadVersion: '5.2' // Updated version for the simplified API
       };
     }
   };

@@ -1,10 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { getElectronAPI, forceApiRecovery, selectDirectory } from '@/lib/electron/api'; 
 
 interface DirectorySelectProps {
   value: string;
@@ -26,44 +25,30 @@ export function DirectorySelect({
   const handleButtonClick = async () => {
     try {
       setIsSelecting(true);
-      console.log('Directory selection button clicked');
+      console.log('Directory selection requested');
       
-      // Try to use the enhanced selectDirectory from our API
-      let result = await selectDirectory();
-      
-      // If it fails, attempt recovery and try again
-      if (!result) {
-        console.log('First attempt failed, trying API recovery...');
-        const recoverySuccessful = forceApiRecovery();
-        
-        if (recoverySuccessful) {
-          console.log('API recovery successful, trying directory selection again...');
-          result = await selectDirectory();
-        }
+      // Direct access to Electron API for maximum reliability
+      if (!window.electron) {
+        throw new Error('Electron API not available');
       }
       
+      const result = await window.electron.selectDirectory();
       console.log('Directory selection result:', result);
       
       if (result) {
         onChange(result);
-        console.log('Directory selected successfully:', result);
         toast({
           title: "Mappa valin",
           description: `Mappa: ${result}`,
         });
       } else {
         console.warn('No directory selected or dialog was cancelled');
-        toast({
-          title: "Villa",
-          description: "Ekki tókst að velja möppu. Reyndu aftur eða endurræstu forritið.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
-      console.error("Unexpected error selecting directory:", error);
+      console.error("Error selecting directory:", error);
       toast({
         title: "Villa",
-        description: "Villa kom upp við möppuval. Reyndu aftur eða endurræstu forritið.",
+        description: "Villa kom upp við möppuval. Reyndu aftur.",
         variant: "destructive",
       });
     } finally {
