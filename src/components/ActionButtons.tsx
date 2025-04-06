@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileCheck, FilePdf } from 'lucide-react';
+import { FileCheck, FileText } from 'lucide-react';
 import { CardFooter } from '@/components/ui/card';
 
 interface ActionButtonsProps {
@@ -31,7 +31,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90"
           disabled={isProcessing}
         >
-          <FilePdf className="mr-2 h-4 w-4" />
+          <FileText className="mr-2 h-4 w-4" />
           {isProcessing ? 'Vinnur...' : 'Búa til PDF skjöl'}
         </Button>
       </div>
