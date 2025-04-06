@@ -3,7 +3,7 @@
  * API recovery utilities for Electron when standard methods fail
  */
 import { toast } from '@/hooks/use-toast';
-import { isElectronAPIAvailable } from './detector-core';
+import { isElectronAPIAvailable } from './detector';
 
 /**
  * Try legacy recovery approaches first
