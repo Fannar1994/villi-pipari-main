@@ -166,7 +166,12 @@ ipcMain.handle('write-file', async (event, { filePath, data }) => {
       fs.mkdirSync(dir, { recursive: true });
     }
     
+    // Add debug logs
+    console.log(`Writing file to: ${fullPath}`);
+    console.log(`Directory exists: ${fs.existsSync(dir)}`);
+    
     await fs.promises.writeFile(fullPath, data);
+    console.log(`Successfully wrote file: ${fullPath}`);
     return { success: true, path: fullPath };
   } catch (error) {
     console.error('Error writing file:', error);
@@ -177,4 +182,9 @@ ipcMain.handle('write-file', async (event, { filePath, data }) => {
   }
 });
 
-ipcMain.handle('file-exists', async (_, filePath) => fs.existsSync(filePath));
+ipcMain.handle('file-exists', async (_, filePath) => {
+  console.log(`Checking if file exists: ${filePath}`);
+  const exists = fs.existsSync(filePath);
+  console.log(`File exists: ${exists}`);
+  return exists;
+});

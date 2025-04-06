@@ -7,6 +7,40 @@ import { formatDateIcelandic } from '../utils/dateUtils';
 import { createSummarySheetData, createInvoiceData, groupEntriesByLocation } from './processor';
 
 /**
+ * Writes a PDF file to disk using the Electron API
+ * @returns Promise with success/failure info
+ */
+async function writePdfToDisk(filePath: string, pdfBlob: ArrayBuffer): Promise<boolean> {
+  // Verify Electron is available
+  if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+    console.error('Electron API not available');
+    throw new Error('Skráarskrifun er ekki í boði í þessari útgáfu. Vinsamlegast notaðu Electron útgáfuna.');
+  }
+
+  try {
+    console.log(`Attempting to save PDF to: ${filePath}`);
+    
+    // Call Electron's writeFile API and wait for the result
+    const result = await window.electron.writeFile({
+      filePath: filePath,
+      data: new Uint8Array(pdfBlob)
+    });
+    
+    // Validate the result
+    if (!result || result.error) {
+      console.error(`Error writing file: ${result?.error || 'Unknown error'}`);
+      throw new Error(result?.error || 'Villa við skráarskrifun');
+    }
+    
+    console.log(`PDF successfully saved to: ${filePath}`);
+    return true;
+  } catch (error: any) {
+    console.error('Failed to write PDF file:', error);
+    throw new Error(`Villa við að vista skrá: ${error instanceof Error ? error.message : 'Óþekkt villa'}`);
+  }
+}
+
+/**
  * Generates PDF files from timesheet entries
  */
 export async function generatePdfFiles(
@@ -17,7 +51,7 @@ export async function generatePdfFiles(
     console.log("Starting PDF generation process...");
     
     // Check if we can access the Electron API for file writing
-    if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+    if (typeof window === 'undefined' || !window.isElectron || !window.electron || !window.electron.writeFile) {
       console.error('Electron API not available for file writing');
       throw new Error('Skráarskrifun er ekki í boði í þessari útgáfu. Vinsamlegast notaðu Electron útgáfuna.');
     }
@@ -35,6 +69,10 @@ export async function generatePdfFiles(
     // Group entries by location and apartment
     const groupedEntries = groupEntriesByLocation(timesheetEntries);
     console.log(`Generating PDFs for ${Object.keys(groupedEntries).length} location groups`);
+    
+    if (Object.keys(groupedEntries).length === 0) {
+      throw new Error('Engar staðsetningar fundust til að búa til PDF skjöl fyrir.');
+    }
     
     let pdfCount = 0;
     const currentDate = new Date().toISOString().split('T')[0];
@@ -66,23 +104,18 @@ export async function generatePdfFiles(
       },
     });
     
-    // Save the summary PDF with validation
+    // Save the summary PDF
     const summaryPath = `${normalizedDir}/Samantekt_${currentDate}.pdf`;
     console.log(`Attempting to save summary PDF to: ${summaryPath}`);
     
     try {
       const summaryPdfBlob = summaryPdf.output('arraybuffer');
-      const summaryResult = await window.electron?.writeFile({
-        filePath: summaryPath,
-        data: new Uint8Array(summaryPdfBlob)
-      });
+      const summarySuccess = await writePdfToDisk(summaryPath, summaryPdfBlob);
       
-      if (!summaryResult || summaryResult.error) {
-        throw new Error(summaryResult?.error || 'Failed to write summary PDF');
+      if (summarySuccess) {
+        console.log(`Summary PDF successfully saved to: ${summaryPath}`);
+        pdfCount++;
       }
-      
-      console.log(`Summary PDF successfully saved to: ${summaryPath}`);
-      pdfCount++;
     } catch (error: any) {
       console.error('Failed to save summary PDF:', error);
       throw new Error(`Villa við að vista samantekt PDF: ${error instanceof Error ? error.message : 'Óþekkt villa'}`);
@@ -91,14 +124,10 @@ export async function generatePdfFiles(
     // Create individual invoice PDFs
     // Use a Map to track used filenames to avoid duplicates
     const usedFilenames = new Map<string, number>();
-    const fileWritePromises: Promise<void>[] = [];
+    const successfulWrites: boolean[] = [];
     const locationGroups = Object.entries(groupedEntries);
     
     console.log(`Processing ${locationGroups.length} location groups for PDF generation...`);
-    
-    if (locationGroups.length === 0) {
-      console.warn("No location groups found to generate PDFs for.");
-    }
     
     for (const [key, entries] of locationGroups) {
       if (entries.length === 0) {
@@ -172,49 +201,23 @@ export async function generatePdfFiles(
         const pdfPath = `${normalizedDir}/${safeFileName}_${currentDate}.pdf`;
         
         const pdfBlob = pdf.output('arraybuffer');
-        console.log(`Attempting to save PDF to: ${pdfPath}`);
         
-        // Create a promise that resolves only when the file is successfully written
-        const filePromise = window.electron?.writeFile({
-          filePath: pdfPath,
-          data: new Uint8Array(pdfBlob)
-        }).then((result: any) => {
-          if (!result || result.error) {
-            throw new Error(result?.error || 'Unknown error writing file');
-          }
-          console.log(`PDF successfully saved to: ${pdfPath}`);
-          return true;
-        }).catch((error: any) => {
-          console.error(`Failed to save PDF ${safeFileName}:`, error);
-          throw new Error(`Villa við að vista skrá ${safeFileName}: ${error instanceof Error ? error.message : 'Óþekkt villa'}`);
-        });
+        // Try to save the file
+        const success = await writePdfToDisk(pdfPath, pdfBlob);
+        successfulWrites.push(success);
         
-        if (filePromise) {
-          fileWritePromises.push(filePromise.then(() => {
-            pdfCount++;
-          }));
-        } else {
-          console.error(`Could not create file write promise for ${pdfPath}`);
+        if (success) {
+          pdfCount++;
+          console.log(`PDF successfully saved as ${safeFileName}`);
         }
+        
       } catch (error: any) {
-        console.error(`Error creating PDF for ${locationName}:`, error);
+        console.error(`Error creating/saving PDF for ${locationName}:`, error);
         // Continue with other PDFs rather than failing completely
       }
     }
     
-    // Wait for all file write operations to complete
-    console.log(`Waiting for ${fileWritePromises.length} PDF write operations to complete...`);
-    
-    try {
-      if (fileWritePromises.length > 0) {
-        await Promise.all(fileWritePromises);
-      } else {
-        console.warn("No PDF write promises were created");
-      }
-    } catch (error: any) {
-      console.error('Error in PDF write operations:', error);
-      throw new Error(`Villa við að vista PDF skjöl: ${error instanceof Error ? error.message : 'Óþekkt villa'}`);
-    }
+    console.log(`PDF generation finished. Successful writes: ${successfulWrites.filter(Boolean).length}`);
     
     if (pdfCount === 0) {
       throw new Error('Engar skrár voru vistaðar. Athugaðu hvort úttak mappa sé rétt valin og skráarheimild sé til staðar.');

@@ -6,4 +6,5 @@ interface Window {
     selectDirectory: () => Promise<string | null>;
     fileExists: (filePath: string) => Promise<boolean>;
   };
+  isElectron?: boolean;
 }

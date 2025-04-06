@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { FileUpload } from '@/components/FileUpload';
 import { DirectorySelect } from '@/components/DirectorySelect';
@@ -15,6 +15,25 @@ export const ExcelTab = () => {
   const [outputDir, setOutputDir] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState('');
+  const [isElectronEnvironment, setIsElectronEnvironment] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Check if running in Electron environment
+    const checkElectronEnvironment = () => {
+      const isElectron = window.isElectron === true && 
+                        typeof window.electron !== 'undefined' &&
+                        typeof window.electron.writeFile === 'function';
+      setIsElectronEnvironment(isElectron);
+      
+      if (!isElectron) {
+        console.warn('Running outside of Electron environment - PDF generation will not be available');
+      } else {
+        console.log('Running in Electron environment - PDF generation is available');
+      }
+    };
+    
+    checkElectronEnvironment();
+  }, []);
 
   const handleExport = async () => {
     if (!excelFile) {
@@ -35,6 +54,17 @@ export const ExcelTab = () => {
       return;
     }
 
+    // Check if we're running in Electron before attempting to generate PDFs
+    if (!isElectronEnvironment) {
+      toast({
+        title: 'Villa',
+        description: 'Skráarskrifun er ekki í boði í þessari útgáfu. Vinsamlegast notaðu Electron útgáfuna.',
+        variant: 'destructive',
+      });
+      setProcessStatus('PDF útflutningur krefst Electron útgáfunnar');
+      return;
+    }
+
     try {
       setIsProcessing(true);
       setProcessStatus('Vinnur að PDF skjölum...');
@@ -50,6 +80,10 @@ export const ExcelTab = () => {
       
       // Generate PDF files from the entries
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
+      
+      if (pdfCount === 0) {
+        throw new Error('Engar skrár voru vistaðar. Athugaðu hvort úttak mappa sé rétt valin.');
+      }
       
       toast({
         title: 'Árangur!',
@@ -94,6 +128,11 @@ export const ExcelTab = () => {
       </CardContent>
       
       <div className="px-6 py-3">
+        {!isElectronEnvironment && (
+          <p className="text-sm text-red-500 mb-2">
+            ATH: PDF útflutningur er aðeins í boði í Electron útgáfunni
+          </p>
+        )}
         {processStatus && <p className="text-sm text-muted-foreground">{processStatus}</p>}
       </div>
       
@@ -101,7 +140,7 @@ export const ExcelTab = () => {
         <Button
           onClick={handleExport}
           className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-          disabled={isProcessing}
+          disabled={isProcessing || !isElectronEnvironment}
         >
           {isProcessing ? 'Vinnur...' : 'Búa til PDF skjöl'}
         </Button>
