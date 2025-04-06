@@ -34,18 +34,18 @@ function createWindow() {
     console.error('Failed to read preload script:', e);
   }
   
-  // Create the browser window with verified preload script
+  // Create the browser window with properly configured preload script
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 800,
     backgroundColor: '#2d2d2d',
     webPreferences: {
       preload: preloadPath,
-      contextIsolation: false, // CRITICAL: Disable context isolation to ensure API exposure
-      nodeIntegration: true,   // Enable node integration for development
-      sandbox: false,          // Disable sandbox for easier debugging
-      webSecurity: false,      // Allow local file access
-      allowRunningInsecureContent: true // Allow loading of insecure content
+      contextIsolation: true, // FIXED: Enable context isolation for security
+      nodeIntegration: false, // FIXED: Disable node integration for security
+      sandbox: false,         // Keep sandbox disabled for easier debugging
+      webSecurity: true,      // FIXED: Enable web security
+      allowRunningInsecureContent: false // FIXED: Disable insecure content
     },
     show: false
   });
@@ -79,10 +79,6 @@ function setupWindowListeners(window) {
       window.webContents.openDevTools();
       console.log('🛠️ DevTools opened');
     }
-    
-    // CRITICAL: Inject API directly into renderer via a script tag
-    // This ensures API is available even if the preload script fails
-    injectEmergencyAPI(window);
     
     // Perform periodic API checks
     setupAPIChecks(window);

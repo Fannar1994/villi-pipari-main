@@ -8,7 +8,7 @@ import { ElectronAPI, ConnectionTestResult } from './types';
  * Attempts to access the Electron API
  */
 export function getElectronAPI(): ElectronAPI | null {
-  // Check if window is available
+  // Check if window is available (we're in browser context)
   if (typeof window === 'undefined') {
     console.log('No window object available');
     return null;
@@ -16,17 +16,22 @@ export function getElectronAPI(): ElectronAPI | null {
   
   console.log('Accessing Electron API...');
   
-  // Standard API access - primary location
-  if (window.electron && typeof window.electron.writeFile === 'function') {
-    console.log('✓ Electron API found at standard location');
-    return window.electron;
-  }
-  
-  // Backup API access if available
-  if ((window as any).electronBackupAPI) {
-    console.log('✓ Electron API found at backup location');
-    window.electron = (window as any).electronBackupAPI;
-    return (window as any).electronBackupAPI;
+  // Standard API access - primary location with proper context isolation
+  if (window.electron) {
+    console.log('✓ Electron API found at window.electron');
+    try {
+      // Verify that writeFile method exists
+      if (typeof window.electron.writeFile === 'function') {
+        console.log('✓ writeFile method found, API appears valid');
+        return window.electron;
+      } else {
+        console.error('✗ writeFile method missing from window.electron');
+      }
+    } catch (e) {
+      console.error('Error accessing API methods:', e);
+    }
+  } else {
+    console.error('✗ window.electron not found');
   }
   
   // No valid API found
@@ -75,7 +80,7 @@ export function testConnection(): ConnectionTestResult {
       } catch (e) {
         return { 
           available: false, 
-          details: `API test failed: ${e.message}` 
+          details: `API test failed: ${e instanceof Error ? e.message : String(e)}` 
         };
       }
     }
@@ -95,7 +100,7 @@ export function testConnection(): ConnectionTestResult {
   } catch (e) {
     return {
       available: false,
-      details: `Error testing connection: ${e.message}`
+      details: `Error testing connection: ${e instanceof Error ? e.message : String(e)}`
     };
   }
 }

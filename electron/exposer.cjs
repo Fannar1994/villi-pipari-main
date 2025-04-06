@@ -2,35 +2,36 @@
 /**
  * Handles API exposure to the renderer process
  */
+const { contextBridge } = require('electron');
 
 /**
  * Exposes the API via contextBridge if available
  * @param {Object} electronAPI - The API object to expose
  */
 function exposeAPI(electronAPI) {
-  const { contextBridge } = require('electron');
+  // Ensure we have valid API to expose
+  if (!electronAPI) {
+    console.error('❌ No API object provided to expose');
+    return;
+  }
   
-  // Expose API via contextBridge
+  console.log('📢 Exposing API with methods:', Object.keys(electronAPI).join(', '));
+  
   try {
+    // Check if contextBridge is available (it should be with contextIsolation: true)
     if (contextBridge) {
-      console.log('Exposing API via contextBridge');
+      console.log('🔗 Exposing API via contextBridge as "electron"');
       contextBridge.exposeInMainWorld('electron', electronAPI);
-      console.log('✅ API exposed via contextBridge');
+      console.log('✅ API exposed via contextBridge successfully');
     } else {
-      console.warn('⚠️ contextBridge not available');
+      console.error('❌ contextBridge not available! API cannot be exposed securely.');
     }
   } catch (e) {
-    console.error('❌ contextBridge exposure failed:', e);
+    console.error('❌ Error exposing API via contextBridge:', e);
   }
 
-  // Backup exposure as a safeguard
-  try {
-    console.log('Creating backup API reference');
-    global.electronBackupAPI = electronAPI;
-    console.log('✅ API exposed via global.electronBackupAPI');
-  } catch (e) {
-    console.error('❌ Global exposure failed:', e);
-  }
+  // Log successful API exposure
+  console.log('🔌 API exposure complete');
 }
 
 module.exports = {

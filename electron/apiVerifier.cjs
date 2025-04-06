@@ -9,7 +9,6 @@ function verifyAPIInRenderer(window, checkCount) {
     window.webContents.executeJavaScript(`
       console.log("🔍 API status check #${checkCount}:");
       console.log("window.electron exists:", typeof window.electron !== "undefined");
-      console.log("window.electronBackupAPI exists:", typeof window.electronBackupAPI !== "undefined");
       
       // Report methods if available
       if (window.electron) {
@@ -22,13 +21,6 @@ function verifyAPIInRenderer(window, checkCount) {
             console.error("Error testing connection:", e);
           }
         }
-      }
-      
-      // Last resort emergency repair
-      if (!window.electron && window.electronBackupAPI) {
-        console.log("🚨 EMERGENCY REPAIR: Restoring API from backup");
-        window.electron = window.electronBackupAPI;
-        console.log("Repair result:", typeof window.electron !== "undefined");
       }
     `).catch(err => {
       console.error('Error executing verification:', err);
@@ -70,47 +62,9 @@ function setupAPIChecks(window) {
   }, 1500);
 }
 
-/**
- * Injects emergency API directly into the renderer
- * @param {BrowserWindow} window - The browser window
- */
-function injectEmergencyAPI(window) {
-  setTimeout(() => {
-    try {
-      console.log('🔄 Attempting direct API injection...');
-      
-      window.webContents.executeJavaScript(`
-        console.log("✨ Starting direct API injection");
-        
-        // First check if the API is already available
-        if (window.electron && typeof window.electron.writeFile === 'function') {
-          console.log("✅ API already available, skipping injection");
-        } else {
-          console.log("⚠️ API not found, performing direct injection");
-          
-          // Create API object with all methods
-          try {
-            ${process.electronDirect ? process.electronDirect.initCode : ''}
-          } catch (error) {
-            console.error("❌ Error during API injection:", error);
-          }
-        }
-        
-        // Report back status
-        console.log("API status after injection:", {
-          electronExists: typeof window.electron !== "undefined",
-          writeFileMethod: typeof window.electron?.writeFile === "function",
-          backupExists: typeof window.electronBackupAPI !== "undefined"
-        });
-      `).then(() => {
-        console.log('✅ Direct API injection script executed');
-      }).catch(err => {
-        console.error('❌ Error executing injection script:', err);
-      });
-    } catch (e) {
-      console.error('❌ Failed to inject API:', e);
-    }
-  }, 1000);
+// Empty function to maintain API compatibility
+function injectEmergencyAPI() {
+  console.log('Emergency API injection disabled - using proper contextBridge instead');
 }
 
 module.exports = {
