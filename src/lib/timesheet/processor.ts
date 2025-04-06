@@ -170,10 +170,6 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   // Styling information for cells
   const styles: { [cell: string]: { font: { color: string } } } = {};
   
-  // Track the current date and employee to add separators
-  let currentDate = '';
-  let currentEmployee = '';
-  
   // Add data rows
   summaryEntries.forEach((entry, index) => {
     const rowIndex = index + 3; // Start after headers
@@ -183,25 +179,18 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
       ? `${entry.location}, ${entry.apartment}`
       : entry.location;
     
-    // Only show date and employee when they change
-    const dateToShow = currentDate !== entry.date ? formatDateIcelandic(entry.date) : '';
-    const employeeToShow = currentDate !== entry.date || currentEmployee !== entry.employee ? entry.employee : '';
-    
+    // Always show date and employee for EVERY row
     data[rowIndex] = [
-      dateToShow,
-      employeeToShow,
+      formatDateIcelandic(entry.date),
+      entry.employee,
       locationDisplay,
       formatNumber(entry.hours)
     ];
     
     // Mark holidays in red
-    if (entry.isHoliday && dateToShow) {
+    if (entry.isHoliday) {
       styles[`A${rowIndex + 1}`] = { font: { color: 'FF0000' } }; // Red font for date
     }
-    
-    // Update tracking variables
-    currentDate = entry.date;
-    currentEmployee = entry.employee;
   });
   
   // Calculate the next row for employee summary section
