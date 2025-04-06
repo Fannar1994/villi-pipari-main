@@ -6,6 +6,7 @@ export interface ApiStatusType {
   available: boolean;
   details: string;
   methods: Record<string, boolean>;
+  backupAvailable?: boolean; // Add the missing property
 }
 
 /**
@@ -84,6 +85,7 @@ export function useElectronAPI() {
         available: hasElectron && allMethodsAvailable,
         details,
         methods,
+        backupAvailable: false, // Set default value for the property
       });
       
       // Show toast with result
@@ -106,6 +108,7 @@ export function useElectronAPI() {
         available: false,
         details: `Error: ${(error as Error).message}`,
         methods: {},
+        backupAvailable: false,
       });
       
       toast({

@@ -9,5 +9,8 @@ export {
   getElectronAPI, 
   isElectronAPIAvailable, 
   testConnection,
-  forceApiRecovery
+  forceApiRecovery,
+  // Add these exports to fix TypeScript errors
+  setEmergencyApiBackup,
+  getEmergencyApiBackup
 } from './detector-core';

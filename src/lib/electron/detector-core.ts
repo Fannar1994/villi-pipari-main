@@ -1,3 +1,4 @@
+
 /**
  * Core API detection utilities for Electron
  */
@@ -75,4 +76,16 @@ export function testConnection(): ConnectionTestResult {
 export function forceApiRecovery(): boolean {
   console.log('API recovery requested, but not needed in direct mode');
   return isElectronAPIAvailable();
+}
+
+// Add missing functions to store and retrieve emergency API backup
+// These are stub implementations since we're moving away from emergency mode
+export function setEmergencyApiBackup(api: ElectronAPI): void {
+  console.log('Emergency API backup requested, but not implemented in direct mode');
+  // No implementation - just a stub to fix TypeScript errors
+}
+
+export function getEmergencyApiBackup(): ElectronAPI | null {
+  console.log('Emergency API backup retrieval requested, but not implemented in direct mode');
+  return null; // No implementation - just a stub to fix TypeScript errors
 }
