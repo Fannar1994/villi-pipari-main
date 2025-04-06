@@ -98,8 +98,13 @@ export const useTimesheetProcessor = () => {
       return;
     }
 
-    // First, check if Electron API is available
-    if (typeof window === 'undefined' || !window.electron || typeof window.electron.writeFile !== 'function') {
+    // Check for Electron API or backup API
+    const hasElectronApi = typeof window !== 'undefined' && (
+      (window.electron && typeof window.electron.writeFile === 'function') || 
+      ((window as any).electronBackupAPI && typeof (window as any).electronBackupAPI.writeFile === 'function')
+    );
+
+    if (!hasElectronApi) {
       toast({
         title: 'Villa',
         description: 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.',
@@ -118,9 +123,13 @@ export const useTimesheetProcessor = () => {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að PDF gerð...' });
 
+      console.log('Parsing timesheet file for PDF generation');
       const timesheetEntries = await parseTimesheetFile(timesheetFile);
+      console.log(`Parsed ${timesheetEntries.length} entries from timesheet`);
       
+      console.log('Starting PDF generation process');
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
+      console.log(`PDF generation completed with ${pdfCount} files created`);
       
       setIsProcessing(false);
       setProcessStatus({

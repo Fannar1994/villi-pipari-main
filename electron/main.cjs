@@ -1,5 +1,5 @@
 
-// ✅ electron/main.cjs
+// electron/main.cjs
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -13,44 +13,74 @@ const MAX_RETRIES = 30;
 let retryCount = 0;
 
 // Log application paths for debugging
-console.log('Application paths:');
+console.log('📂 Application paths:');
 console.log('App path:', app.getAppPath());
 console.log('User data path:', app.getPath('userData'));
 console.log('Executable path:', app.getPath('exe'));
 console.log('Current working directory:', process.cwd());
 
 function createWindow() {
-  const { BrowserWindow } = require('electron');
+  // CRITICAL: Set up IPC handlers BEFORE creating the window
+  setupIPCHandlers();
+  
+  console.log('🪟 Creating main window...');
+  const preloadPath = path.join(__dirname, 'preload.cjs');
+  
+  console.log('⚙️ Using preload script:', preloadPath);
+  console.log('Preload script exists:', fs.existsSync(preloadPath));
+  
+  // Create the browser window
   const win = new BrowserWindow({
-    width: 900,
-    height: 700,
-    backgroundColor: '#2d2d2d',  // Dark grey background
+    width: 1000,
+    height: 800,
+    backgroundColor: '#2d2d2d',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
+      preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: false // Disable web security in the packaged app to allow local file access
+      sandbox: false, // Disable sandbox for easier debugging
+      webSecurity: false // Allow local file access
     },
     icon: path.join(__dirname, '../public/favicon.ico'),
     show: false
   });
 
   mainWindow = win;
-
-  // Log that we're creating the window with the correct preload script
-  console.log('Creating window with preload script:', path.join(__dirname, 'preload.cjs'));
-  console.log('Preload script exists:', fs.existsSync(path.join(__dirname, 'preload.cjs')));
-
+  
+  // Set up window listeners
   mainWindow.once('ready-to-show', () => {
-    console.log('Window ready to show');
+    console.log('🎉 Window ready to show');
     mainWindow.show();
     
-    // Open dev tools in both development and production for debugging
+    // Always open DevTools for debugging
     mainWindow.webContents.openDevTools();
-    
-    console.log('Window shown, dev tools opened');
+    console.log('🛠️ DevTools opened');
   });
 
+  // Log all console messages from renderer to main process
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    const levels = ['debug', 'log', 'warn', 'error'];
+    console.log(`[Renderer] ${levels[level] || 'log'}: ${message}`);
+  });
+  
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('❌ Failed to load:', errorCode, errorDescription);
+    dialog.showErrorBox('Loading Failed', `Error ${errorCode}: ${errorDescription}`);
+  });
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('✅ Page loaded successfully');
+    // Execute test script to verify API
+    mainWindow.webContents.executeJavaScript(`
+      console.log("🔍 Testing Electron API availability from renderer:");
+      console.log("window.electron exists:", typeof window.electron !== "undefined");
+      if (window.electron) {
+        console.log("Available methods:", Object.keys(window.electron));
+      }
+    `).catch(err => console.error("Error executing test script:", err));
+  });
+
+  // Load the app
   if (isDev) {
     loadDev();
   } else {
@@ -58,24 +88,9 @@ function createWindow() {
   }
 
   mainWindow.on('closed', () => mainWindow = null);
-  
-  // Add error handling for webContents
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('Failed to load:', errorCode, errorDescription);
-    dialog.showErrorBox('Loading Failed', `Error ${errorCode}: ${errorDescription}`);
-  });
-  
-  // Add debug info for preload script
-  mainWindow.webContents.on('did-finish-load', () => {
-    console.log('Main: Page finished loading');
-    console.log('Main: Checking if preload script was executed...');
-  });
-  
-  mainWindow.webContents.on('console-message', (event, level, message) => {
-    console.log('Renderer console:', message);
-  });
 }
 
+// Test connection to dev server
 async function testConnection(url, timeout = 1000) {
   return new Promise((resolve) => {
     const req = http.get(url, res => {
@@ -90,9 +105,10 @@ async function testConnection(url, timeout = 1000) {
   });
 }
 
+// Load app in development mode
 async function loadDev() {
   const devUrl = `http://localhost:${VITE_PORT}`;
-  console.log('Loading development URL:', devUrl);
+  console.log('🔗 Loading development URL:', devUrl);
   const isConnected = await testConnection(devUrl);
 
   if (isConnected) {
@@ -100,7 +116,7 @@ async function loadDev() {
     mainWindow.webContents.openDevTools();
   } else if (retryCount < MAX_RETRIES) {
     retryCount++;
-    console.log(`Retry ${retryCount}/${MAX_RETRIES} connecting to ${devUrl}`);
+    console.log(`🔄 Retry ${retryCount}/${MAX_RETRIES} connecting to ${devUrl}`);
     setTimeout(loadDev, 1000);
   } else {
     dialog.showErrorBox('Dev Server Error', `Could not reach ${devUrl}`);
@@ -108,14 +124,15 @@ async function loadDev() {
   }
 }
 
+// Load app in production mode
 function loadProd() {
   // Use relative paths to find the dist folder
   let indexPath = '';
   const possiblePaths = [
-    path.join(__dirname, '../dist/index.html'),          // Standard path
-    path.join(__dirname, '../../dist/index.html'),       // Nested in asar
-    path.join(process.resourcesPath, 'dist/index.html'), // In resources folder
-    path.join(app.getAppPath(), 'dist/index.html')       // From app path
+    path.join(__dirname, '../dist/index.html'),
+    path.join(__dirname, '../../dist/index.html'),
+    path.join(process.resourcesPath, 'dist/index.html'),
+    path.join(app.getAppPath(), 'dist/index.html')
   ];
   
   for (const testPath of possiblePaths) {
@@ -127,42 +144,102 @@ function loadProd() {
   }
   
   if (indexPath) {
-    console.log('Found index.html at:', indexPath);
+    console.log('📄 Found index.html at:', indexPath);
     const fileUrl = url.format({
       pathname: indexPath,
       protocol: 'file:',
       slashes: true
     });
-    console.log('Loading URL:', fileUrl);
+    console.log('🔗 Loading URL:', fileUrl);
     mainWindow.loadURL(fileUrl).catch(err => {
-      console.error('Error loading URL:', err);
+      console.error('❌ Error loading URL:', err);
       dialog.showErrorBox('Loading Error', `Failed to load the app: ${err.message}`);
     });
   } else {
-    console.error('Could not find index.html in any of the checked locations');
-    dialog.showErrorBox('Build Missing', 'Could not find the application files. The application may not be built correctly.');
+    console.error('❌ Could not find index.html');
+    dialog.showErrorBox('Build Missing', 'Could not find the application files.');
     app.quit();
   }
 }
 
-// Set application name
-app.setName('Villi pipari');
+// Set up IPC handlers
+function setupIPCHandlers() {
+  console.log('🔌 Setting up IPC handlers...');
+  
+  // Check existing handlers to avoid duplicates
+  const channels = ipcMain.eventNames();
+  console.log('Currently registered IPC channels:', channels);
 
-// Quit when all windows are closed
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
+  // Handle directory selection
+  if (!channels.includes('select-directory')) {
+    ipcMain.handle('select-directory', async () => {
+      console.log('📂 Handler: select-directory called');
+      try {
+        const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+        console.log('📂 Dialog result:', result);
+        return result.canceled ? null : result.filePaths[0];
+      } catch (error) {
+        console.error('❌ Error in select-directory:', error);
+        return null;
+      }
+    });
+    console.log('✅ Registered select-directory handler');
   }
-});
 
-app.whenReady().then(() => {
-  console.log('App is ready, setting up IPC handlers before creating window');
+  // Handle file writing
+  if (!channels.includes('write-file')) {
+    ipcMain.handle('write-file', async (event, { filePath, data }) => {
+      console.log('📝 Handler: write-file called for path:', filePath);
+      try {
+        const dir = path.dirname(filePath);
+        
+        if (!fs.existsSync(dir)) {
+          console.log('📁 Creating directory:', dir);
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        
+        await fs.promises.writeFile(filePath, data);
+        console.log('✅ File written successfully:', filePath);
+        return { success: true, path: filePath };
+      } catch (error) {
+        console.error('❌ Error writing file:', error);
+        return { success: false, error: error.message };
+      }
+    });
+    console.log('✅ Registered write-file handler');
+  }
+
+  // Handle file existence check
+  if (!channels.includes('file-exists')) {
+    ipcMain.handle('file-exists', async (_, filePath) => {
+      console.log('🔍 Handler: file-exists called for path:', filePath);
+      try {
+        const exists = fs.existsSync(filePath);
+        console.log('🔍 File exists result:', exists);
+        return exists;
+      } catch (error) {
+        console.error('❌ Error checking if file exists:', error);
+        return false;
+      }
+    });
+    console.log('✅ Registered file-exists handler');
+  }
   
-  // Debug to ensure IPC handlers are set up correctly
-  setupIPCHandlers();
-  
+  // Add test handler for connection verification
+  if (!channels.includes('test-ipc')) {
+    ipcMain.handle('test-ipc', async () => {
+      console.log('🧪 Handler: test-ipc called');
+      return { success: true, time: new Date().toString(), mainVersion: '2.0' };
+    });
+    console.log('✅ Registered test-ipc handler');
+  }
+}
+
+// Handle app lifecycle events
+app.on('ready', () => {
+  console.log('🚀 App is ready');
   createWindow();
-
+  
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -170,82 +247,17 @@ app.whenReady().then(() => {
   });
 });
 
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
 // Handle any startup errors
 app.on('render-process-gone', (event, webContents, details) => {
-  console.error('Render process gone:', details.reason);
+  console.error('❌ Render process gone:', details.reason);
   dialog.showErrorBox('Application Error', `The application encountered an error: ${details.reason}`);
 });
 
-// Set up IPC handlers in a separate function for clarity
-function setupIPCHandlers() {
-  // Check if handlers are already registered to avoid duplicate handlers
-  const channels = ipcMain.eventNames();
-  console.log('Currently registered IPC channels:', channels);
-
-  if (!channels.includes('select-directory')) {
-    ipcMain.handle('select-directory', async (event) => {
-      console.log('Main: select-directory called');
-      try {
-        const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
-        console.log('Main: dialog result:', result);
-        return result.canceled ? null : result.filePaths[0];
-      } catch (error) {
-        console.error('Main: Error in select-directory:', error);
-        return null;
-      }
-    });
-    console.log('Main: Registered select-directory handler');
-  }
-
-  if (!channels.includes('write-file')) {
-    ipcMain.handle('write-file', async (event, { filePath, data }) => {
-      console.log('Main: write-file called, filePath:', filePath, 'data length:', data?.length);
-      try {
-        // The filePath should already be the complete path
-        const fullPath = filePath;
-        
-        const dir = path.dirname(fullPath);
-        console.log('Main: Creating directory if needed:', dir);
-        
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-        }
-        
-        await fs.promises.writeFile(fullPath, data);
-        console.log('Main: File written successfully:', fullPath);
-        return { success: true, path: fullPath };
-      } catch (error) {
-        console.error('Main: Error writing file:', error);
-        if (error.code === 'EBUSY') {
-          return { success: false, error: 'Vinsamlegast lokið skjalinu' };
-        }
-        return { success: false, error: error.message };
-      }
-    });
-    console.log('Main: Registered write-file handler');
-  }
-
-  if (!channels.includes('file-exists')) {
-    ipcMain.handle('file-exists', async (_, filePath) => {
-      console.log('Main: file-exists called, filePath:', filePath);
-      try {
-        const exists = fs.existsSync(filePath);
-        console.log('Main: file exists result:', exists);
-        return exists;
-      } catch (error) {
-        console.error('Main: Error checking if file exists:', error);
-        return false;
-      }
-    });
-    console.log('Main: Registered file-exists handler');
-  }
-  
-  // Add a test handler
-  if (!channels.includes('test-ipc')) {
-    ipcMain.handle('test-ipc', async () => {
-      console.log('Main: test-ipc called');
-      return { success: true, time: new Date().toString() };
-    });
-    console.log('Main: Registered test-ipc handler');
-  }
-}
+// Set application name
+app.setName('Villi pipari');

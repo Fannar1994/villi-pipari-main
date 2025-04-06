@@ -1,12 +1,23 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-// Log when preload script starts executing
-console.log('Electron preload script starting...');
-console.log('Context Bridge available:', typeof contextBridge !== 'undefined');
-console.log('IPC Renderer available:', typeof ipcRenderer !== 'undefined');
+// Log when preload script starts executing with clear identification
+console.log('🚀 Electron preload script starting...');
 
-// Create a safer API
+// Immediately check if we have access to required APIs
+if (!contextBridge) {
+  console.error('❌ CRITICAL: contextBridge is not available in this environment');
+} else {
+  console.log('✅ contextBridge is available');
+}
+
+if (!ipcRenderer) {
+  console.error('❌ CRITICAL: ipcRenderer is not available in this environment');
+} else {
+  console.log('✅ ipcRenderer is available');
+}
+
+// Create the API object that will be exposed to the renderer
 const electronAPI = {
   writeFile: async (options) => {
     console.log('Preload: writeFile called with:', {
@@ -44,37 +55,41 @@ const electronAPI = {
       return false;
     }
   },
-  // Add this diagnostic function to help debugging
+  // Test function to verify API connection
   _testConnection: () => {
     console.log('Preload: _testConnection called');
     return { 
       available: true, 
       time: new Date().toString(),
-      preloadVersion: '1.1' // Version to confirm we're using the updated preload
+      preloadVersion: '2.0' // Updated version to confirm we're using this new preload
     };
   }
 };
 
-// Debug that our API was created successfully
-console.log('Electron API object created with methods:', Object.keys(electronAPI));
+// Log the API we're about to expose
+console.log('📦 Electron API object created with methods:', Object.keys(electronAPI));
 
+// This is the critical part - expose the API to the renderer
 try {
-  // Expose the API to the renderer process
   contextBridge.exposeInMainWorld('electron', electronAPI);
-  console.log('Electron preload: API successfully exposed to renderer via contextBridge');
+  console.log('✅ Electron API successfully exposed via contextBridge');
+  
+  // Add a global variable as a backup method (in case contextBridge isn't working)
+  console.log('🔄 Adding backup global.electronBackupAPI');
+  global.electronBackupAPI = electronAPI;
 } catch (error) {
-  console.error('ERROR exposing API via contextBridge:', error);
+  console.error('❌ CRITICAL: Failed to expose API via contextBridge:', error);
 }
 
-// Test that the API is available in the window object
-setTimeout(() => {
-  try {
-    // This won't work directly due to context isolation, but we'll log the attempt
-    console.log('Attempting to check if API was exposed correctly (will not work directly in preload)');
-  } catch (error) {
-    console.error('Error in setTimeout check:', error);
-  }
-}, 1000);
+// Confirmation message at the end of preload script execution
+console.log('🏁 Electron preload script completed');
 
-// Log when preload script finishes executing
-console.log('Electron preload script completed, API exposed:', Object.keys(electronAPI));
+// Add an initialization check that can be observed in DevTools
+setTimeout(() => {
+  console.log('⏱️ Delayed check: Electron API should now be available to renderer process');
+  // Test IPC directly
+  ipcRenderer.invoke('test-ipc').then(
+    result => console.log('✅ IPC test successful:', result),
+    error => console.error('❌ IPC test failed:', error)
+  );
+}, 1000);
