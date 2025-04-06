@@ -60,7 +60,8 @@ export async function checkElectronConnection(): Promise<boolean> {
     try {
       const testResult = api._testConnection();
       console.log('Test connection result:', testResult);
-      if (testResult.preloadVersion) {
+      // Safely check for preloadVersion
+      if ('preloadVersion' in testResult) {
         console.log('Using updated preload script version:', testResult.preloadVersion);
       }
       return testResult.available;

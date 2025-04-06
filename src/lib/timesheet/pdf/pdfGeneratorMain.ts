@@ -35,6 +35,34 @@ export async function generatePdfFiles(
     const electronApiDefined = typeof window.electron !== 'undefined';
     console.log("Electron API defined:", electronApiDefined);
     
+    // Direct troubleshooting - make a small PDF in memory and try to save it
+    if (electronApiDefined && typeof window.electron.writeFile === 'function') {
+      try {
+        console.log("DIRECT TEST: Attempting to create and save a simple test PDF");
+        // Import jsPDF directly here to avoid issues if it's not loaded elsewhere
+        const { jsPDF } = await import('jspdf');
+        const testPdf = new jsPDF();
+        testPdf.text('Test PDF', 10, 10);
+        const testPdfBlob = testPdf.output('arraybuffer');
+        const testPath = `${outputDirectory}/test_pdf_${Date.now()}.pdf`;
+        console.log("DIRECT TEST: Writing test PDF to:", testPath);
+        
+        const testResult = await window.electron.writeFile({
+          filePath: testPath,
+          data: new Uint8Array(testPdfBlob)
+        });
+        
+        console.log("DIRECT TEST: Test PDF result:", testResult);
+        if (testResult && testResult.success) {
+          console.log("DIRECT TEST: Test PDF creation successful!");
+        } else {
+          console.error("DIRECT TEST: Test PDF creation failed:", testResult?.error || "Unknown error");
+        }
+      } catch (e) {
+        console.error("DIRECT TEST: Error creating test PDF:", e);
+      }
+    }
+    
     if (electronApiDefined) {
       // List available methods on the electron object
       console.log("Available electron API methods:", Object.keys(window.electron || {}));

@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, FileOutput } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * A component that tests if the Electron API is correctly available
@@ -18,6 +19,7 @@ export function ElectronTester() {
     details: 'Checking...',
     methods: {},
   });
+  const [testOutputPath, setTestOutputPath] = useState<string | null>(null);
 
   const checkApi = () => {
     try {
@@ -56,7 +58,8 @@ export function ElectronTester() {
             try {
               const result = api._testConnection();
               details += ` (Test: ${result.available ? 'SUCCESS' : 'FAILED'}, Time: ${result.time})`;
-              if (result.preloadVersion) {
+              // Safely check for preloadVersion
+              if (result && 'preloadVersion' in result) {
                 details += ` [Preload v${result.preloadVersion}]`;
               }
             } catch (error) {
@@ -95,12 +98,95 @@ export function ElectronTester() {
     if (apiStatus.methods.selectDirectory && window.electron) {
       try {
         const result = await window.electron.selectDirectory();
-        alert(`Directory selected: ${result || 'none'}`);
+        setTestOutputPath(result);
+        toast({
+          title: 'Directory Selected',
+          description: `Path: ${result || 'none'}`,
+        });
       } catch (error) {
-        alert(`Error: ${error.message}`);
+        toast({
+          title: 'Error',
+          description: `Failed to select directory: ${error.message}`,
+          variant: 'destructive',
+        });
       }
     } else {
-      alert('selectDirectory method not available');
+      toast({
+        title: 'Error',
+        description: 'selectDirectory method not available',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const testPdfGeneration = async () => {
+    if (!testOutputPath) {
+      toast({
+        title: 'Select directory first',
+        description: 'Please select an output directory first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!apiStatus.methods.writeFile || !window.electron) {
+      toast({
+        title: 'Error',
+        description: 'writeFile method not available',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Dynamically import jsPDF to avoid it being a hard dependency for the component
+      const jsPDFModule = await import('jspdf');
+      const jsPDF = jsPDFModule.jsPDF;
+      
+      toast({
+        title: 'Creating test PDF',
+        description: 'Generating a simple test PDF file...',
+      });
+      
+      // Create a simple PDF
+      const pdf = new jsPDF();
+      pdf.text('Test PDF created at ' + new Date().toString(), 10, 10);
+      pdf.text('If you can read this, PDF generation works!', 10, 20);
+      
+      // Convert to ArrayBuffer then Uint8Array
+      const pdfBlob = pdf.output('arraybuffer');
+      const pdfData = new Uint8Array(pdfBlob);
+      
+      // Generate a unique filename
+      const timestamp = Date.now();
+      const filePath = `${testOutputPath}/test_pdf_${timestamp}.pdf`;
+      
+      console.log(`Writing test PDF to: ${filePath} (${pdfData.length} bytes)`);
+      
+      const result = await window.electron.writeFile({
+        filePath,
+        data: pdfData
+      });
+      
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: `PDF created at: ${filePath}`,
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: `Failed to create PDF: ${result.error}`,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error creating test PDF:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to create PDF: ${error.message}`,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -136,19 +222,38 @@ export function ElectronTester() {
           ))}
         </div>
         
-        <div className="flex gap-2 mt-4">
+        <div className="flex flex-col gap-2 mt-4">
           <Button size="sm" onClick={checkApi}>
             Refresh Status
           </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={testSelectDirectory}
-            disabled={!apiStatus.methods.selectDirectory}
-          >
-            Test Directory Select
-          </Button>
+          
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={testSelectDirectory}
+              disabled={!apiStatus.methods.selectDirectory}
+            >
+              1. Select Test Directory
+            </Button>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={testPdfGeneration}
+              disabled={!apiStatus.methods.writeFile || !testOutputPath}
+            >
+              <FileOutput className="mr-1 h-4 w-4" />
+              2. Test PDF Creation
+            </Button>
+          </div>
         </div>
+        
+        {testOutputPath && (
+          <div className="text-sm text-green-600">
+            Output directory: {testOutputPath}
+          </div>
+        )}
         
         <div className="text-sm text-amber-600 flex items-center gap-1 mt-2">
           <AlertTriangle size={16} />

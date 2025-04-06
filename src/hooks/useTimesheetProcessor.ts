@@ -98,6 +98,22 @@ export const useTimesheetProcessor = () => {
       return;
     }
 
+    // First, check if Electron API is available
+    if (typeof window === 'undefined' || !window.electron || typeof window.electron.writeFile !== 'function') {
+      toast({
+        title: 'Villa',
+        description: 'Ekki er hægt að búa til PDF skjöl - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.',
+        variant: 'destructive',
+      });
+      
+      setProcessStatus({
+        status: 'error',
+        message: 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Endurræstu forritið.',
+      });
+      
+      return;
+    }
+
     try {
       setIsProcessing(true);
       setProcessStatus({ status: 'processing', message: 'Vinnur að PDF gerð...' });
@@ -121,14 +137,23 @@ export const useTimesheetProcessor = () => {
     } catch (error) {
       console.error('Error generating PDFs:', error);
       setIsProcessing(false);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Ekki tókst að búa til PDF skjöl';
+      if (error.message && error.message.includes('skráarkerfisvirkni')) {
+        errorMessage = 'Ekki er hægt að búa til PDF - vantar skráarkerfisvirkni. Vinsamlegast endurræstu forritið.';
+      } else if (error.message) {
+        errorMessage = `Villa kom upp: ${error.message}`;
+      }
+      
       setProcessStatus({
         status: 'error',
-        message: `Villa kom upp: ${error.message || 'Óþekkt villa'}`,
+        message: errorMessage,
       });
       
       toast({
         title: 'Villa',
-        description: 'Ekki tókst að búa til PDF skjöl.',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
