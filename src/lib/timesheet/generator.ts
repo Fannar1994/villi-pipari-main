@@ -120,8 +120,7 @@ export async function generateInvoices(
     const wopts: XLSX.WritingOptions = { 
       bookType: 'xlsx', 
       type: 'buffer', 
-      bookSST: false, 
-      cellFormula: true  // Keep formulas 
+      bookSST: false,
     };
     
     // Write the workbook to a buffer with formulas preserved
