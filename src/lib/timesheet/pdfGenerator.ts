@@ -1,4 +1,3 @@
-
 import { TimesheetEntry } from "@/types/timesheet";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
@@ -15,12 +14,23 @@ import {
  */
 function isElectronAvailable(): boolean {
   try {
-    return (
-      typeof window !== "undefined" &&
-      window.isElectron === true &&
-      window.electron !== undefined &&
-      typeof window.electron.writeFile === "function"
-    );
+    // More robust check for Electron environment
+    if (typeof window === 'undefined') return false;
+    if (typeof window.electron === 'undefined') return false;
+    if (typeof window.electron.writeFile !== 'function') return false;
+
+    // Check if the isElectron flag is set
+    const hasElectronFlag = window.isElectron === true;
+
+    console.log("Electron API check:", {
+      hasWindowObject: typeof window !== 'undefined',
+      hasElectronObject: typeof window.electron !== 'undefined',
+      hasWriteFileFunction: typeof window.electron?.writeFile === 'function',
+      hasElectronFlag: hasElectronFlag
+    });
+
+    // Return true only if all conditions are met
+    return hasElectronFlag && typeof window.electron.writeFile === 'function';
   } catch (err) {
     console.error("Error checking for Electron:", err);
     return false;
@@ -37,7 +47,7 @@ async function writePdfToDisk(
 ): Promise<boolean> {
   // First verify Electron is available
   if (!isElectronAvailable()) {
-    console.error("Electron API not available");
+    console.error("Electron API not available for file writing");
     throw new Error(
       "PDF útflutningur er aðeins í boði í Electron útgáfunni."
     );
@@ -45,12 +55,13 @@ async function writePdfToDisk(
 
   try {
     console.log(`Attempting to save PDF to: ${filePath}`);
+    console.log("Electron API status:", {
+      electronObject: typeof window.electron,
+      writeFileFunction: typeof window.electron.writeFile
+    });
 
-    // Try to verify the directory exists first
-    const dirPath = filePath.substring(0, filePath.lastIndexOf("/"));
-    
     // Call Electron's writeFile API and wait for the result
-    const result = await window.electron!.writeFile({
+    const result = await window.electron.writeFile({
       filePath: filePath,
       data: new Uint8Array(pdfBlob),
     });
@@ -63,7 +74,7 @@ async function writePdfToDisk(
 
     // Verify the file exists after writing
     try {
-      const fileExists = await window.electron!.fileExists(filePath);
+      const fileExists = await window.electron.fileExists(filePath);
       if (!fileExists) {
         console.error(`File was not found after writing: ${filePath}`);
         throw new Error(`Skrá fannst ekki eftir vistun: ${filePath}`);

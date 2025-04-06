@@ -3,14 +3,13 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload } from "@/components/FileUpload";
 import { DirectorySelect } from "@/components/DirectorySelect";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, InfoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { parseTimesheetFile } from "@/lib/timesheet/parser";
 import { generatePdfFiles } from "@/lib/timesheet/pdfGenerator";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon } from "lucide-react";
 
 export const ExcelTab = () => {
   const [excelFile, setExcelFile] = useState<File | null>(null);
@@ -21,15 +20,16 @@ export const ExcelTab = () => {
 
   // Check if we're running in Electron on component mount
   useEffect(() => {
-    // Check for the Electron runtime using multiple methods
+    // More thorough check for Electron environment
     const isElectron = 
       window.isElectron === true || 
       (typeof window !== 'undefined' && 
-       window.electron !== undefined && 
+       typeof window.electron !== 'undefined' && 
        typeof window.electron.writeFile === 'function');
     
     setIsElectronApp(isElectron);
     console.log("Running in Electron environment:", isElectron);
+    console.log("Window electron object:", window.electron ? "Available" : "Not available");
   }, []);
 
   const handleExport = async () => {
