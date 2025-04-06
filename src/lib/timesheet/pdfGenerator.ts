@@ -1,11 +1,9 @@
-
 import { TimesheetEntry } from '@/types/timesheet';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatDateIcelandic } from '../utils/dateUtils';
-import { createSummarySheetData, createInvoiceData } from './processor';
-import { groupEntriesByLocation } from './processor';
+import { createSummarySheetData, createInvoiceData, groupEntriesByLocation } from './processor';
 
 /**
  * Generates PDF files from timesheet entries
@@ -35,7 +33,7 @@ export async function generatePdfFiles(
     
     // Generate the table
     autoTable(summaryPdf, {
-      head: [['Dagsetning', 'Starfsmaður', 'Heildar tímar']],
+      head: [['Dagsetning', 'Starfsmaður', 'Staðsetning', 'Tímar']],
       body: tableData.map(row => row.map(cell => cell.toString())),
       startY: 20,
       theme: 'grid',
