@@ -93,7 +93,7 @@ export function createSummaryData(entries: TimesheetEntry[]): SummaryEntry[] {
         employee: entry.employee,
         totalHours: entry.hours,
         isHoliday: isIcelandicHoliday(entry.date),
-        location: entry.location || ''
+        location: entry.location || '' // Ensure location is always included
       });
     }
   });

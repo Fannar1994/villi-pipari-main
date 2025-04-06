@@ -18,6 +18,9 @@ export async function generatePdfFiles(
       throw new Error('No timesheet entries provided');
     }
 
+    // Ensure output directory ends without slash
+    const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
+    
     // Create a summary PDF
     const summaryPdf = new jsPDF();
     
@@ -34,11 +37,12 @@ export async function generatePdfFiles(
       formatDateIcelandic(entry.date),
       entry.employee,
       entry.totalHours.toString(),
+      entry.location || '' // Include location information
     ]);
     
     // Generate the table
     autoTable(summaryPdf, {
-      head: [['Dagsetning', 'Starfsmaður', 'Heildar tímar']],
+      head: [['Dagsetning', 'Starfsmaður', 'Heildar tímar', 'Staðsetning']],
       body: tableData,
       startY: 20,
       theme: 'grid',
@@ -55,14 +59,18 @@ export async function generatePdfFiles(
     
     // Save the summary PDF
     const summaryFilename = `Summary_${new Date().toISOString().split('T')[0]}.pdf`;
-    const normalizedDir = outputDirectory.replace(/[\/\\]+$/, '');
     const summaryPath = `${normalizedDir}/${summaryFilename}`;
     
     console.log("Saving summary PDF to:", summaryPath);
     
-    // Check if we're in Electron environment
-    if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
+    // Verify if Electron API is available and use it properly
+    if (typeof window !== 'undefined' && window.electron) {
       try {
+        if (!window.electron.writeFile) {
+          console.error("Electron writeFile API is not available");
+          throw new Error("Electron writeFile API is not available");
+        }
+        
         const pdfOutput = summaryPdf.output('arraybuffer');
         const result = await window.electron.writeFile({
           filePath: summaryPath,
@@ -72,19 +80,21 @@ export async function generatePdfFiles(
         if (!result.success) {
           throw new Error(result.error || 'Failed to save summary PDF');
         }
+        
+        console.log("Successfully saved summary PDF!");
       } catch (error) {
         console.error("Error saving summary PDF:", error);
-        throw error; // Re-throw to ensure we capture the specific error
+        throw error;
       }
     } else {
-      console.error("Electron writeFile API is not available for summary PDF");
-      throw new Error("Electron writeFile API is not available");
+      console.error("Electron environment not detected for summary PDF");
+      throw new Error("Unable to save files - Electron environment not detected");
     }
     
     // Create individual invoice PDFs
     let pdfCount = 1; // Start with 1 for the summary PDF
 
-    // Now group by BOTH employee AND location for individual PDFs
+    // Group by BOTH employee AND location for individual PDFs
     const employeeLocationGroups = new Map<string, TimesheetEntry[]>();
     
     timesheetEntries.forEach(entry => {
@@ -106,7 +116,10 @@ export async function generatePdfFiles(
       const location = firstEntry.location;
       
       // Skip if missing critical information
-      if (!employee || !location) continue;
+      if (!employee || !location) {
+        console.log("Skipping entry without employee or location data");
+        continue;
+      }
       
       // Create a new PDF for this employee-location combination
       const pdf = new jsPDF();
@@ -161,7 +174,9 @@ export async function generatePdfFiles(
       const filename = `${sanitizedEmployee}_${sanitizedLocation}_${new Date().toISOString().split('T')[0]}.pdf`;
       const filePath = `${normalizedDir}/${filename}`;
       
-      // Save file using Electron API
+      console.log(`Saving PDF for ${employee} at ${location} to: ${filePath}`);
+      
+      // Save file using Electron API with proper error checking
       if (typeof window !== 'undefined' && window.electron && window.electron.writeFile) {
         try {
           const pdfOutput = pdf.output('arraybuffer');
@@ -171,6 +186,7 @@ export async function generatePdfFiles(
           });
           
           if (result.success) {
+            console.log(`Successfully saved PDF for ${employee} at ${location}`);
             pdfCount++;
           } else {
             console.error(`Failed to save PDF for ${employee} at ${location}: ${result.error}`);
@@ -179,13 +195,16 @@ export async function generatePdfFiles(
           console.error(`Error saving PDF for ${employee} at ${location}:`, error);
           // Continue with other PDFs rather than stopping the whole process
         }
+      } else {
+        console.error("Electron writeFile API is not available for individual PDF");
+        throw new Error("Electron writeFile API is not available");
       }
     }
     
-    console.log(`Successfully created ${pdfCount} PDF files`);
+    console.log(`Successfully created ${pdfCount} PDF files in total`);
     return pdfCount;
   } catch (error) {
     console.error('Error generating PDFs:', error);
-    throw new Error(error.message || 'Error generating PDF files');
+    throw new Error(error instanceof Error ? error.message : 'Error generating PDF files');
   }
 }

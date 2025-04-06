@@ -114,8 +114,18 @@ export const useTimesheetProcessor = () => {
       }
       
       console.log("Starting PDF generation with", timesheetEntries.length, "entries");
+      
+      // Check if Electron API is available
+      if (typeof window === 'undefined' || !window.electron || !window.electron.writeFile) {
+        throw new Error('Electron API er ekki aðgengileg til að vista skrár');
+      }
+      
       const pdfCount = await generatePdfFiles(timesheetEntries, outputDir);
       console.log("PDF generation completed, count:", pdfCount);
+      
+      if (pdfCount === 0) {
+        throw new Error('Engar PDF skrár voru búnar til');
+      }
       
       setIsProcessing(false);
       setProcessStatus({
