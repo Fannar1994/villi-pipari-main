@@ -14,25 +14,23 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
   pdf.setFontSize(12);
   pdf.text("Villi Pípari ehf.", 14, 10);
   
-  // Add fovea logo on top right if available
+  // Add fovea logo on top right
   try {
-    // Position for top right - adjust as needed
-    const logoX = pdf.internal.pageSize.width - 50;
+    // Position for top right - adjust as needed based on the provided image
+    const logoX = pdf.internal.pageSize.width - 80;
     const logoY = 10;
     
-    // Add logo image - using base64 format for the logo
-    // This would typically come from an asset in your project
-    const logoWidth = 35;
+    // Add logo image
+    const logoWidth = 60;
+    const logoHeight = 25;
     
-    // Try to add logo from an imported image
-    // Note: In a real implementation, you would need to import an actual image
     pdf.addImage(
-      "/src/assets/fovea_logo.png", // Path should point to your logo file
+      "/src/assets/fovea_logo.png",
       "PNG",
       logoX,
-      logoY - 9,
+      logoY - 5,
       logoWidth,
-      logoWidth * 0.4
+      logoHeight
     );
   } catch (logoError) {
     console.warn("Could not add logo to PDF:", logoError);
