@@ -14,6 +14,11 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
   pdf.setFontSize(12);
   pdf.text("Villi Pípari ehf.", 14, 10);
   
+  // Add address information on the line below company name
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(12);
+  pdf.text("Auðbrekka 2, 402", 14, 18);
+  
   // Add fovea logo on top right
   try {
     // Get the base URL for assets - this helps resolve the correct path
@@ -90,4 +95,3 @@ export function createSafeFilename(sheetName: string, dateString: string): strin
   const safeFileName = sheetName.replace(/[^a-z0-9áðéíóúýþæöÁÐÉÍÓÚÝÞÆÖ]/gi, "_");
   return `${safeFileName}_${dateString}.pdf`;
 }
-
