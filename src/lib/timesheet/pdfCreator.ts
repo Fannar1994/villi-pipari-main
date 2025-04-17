@@ -23,9 +23,9 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
     const logoX = pdf.internal.pageSize.width - 50;
     const logoY = 10;
     
-    // Using proper aspect ratio (width:height = 2.4:1)
-    const logoWidth = 40; 
-    const logoHeight = 16.67; // Maintains the proper aspect ratio
+    // Adjusted logo size to maintain aspect ratio and reduce stretching
+    const logoWidth = 34; // Reduced from 40
+    const logoHeight = 14; // Proportionally adjusted to maintain 2.4:1 ratio
     
     // Use an absolute path to the image
     // In Electron, we need to use an absolute file path
@@ -90,3 +90,4 @@ export function createSafeFilename(sheetName: string, dateString: string): strin
   const safeFileName = sheetName.replace(/[^a-z0-9áðéíóúýþæöÁÐÉÍÓÚÝÞÆÖ]/gi, "_");
   return `${safeFileName}_${dateString}.pdf`;
 }
+
