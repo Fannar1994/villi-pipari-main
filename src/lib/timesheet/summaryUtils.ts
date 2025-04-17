@@ -170,7 +170,8 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
     // Add hours for each apartment
     for (const apartment of apartmentHeaders) {
       const locationEntry = empSummary.locationBreakdown.find(lb => lb.apartment === apartment);
-      rowData.push(locationEntry ? formatNumber(locationEntry.hours) : 0);
+      // Fix here: Ensure we're returning a string (not a number) by using formatNumber or converting 0 to "0"
+      rowData.push(locationEntry ? formatNumber(locationEntry.hours) : "0");
     }
     
     data.push(rowData);
