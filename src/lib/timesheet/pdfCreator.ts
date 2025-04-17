@@ -9,9 +9,10 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
   // Create PDF for this sheet
   const pdf = new jsPDF();
   
-  // Add sheet name as title
-  pdf.setFontSize(14);
-  pdf.text(`${sheetName}`, 14, 25);
+  // Add company name on top left
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(12);
+  pdf.text("Villi Pípari ehf.", 14, 10);
   
   // Add fovea logo on top right
   try {
@@ -22,9 +23,9 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
     const logoX = pdf.internal.pageSize.width - 50;
     const logoY = 10;
     
-    // Adjusted logo size to maintain aspect ratio and reduce stretching
-    const logoWidth = 34; // Reduced from 40
-    const logoHeight = 14; // Proportionally adjusted to maintain 2.4:1 ratio
+    // Adjusted logo size as requested
+    const logoWidth = 25;
+    const logoHeight = 25;
     
     // Use an absolute path to the image
     // In Electron, we need to use an absolute file path
