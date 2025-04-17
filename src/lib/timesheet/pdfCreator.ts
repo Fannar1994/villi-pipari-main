@@ -20,12 +20,12 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
     const baseUrl = window.location.origin;
     
     // Position for top right
-    const logoX = pdf.internal.pageSize.width - 80;
+    const logoX = pdf.internal.pageSize.width - 60; // Reduced X position
     const logoY = 10;
     
-    // Add logo image with dimensions
-    const logoWidth = 60;
-    const logoHeight = 25;
+    // Reduce logo size by 25%
+    const logoWidth = 45; // Reduced from 60
+    const logoHeight = 18.75; // Reduced from 25
     
     // Use an absolute path to the image
     // In Electron, we need to use an absolute file path
@@ -43,7 +43,7 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
     } else {
       // For browser environment
       pdf.addImage(
-        `${baseUrl}/assets/fovea_logo.png`,
+        `/assets/fovea_logo.png`,
         "PNG",
         logoX,
         logoY - 5,
@@ -90,3 +90,4 @@ export function createSafeFilename(sheetName: string, dateString: string): strin
   const safeFileName = sheetName.replace(/[^a-z0-9áðéíóúýþæöÁÐÉÍÓÚÝÞÆÖ]/gi, "_");
   return `${safeFileName}_${dateString}.pdf`;
 }
+
