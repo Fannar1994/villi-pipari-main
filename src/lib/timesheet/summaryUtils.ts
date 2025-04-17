@@ -88,7 +88,7 @@ export function createEmployeeSummaries(entries: TimesheetEntry[]): EmployeeSumm
 
 /**
  * Creates formatted summary sheet data with styling information
- * Organized by employee and apartment locations
+ * Removing dynamic calculation with Excel formulas
  */
 export function createSummarySheetData(entries: TimesheetEntry[]): {
   data: (string | number)[][];
@@ -97,29 +97,17 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   const summaryEntries = createSummaryData(entries);
   const employeeSummaries = createEmployeeSummaries(entries);
   
-  // First, collect all unique apartments for column headers
-  const uniqueApartments = new Set<string>();
-  
-  entries.forEach(entry => {
-    if (entry.apartment) {
-      uniqueApartments.add(entry.apartment);
-    }
-  });
-  
-  // Convert to sorted array
-  const apartmentHeaders = Array.from(uniqueApartments).sort();
-  
   // Create headers
   const data: (string | number)[][] = [
     ['Samantekt'], // Title
     [], // Empty row
-    ['Dagsetning', 'Starfsmaður', 'Staðsetning', 'Tímar'], // Main headers
+    ['Dagsetning', 'Starfsmaður', 'Staðsetning', 'Tímar'], // Headers
   ];
   
   // Styling information for cells
   const styles: { [cell: string]: { font: { color: string } } } = {};
   
-  // Add data rows for detailed view
+  // Add data rows
   summaryEntries.forEach((entry, index) => {
     const rowIndex = index + 3; // Start after headers
     
@@ -149,32 +137,19 @@ export function createSummarySheetData(entries: TimesheetEntry[]): {
   data.push([]);
   data.push([]);
   
-  // Add employee summary section headers with apartment columns
-  const summaryHeaders = ['Starfsmaður', 'Heildar tímar'];
-  apartmentHeaders.forEach(apt => {
-    summaryHeaders.push(`Íbúð ${apt}`);
-  });
+  // Add employee summary section headers - only showing total hours
+  data.push(['Samtals vinnustundir']);
+  data.push(['Starfsmaður', 'Heildar tímar']);
   
-  data.push(['Samtals vinnustundir eftir íbúðum']); // Title for this section
-  data.push(summaryHeaders);
-  
-  // Add employee summaries with apartment breakdown
+  // Add employee summaries - only with total hours
   let currentRow = nextRowIndex + 2; // Start after the headers
   
   employeeSummaries.forEach(empSummary => {
-    const rowData = [
+    // Add the employee row with static calculation
+    data.push([
       empSummary.employee,
       formatNumber(empSummary.totalHours)
-    ];
-    
-    // Add hours for each apartment
-    for (const apartment of apartmentHeaders) {
-      const locationEntry = empSummary.locationBreakdown.find(lb => lb.apartment === apartment);
-      // Fix here: Ensure we're returning a string (not a number) by using formatNumber or converting 0 to "0"
-      rowData.push(locationEntry ? formatNumber(locationEntry.hours) : "0");
-    }
-    
-    data.push(rowData);
+    ]);
     currentRow++;
   });
   
