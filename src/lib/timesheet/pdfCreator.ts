@@ -14,18 +14,23 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
   pdf.setFontSize(12);
   pdf.text("Villi Pípari ehf.", 14, 10);
   
+  // Add apartment details
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(10);
+  pdf.text("Arnasmári 30, 102", 14, 16);
+  
   // Add fovea logo on top right
   try {
     // Get the base URL for assets - this helps resolve the correct path
     const baseUrl = window.location.origin;
     
     // Position for top right
-    const logoX = pdf.internal.pageSize.width - 60; // Reduced X position
+    const logoX = pdf.internal.pageSize.width - 51; // Reduced X position
     const logoY = 10;
     
-    // Reduce logo size by 25%
-    const logoWidth = 45; // Reduced from 60
-    const logoHeight = 18.75; // Reduced from 25
+    // Reduce logo size by 15%
+    const logoWidth = 51; // Reduced from 60
+    const logoHeight = 21.25; // Proportionally reduced
     
     // Use an absolute path to the image
     // In Electron, we need to use an absolute file path
@@ -59,13 +64,13 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
 
   // Add sheet name as title
   pdf.setFontSize(14);
-  pdf.text(`${sheetName}`, 14, 25);
+  pdf.text(`${sheetName}`, 14, 30); // Moved down to accommodate apartment details
   
   // Generate the table - use all data from the sheet
   autoTable(pdf, {
     head: [sheetData[0]],
     body: sheetData.slice(1),
-    startY: 30, // Increased startY to accommodate the header
+    startY: 35, // Increased startY to accommodate the header
     theme: "grid",
     styles: {
       fontSize: 10,
