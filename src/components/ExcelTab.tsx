@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload } from "@/components/FileUpload";
@@ -7,8 +6,7 @@ import { FileSpreadsheet, InfoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { parseTimesheetFile } from "@/lib/timesheet/parser";
-import { generatePdfFiles } from "@/lib/timesheet/pdfGenerator";
+import { generatePdfFiles, isElectronAvailable } from "@/lib/excelProcessor";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export const ExcelTab = () => {
@@ -20,16 +18,9 @@ export const ExcelTab = () => {
 
   // Check if we're running in Electron on component mount
   useEffect(() => {
-    // More thorough check for Electron environment
-    const isElectron = 
-      window.isElectron === true || 
-      (typeof window !== 'undefined' && 
-       typeof window.electron !== 'undefined' && 
-       typeof window.electron.writeFile === 'function');
-    
+    const isElectron = isElectronAvailable();
     setIsElectronApp(isElectron);
     console.log("Running in Electron environment:", isElectron);
-    console.log("Window electron object:", window.electron ? "Available" : "Not available");
   }, []);
 
   const handleExport = async () => {

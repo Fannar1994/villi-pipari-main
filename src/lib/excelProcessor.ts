@@ -4,6 +4,7 @@ import { generateInvoices } from './timesheet/generator';
 import { generatePdfFiles } from './timesheet/pdfGenerator';
 import type { TimesheetEntry } from '@/types/timesheet';
 import { createInvoiceData, createSummarySheetData } from './timesheet/processor';
+import { isElectronAvailable } from './electron/electronUtils';
 
 export { 
   parseTimesheetFile, 
@@ -11,5 +12,6 @@ export {
   generatePdfFiles,
   TimesheetEntry,
   createInvoiceData,
-  createSummarySheetData
+  createSummarySheetData,
+  isElectronAvailable
 };
