@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -9,15 +8,9 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
   // Create PDF for this sheet
   const pdf = new jsPDF();
   
-  // Add company name in top left
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12);
-  pdf.text("Villi Pípari ehf.", 14, 10);
-  
-  // Add address information on the line below company name
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(12);
-  pdf.text("Auðbrekka 2, 402", 14, 18);
+  // Add sheet name as title
+  pdf.setFontSize(14);
+  pdf.text(`${sheetName}`, 14, 25);
   
   // Add fovea logo on top right
   try {
@@ -61,10 +54,6 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
     console.error("Could not add logo to PDF:", logoError);
     // Continue without logo if there's an error
   }
-
-  // Add sheet name as title
-  pdf.setFontSize(14);
-  pdf.text(`${sheetName}`, 14, 25);
   
   // Generate the table - use all data from the sheet
   autoTable(pdf, {
