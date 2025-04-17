@@ -11,8 +11,8 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
   
   // Add company name on top left
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12);
-  pdf.text("Villi Pípari ehf.", 14, 10);
+  pdf.setFontSize(16);
+  pdf.text("Villi Pípari ehf.", 14, 25);
   
   // Add fovea logo on top right
   try {
@@ -20,12 +20,12 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
     const baseUrl = window.location.origin;
     
     // Position for top right
-    const logoX = pdf.internal.pageSize.width - 50;
-    const logoY = 10;
+    const logoX = pdf.internal.pageSize.width - 50; // 50 units from the right
+    const logoY = 5;
     
     // Adjusted logo size as requested
-    const logoWidth = 25;
-    const logoHeight = 25;
+    const logoWidth = 30;
+    const logoHeight = 30;
     
     // Use an absolute path to the image
     // In Electron, we need to use an absolute file path
@@ -64,7 +64,7 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
     startY: 30,
     theme: "grid",
     styles: {
-      fontSize: 10,
+      fontSize: 12,
       cellPadding: 3,
     },
     headStyles: {
