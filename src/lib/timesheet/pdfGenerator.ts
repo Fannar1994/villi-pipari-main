@@ -25,11 +25,14 @@ export async function generatePdfFiles(
     validateOutputDirectory(outputDirectory);
     
     // Read the Excel file
+    console.log("Reading Excel file...");
     const workbook = await readExcelFile(excelFile);
     
     let pdfCount = 0;
     const currentDate = new Date().toISOString().split("T")[0];
     const normalizedDir = outputDirectory.replace(/[\/\\]+$/, "");
+    
+    console.log(`Processing ${workbook.SheetNames.length} sheets...`);
     
     // Process each sheet in the workbook
     for (const sheetName of workbook.SheetNames) {
@@ -46,6 +49,8 @@ export async function generatePdfFiles(
           continue;
         }
         
+        console.log(`Creating PDF for sheet: ${sheetName}`);
+        
         // Create PDF for this sheet
         const pdfBlob = createPdfFromSheetData(sheetName, sheetData);
         
@@ -53,12 +58,16 @@ export async function generatePdfFiles(
         const pdfFilename = createSafeFilename(sheetName, currentDate);
         const pdfPath = `${normalizedDir}/${pdfFilename}`;
         
+        console.log(`Writing PDF to: ${pdfPath}`);
+        
         // Write PDF to disk
         const success = await writePdfToDisk(pdfPath, pdfBlob);
         
         if (success) {
           pdfCount++;
-          console.log(`PDF created for sheet: ${sheetName}`);
+          console.log(`PDF created successfully for sheet: ${sheetName}`);
+        } else {
+          console.error(`Failed to write PDF for sheet: ${sheetName}`);
         }
       } catch (sheetError) {
         console.error(`Error processing sheet ${sheetName}:`, sheetError);

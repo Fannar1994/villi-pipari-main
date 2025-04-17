@@ -16,24 +16,44 @@ export function createPdfFromSheetData(sheetName: string, sheetData: any[][]): A
   
   // Add fovea logo on top right
   try {
-    // Position for top right - adjust as needed based on the provided image
+    // Get the base URL for assets - this helps resolve the correct path
+    const baseUrl = window.location.origin;
+    
+    // Position for top right
     const logoX = pdf.internal.pageSize.width - 80;
     const logoY = 10;
     
-    // Add logo image
+    // Add logo image with dimensions
     const logoWidth = 60;
     const logoHeight = 25;
     
-    pdf.addImage(
-      "/src/assets/fovea_logo.png",
-      "PNG",
-      logoX,
-      logoY - 5,
-      logoWidth,
-      logoHeight
-    );
+    // Use an absolute path to the image
+    // In Electron, we need to use an absolute file path
+    if (window.isElectron) {
+      // For Electron - log the attempt to help with debugging
+      console.log("Attempting to add logo in Electron environment");
+      pdf.addImage(
+        "fovea_logo.png", // Using just the filename may work better in Electron
+        "PNG",
+        logoX,
+        logoY - 5,
+        logoWidth,
+        logoHeight
+      );
+    } else {
+      // For browser environment
+      pdf.addImage(
+        `${baseUrl}/assets/fovea_logo.png`,
+        "PNG",
+        logoX,
+        logoY - 5,
+        logoWidth,
+        logoHeight
+      );
+    }
+    console.log("Logo added successfully to PDF");
   } catch (logoError) {
-    console.warn("Could not add logo to PDF:", logoError);
+    console.error("Could not add logo to PDF:", logoError);
     // Continue without logo if there's an error
   }
 
