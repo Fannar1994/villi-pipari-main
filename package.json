@@ -55,7 +55,7 @@
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
     "date-fns": "^3.6.0",
-    "embla-carousel-react": "^8.3.0",
+    "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.2.4",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^3.8.4",
